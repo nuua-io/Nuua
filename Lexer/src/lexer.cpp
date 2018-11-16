@@ -8,7 +8,7 @@
  */
 
 #include "../include/lexer.hpp"
-// #include "../include/logger.hpp"
+#include "../../Logger/include/logger.hpp"
 #include <string.h>
 #include <string>
 #include <unordered_map>
@@ -82,7 +82,11 @@ static TokenType is_string(bool simple)
         NEXT();
     }
 
-    if (IS_AT_END()) error("Unterminated string literal", scanner->line);
+    if (IS_AT_END()) {
+        logger->error("Unterminated string literal", scanner->line);
+        exit(EXIT_FAILURE);
+    }
+
     NEXT(); // The " itelf
 
     return TOKEN_STRING;
@@ -123,7 +127,7 @@ static TokenType is_identifier()
 
 std::vector<Token> *scan(const char *source)
 {
-    info("Started scanning...");
+    logger->info("Started scanning...");
 
     scanner->start = source;
     scanner->current = source;
@@ -168,14 +172,16 @@ std::vector<Token> *scan(const char *source)
             default: {
                 if (IS_DIGIT(c)) { ADD_TOKEN(is_number()); break; }
                 else if (IS_ALPHA(c)) { ADD_TOKEN(is_identifier()); break; }
-                error(token_error(), scanner->line);
+                logger->error(token_error(), scanner->line);
+                exit(EXIT_FAILURE);
             }
         }
     }
     tokens->push_back(make_token(TOKEN_EOF));
 
     debug_tokens(*tokens);
-    success("Scanning complete");
+
+    logger->success("Scanning complete");
 
     return tokens;
 }
