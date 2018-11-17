@@ -2,13 +2,13 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -flto -Ofast
 BIN = bin
+BUILD = build
 
 # Dependency list for each layered tier
-DEP_LOGGER = Logger/src/logger.o
-DEP_LEXER = Lexer/src/tokens.o Lexer/src/lexer.o
+MODULES = Logger Lexer
 
-# Nuua dependencies
-DEPENDENCIES = nuua.o $(DEP_LOGGER) $(DEP_LEXER)
+# Objects required to build nuua
+OBJS = $(BUILD)/nuua.o $(foreach module,$(MODULES),$(patsubst $(module)/src/%.cpp,$(BUILD)/$(module)/%.o,$(wildcard $(module)/src/*.cpp)))
 
 ifeq ($(OS),Windows_NT)
 EXECUTABLE	:= nuua.exe
@@ -20,11 +20,18 @@ endif
 all: $(BIN)/$(EXECUTABLE)
 
 # Build the nuua programming language
-$(BIN)/$(EXECUTABLE): $(DEPENDENCIES)
+$(BIN)/$(EXECUTABLE): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-%.o: %.cpp
+build/nuua.o: nuua.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+build/Lexer/%.o: Lexer/src/%.cpp Lexer/include/%.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+build/Logger/%.o: Logger/src/%.cpp Logger/include/%.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+.PHONY: test
+test:
+	# $(OBJS)
 
 .PHONY: clean
 clean:
