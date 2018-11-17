@@ -3,7 +3,7 @@
 
 Logger *logger = new Logger;
 
-void Logger::info(const std::string error, int line = -1)
+void Logger::info(const std::string error, int line)
 {
     std::cout
         << rang::style::bold
@@ -17,7 +17,7 @@ void Logger::info(const std::string error, int line = -1)
     std::cout << rang::style::reset << std::endl;
 }
 
-void Logger::success(const std::string error, int line = -1)
+void Logger::success(const std::string error, int line)
 {
     std::cout
         << rang::style::bold
@@ -31,7 +31,7 @@ void Logger::success(const std::string error, int line = -1)
     std::cout << rang::style::reset << std::endl;
 }
 
-void Logger::warning(const std::string error, int line = -1)
+void Logger::warning(const std::string error, int line)
 {
     std::cout
         << rang::style::bold
@@ -44,7 +44,7 @@ void Logger::warning(const std::string error, int line = -1)
     std::cout << rang::style::reset << std::endl;
 }
 
-void Logger::error(const std::string error, int line = -1)
+void Logger::error(const std::string error, int line)
 {
     std::cout
         << rang::style::bold

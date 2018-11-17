@@ -11,6 +11,7 @@
 #define TOKEN_HPP
 
 #include <vector>
+#include <string>
 #include <stdint.h>
 
 typedef enum : uint8_t {
@@ -62,16 +63,24 @@ typedef enum : uint8_t {
     TOKEN_RETURN // return
 } TokenType;
 
-typedef struct {
-    TokenType type;
-    const char *start;
-    uint32_t length;
-    uint32_t line;
-} Token;
+class Token
+{
+    public:
+        TokenType type;
+        const char *start;
+        uint32_t length;
+        uint32_t line;
 
-void debug_token(Token token);
-void debug_token(TokenType token);
-void debug_tokens(std::vector<Token> tokens);
-void debug_tokens(std::vector<TokenType> tokens);
+        static std::vector<std::string> tokenNames;
+
+        Token(TokenType type, const char *start, uint32_t length, uint32_t line)
+            : type(type), start(start), length(length), line(line) {}
+
+        void debug_token();
+
+        static void debug_token(TokenType token);
+        static void debug_tokens(std::vector<Token> tokens);
+        static void debug_tokens(std::vector<TokenType> tokens);
+};
 
 #endif

@@ -10,22 +10,18 @@
 #include "../include/lexer.hpp"
 #include "../../Logger/include/logger.hpp"
 #include <string.h>
-#include <string>
-#include <unordered_map>
 
-#define ADD_TOKEN(token) (tokens->push_back(make_token(token)))
-#define TOK_LENGTH() ((int) (scanner->current - scanner->start))
-#define IS_AT_END() (*scanner->current == '\0')
-#define NEXT() (*(scanner->current++))
-#define PEEK() (*scanner->current)
-#define PEEK_ON(offset) (*(scanner->current + offset))
-#define IS_DIGIT(character) (character >= '0' && character <= '9')
-#define IS_ALPHA(character) (character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z' || character == '_')
+#define ADD_TOKEN(token) (tokens.push_back(this->make_token(token)))
+#define TOK_LENGTH() ((int) (this->current - this->start))
+#define IS_AT_END() (*this->current == '\0')
+#define NEXT() (*(this->current++))
+#define PEEK() (*this->current)
+#define PEEK_ON(offset) (*(this->current + (offset)))
+#define IS_DIGIT(character) ((character) >= '0' && (character) <= '9')
+#define IS_ALPHA(character) (((character) >= 'a' && (character) <= 'z') || ((character) >= 'A' && (character) <= 'Z') || (character) == '_')
 #define IS_ALPHANUM(character) (IS_ALPHA(character) || IS_DIGIT(character))
 
-static Scanner *scanner = new Scanner;
-
-static const std::unordered_map<std::string, TokenType> reservedWords = {
+const std::unordered_map<std::string, TokenType> Lexer::reservedWords = {
     { "true", TOKEN_TRUE },
     { "false", TOKEN_FALSE },
     { "or", TOKEN_OR },
@@ -41,49 +37,49 @@ static const std::unordered_map<std::string, TokenType> reservedWords = {
     { "unroll", TOKEN_UNROLL }
 };
 
-static const std::string token_error()
+const std::string Lexer::token_error()
 {
-    return std::string("Unexpected token '") + *scanner->start + "'";
+    return std::string("Unexpected token '") + *this->start + "'";
 }
 
-static Token make_token(TokenType type)
+Token Lexer::make_token(TokenType type)
 {
-    Token token;
-    token.type = type;
-    token.line = scanner->line;
+    const char *start;
+    uint32_t length;
 
     if (type == TOKEN_STRING) {
         // The '"' must be eliminated in both sides.
-        token.start = scanner->start + 1; // +(The initial '"")
-        token.length = TOK_LENGTH() - 2; // -(The initial '"' + The final '"')
+        start = this->start + 1; // +(The initial '"")
+        length = TOK_LENGTH() - 2; // -(The initial '"' + The final '"')
     } else {
-        token.start = scanner->start;
-        token.length = TOK_LENGTH();
+        start = this->start;
+        length = TOK_LENGTH();
     }
 
-    scanner->start = *scanner->current == ' ' ? scanner->current + 1 : scanner->current;
+    this->start = *this->current == ' ' ? this->current + 1 : this->current;
 
-    return token;
+    return Token(type, start, length, this->line);
 }
 
-static bool match(const char c)
+bool Lexer::match(const char c)
 {
     if (IS_AT_END() || PEEK() != c) return false;
-    scanner->current++;
+
+    this->current++;
 
     return true;
 }
 
-static TokenType is_string(bool simple)
+TokenType Lexer::is_string(bool simple)
 {
     while (PEEK() != (simple ? '\'' : '"') && !IS_AT_END()) {
-        if (PEEK() == '\n') scanner->line++;
+        if (PEEK() == '\n') this->line++;
         else if (PEEK() == '\\') { NEXT(); }
         NEXT();
     }
 
     if (IS_AT_END()) {
-        logger->error("Unterminated string literal", scanner->line);
+        logger->error("Unterminated string literal", this->line);
         exit(EXIT_FAILURE);
     }
 
@@ -92,7 +88,7 @@ static TokenType is_string(bool simple)
     return TOKEN_STRING;
 }
 
-static TokenType is_number()
+TokenType Lexer::is_number()
 {
     while (IS_DIGIT(PEEK())) NEXT();
 
@@ -104,42 +100,40 @@ static TokenType is_number()
     return TOKEN_NUMBER;
 }
 
-static TokenType is_identifier()
+TokenType Lexer::is_identifier()
 {
     while (IS_ALPHANUM(PEEK())) NEXT();
 
     std::string key;
-    for (int i = 0; i < TOK_LENGTH(); i++) {
-        key += *(scanner->start + i);
-    }
+    for (int i = 0; i < TOK_LENGTH(); i++) key += *(this->start + i);
 
     /*
     printf(
         "Word is: '%s' - Found: %d - Number: %d\n",
         key.c_str(),
-        reservedWords.find(key) != reservedWords.end(),
-        (reservedWords.find(key) != reservedWords.end()) ? reservedWords.at(key) : TOKEN_IDENTIFIER
+        Lexer::reservedWords.find(key) != Lexer::reservedWords.end(),
+        (Lexer::reservedWords.find(key) != Lexer::reservedWords.end()) ? Lexer::reservedWords.at(key) : TOKEN_IDENTIFIER
     );
     */
 
-    return (reservedWords.find(key) != reservedWords.end()) ? reservedWords.at(key) : TOKEN_IDENTIFIER;
+    return (Lexer::reservedWords.find(key) != Lexer::reservedWords.end()) ? Lexer::reservedWords.at(key) : TOKEN_IDENTIFIER;
 }
 
-std::vector<Token> *scan(const char *source)
+std::vector<Token> Lexer::scan(const char *source)
 {
     logger->info("Started scanning...");
 
-    scanner->start = source;
-    scanner->current = source;
-    scanner->line = 1;
+    this->start = source;
+    this->current = source;
+    this->line = 1;
 
-    auto tokens = new std::vector<Token>;
+    std::vector<Token> tokens;
 
     while (!IS_AT_END()) {
         switch (char c = NEXT()) {
-            case ' ': { scanner->start = scanner->current; break; }
+            case ' ': { this->start = this->current; break; }
             case '\r': case '\t': { break; }
-            case '\n': { scanner->line++; ADD_TOKEN(TOKEN_NEW_LINE); break; }
+            case '\n': { this->line++; ADD_TOKEN(TOKEN_NEW_LINE); break; }
             case '#': { while (PEEK() != '\n' && !IS_AT_END()) NEXT(); break; }
             case '(': { ADD_TOKEN(TOKEN_LEFT_PAREN); break; }
             case ')': { ADD_TOKEN(TOKEN_RIGHT_PAREN); break; }
@@ -151,35 +145,36 @@ std::vector<Token> *scan(const char *source)
             case '.': { ADD_TOKEN(TOKEN_DOT); break; }
             case ':': { ADD_TOKEN(TOKEN_COLON); break; }
             case '-': {
-                if (match('>')) { ADD_TOKEN(TOKEN_RIGHT_ARROW); break; }
+                if (this->match('>')) { ADD_TOKEN(TOKEN_RIGHT_ARROW); break; }
                 ADD_TOKEN(TOKEN_MINUS); break;
             }
             case '+': { ADD_TOKEN(TOKEN_PLUS); break; }
             case '/': { ADD_TOKEN(TOKEN_SLASH); break; }
             case '*': { ADD_TOKEN(TOKEN_STAR); break; }
             case '=': {
-                if (match('=')) { ADD_TOKEN(TOKEN_EQUAL_EQUAL); break; }
-                else if (match('>')) { ADD_TOKEN(TOKEN_BIG_RIGHT_ARROW); break; }
+                if (this->match('=')) { ADD_TOKEN(TOKEN_EQUAL_EQUAL); break; }
+                else if (this->match('>')) { ADD_TOKEN(TOKEN_BIG_RIGHT_ARROW); break; }
                 ADD_TOKEN(TOKEN_EQUAL); break;
             }
-            case '"': { ADD_TOKEN(is_string(false)); break; }
-            case '\'': { ADD_TOKEN(is_string(true)); break; }
+            case '"': { ADD_TOKEN(this->is_string(false)); break; }
+            case '\'': { ADD_TOKEN(this->is_string(true)); break; }
             case '<': {
-                if (match('-')) { ADD_TOKEN(TOKEN_LEFT_ARROW); break; }
-                ADD_TOKEN(match('=') ? TOKEN_LOWER_EQUAL : TOKEN_LOWER); break;
+                if (this->match('-')) { ADD_TOKEN(TOKEN_LEFT_ARROW); break; }
+                ADD_TOKEN(this->match('=') ? TOKEN_LOWER_EQUAL : TOKEN_LOWER); break;
             }
-            case '>': { ADD_TOKEN(match('=') ? TOKEN_HIGHER_EQUAL : TOKEN_HIGHER); break; }
+            case '>': { ADD_TOKEN(this->match('=') ? TOKEN_HIGHER_EQUAL : TOKEN_HIGHER); break; }
             default: {
-                if (IS_DIGIT(c)) { ADD_TOKEN(is_number()); break; }
-                else if (IS_ALPHA(c)) { ADD_TOKEN(is_identifier()); break; }
-                logger->error(token_error(), scanner->line);
+                if (IS_DIGIT(c)) { ADD_TOKEN(this->is_number()); break; }
+                else if (IS_ALPHA(c)) { ADD_TOKEN(this->is_identifier()); break; }
+                logger->error(this->token_error(), this->line);
                 exit(EXIT_FAILURE);
             }
         }
     }
-    tokens->push_back(make_token(TOKEN_EOF));
 
-    debug_tokens(*tokens);
+    tokens.push_back(this->make_token(TOKEN_EOF));
+
+    Token::debug_tokens(tokens);
 
     logger->success("Scanning complete");
 
