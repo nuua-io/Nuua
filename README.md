@@ -40,7 +40,7 @@ However, you're free to build the source yourself. The required software is:
 - A C++ compiler (I use g++: *gcc version 8.2.0 (Rev3, Built by MSYS2 project)*)
 - GNU makefile (You can also use it on windows by using mingw32-make)
 
-To build the language you just need to invoke the `make nuua` command. The build directory will then be
-populated with a few `*.o` objects. The executable file will be inside the bin folder and will be named `nuua` (.exe in windows)
+To build the language you just need to invoke the `make` command.
+The executable file will be inside the bin folder and will be named `nuua` (.exe in windows)
 
 You may use `make clean` to remove the `*.o` files in the build directory.
