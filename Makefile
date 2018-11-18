@@ -47,3 +47,4 @@ push:
 	git push
 	git subtree push --prefix=Lexer Lexer master
 	git subtree push --prefix=Logger Logger master
+	git subtree push --prefix=Parser Parser master
