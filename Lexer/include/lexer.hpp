@@ -1,7 +1,7 @@
 /**
- * |--------------|
- * | Nuua Scanner |
- * |--------------|
+ * |------------|
+ * | Nuua Lexer |
+ * |------------|
  *
  * Copyright 2018 Erik Campobadal <soc@erik.cat>
  * https://nuua.io

@@ -1,6 +1,8 @@
 #ifndef RANG_DOT_HPP
 #define RANG_DOT_HPP
 
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+
 #if defined(__unix__) || defined(__unix) || defined(__linux__)
 #define OS_LINUX
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN64)

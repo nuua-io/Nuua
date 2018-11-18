@@ -1,3 +1,11 @@
+/**
+ * |-------------------|
+ * | Nuua Error Logger |
+ * |-------------------|
+ *
+ * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/logger.hpp"
 #include "../include/rang.hpp"
 

@@ -1,3 +1,11 @@
+/**
+ * |-------------|
+ * | Nuua Tokens |
+ * |-------------|
+ *
+ * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/tokens.hpp"
 #include <stdio.h>
 

@@ -1,3 +1,11 @@
+/**
+ * |-------------------|
+ * | Nuua Error Logger |
+ * |-------------------|
+ *
+ * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 

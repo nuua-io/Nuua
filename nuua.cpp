@@ -25,13 +25,13 @@
  * SOFTWARE.
  */
 
-#include "Lexer/include/lexer.hpp"
+#include "Parser/include/parser.hpp"
 
 int main()
 {
-    auto lexer = new Lexer;
+    auto parser = new Parser;
 
-    lexer->scan("1 + 1");
+    parser->parse("1 + 1");
 
-    delete lexer;
+    delete parser;
 }
