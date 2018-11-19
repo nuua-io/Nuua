@@ -5,7 +5,7 @@ BIN = bin
 BUILD = build
 
 # Dependency list for each layered tier
-MODULES = Logger Lexer Parser
+MODULES = Logger Lexer Parser Compiler
 
 # Objects required to build nuua
 OBJS = $(BUILD)/nuua.o $(foreach module,$(MODULES),$(patsubst $(module)/src/%.cpp,$(BUILD)/$(module)/%.o,$(wildcard $(module)/src/*.cpp)))
@@ -48,3 +48,4 @@ push:
 	git subtree push --prefix=Lexer Lexer master
 	git subtree push --prefix=Logger Logger master
 	git subtree push --prefix=Parser Parser master
+	git subtree push --prefix=Compiler Compiler master
