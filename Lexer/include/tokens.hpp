@@ -59,7 +59,6 @@ typedef enum : uint8_t {
     TOKEN_RIGHT_SQUARE, // ]
     TOKEN_BIG_RIGHT_ARROW, // =>
     TOKEN_COLON, // :
-    TOKEN_UNROLL, // unroll
     TOKEN_RETURN // return
 } TokenType;
 

@@ -404,41 +404,11 @@ Statement *Parser::whileStatement()
     return new While(condition, body);
 }
 
-Statement *Parser::unrollStatement()
-{
-    this->consume(TOKEN_LEFT_PAREN, "Expected '(' after 'unroll'");
-    auto times = this->primary();
-    if (times->rule != RULE_NUMBER) {
-        logger->error("Expected a constant iterations number in 'unroll'.", this->current->line);
-        exit(EXIT_FAILURE);
-    }
-    this->consume(TOKEN_COMMA, "Expected ',' after 'unroll' iterations");
-    auto chunks = this->primary();
-    if (times->rule != RULE_NUMBER) {
-        logger->error("Expected a constant chunks number in 'unroll'.", this->current->line);
-        exit(EXIT_FAILURE);
-    }
-    this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after 'unroll' chunks");
-    this->consume(TOKEN_LEFT_BRACE, "Expected a '{' after the ')'");
-    this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
-    auto body = this->getBlockBody();
-    this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
-    if (!this->matchAny(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
-        logger->error("Expected a new line after the '}'", this->current->line);
-        exit(EXIT_FAILURE);
-    }
-    return new Unroll(static_cast<Number *>(times)->value, static_cast<Number *>(chunks)->value, body);
-}
-
 Statement *Parser::statement()
 {
-    if (this->match(TOKEN_IF)) {
-        return this->ifStatement();
-    } else if (this->match(TOKEN_WHILE)) {
-        return this->whileStatement();
-    } else if (this->match(TOKEN_UNROLL)) {
-        return this->unrollStatement();
-    }
+    if (this->match(TOKEN_IF)) return this->ifStatement();
+    else if (this->match(TOKEN_WHILE)) return this->whileStatement();
+
     return this->expressionStatement();
 }
 

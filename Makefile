@@ -57,11 +57,6 @@ all:
 .PHONY: nuua
 nuua: $(BIN)/$(EXECUTABLE)
 
-# $(DEPS)
-# $(call generateDependency, nuua.cpp)
-# $(foreach module,$(MODULES),$(foreach file,$(wildcard $(module)/src/*.cpp),$(call generateDependency, $(file))${\n}))
-
-
 # Build the nuua programming language
 $(BIN)/$(EXECUTABLE): $(OBJS)
 	@printf "\n"
