@@ -33,8 +33,9 @@ typedef enum : uint8_t {
     OP_LEN, OP_PRINT, OP_EXIT
 } OpCode;
 
-// Forward declare the Value class
-class Value;
+typedef enum : uint8_t {
+    PROGRAM_MEMORY, FUNCTIONS_MEMORY, CLASSES_MEMORY
+} MemoryType;
 
 class Memory
 {

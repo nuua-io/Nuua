@@ -6,14 +6,16 @@
 
 class Compiler
 {
+    uint32_t current_line;
+
     void compile(Statement *rule);
-    void add_opcode(OpCode opcode, uint8_t memory);
-    void add_constant(Value value, uint8_t memory);
+    void add_opcode(OpCode opcode, MemoryType memory);
+    void add_constant(Value value, MemoryType memory);
 
     public:
         Program program;
 
-        void compile(const char *source);
+        Program compile(const char *source);
 };
 
 #endif

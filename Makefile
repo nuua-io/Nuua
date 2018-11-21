@@ -8,7 +8,15 @@ BUILD = build
 MODULES = Logger Lexer Parser Compiler
 
 # Objects required to build nuua
-OBJS = $(BUILD)/nuua.o $(foreach module,$(MODULES),$(patsubst $(module)/src/%.cpp,$(BUILD)/$(module)/%.o,$(wildcard $(module)/src/*.cpp)))
+OBJS = $(BUILD)/nuua.o $(foreach module,$(MODULES),$(patsubst $(module)/src/%.cpp,$(BUILD)/$(module)/src/%.o,$(wildcard $(module)/src/*.cpp)))
+DEPS = $(patsubst %.o,%.d,$(OBJS))
+
+# Helpers
+define \n
+
+
+endef
+GENERATE_DEPENDENCY = @printf " -> Generating dependencies: %s\n" $1${\n}@$(CXX) $(CXXFLAGS) -MM $1 -MT $(BUILD)/$(patsubst %.cpp,%.o,$1) -MF $(BUILD)/$(patsubst %.cpp,%.d,$1)
 
 ifeq ($(OS),Windows_NT)
 EXECUTABLE	:= nuua.exe
@@ -17,35 +25,70 @@ EXECUTABLE	:= nuua
 endif
 
 # Main entry point
-all: $(BIN)/$(EXECUTABLE)
+all:
+	@printf "\n"
+	@printf "   _   _ _   _ _   _   _     \n"
+	@printf "  | \ | | | | | | | | / \    \n"
+	@printf "  |  \| | | | | | | |/ _ \   \n"
+	@printf "  | |\  | |_| | |_| / ___ \  \n"
+	@printf "  |_| \_|\___/ \___/_/   \_\ \n"
+	@printf "                             \n"
+	@printf "\n"
+	@printf " -------------------------------------------\n"
+	@printf " |                                         |\n"
+	@printf " |        NUUA PROGRAMMING LANGUAGE        |\n"
+	@printf " |          Erik Campobadal Fores          |\n"
+	@printf " |             https://nuua.io             |\n"
+	@printf " |                                         |\n"
+	@printf " -------------------------------------------\n"
+	@printf "\n"
+	@printf "\n"
+	@printf " -------------------------------------------\n"
+	@printf " |> Building Nuua                           \n"
+	@printf " -------------------------------------------\n"
+	@printf "\n"
+	@$(MAKE) --no-print-directory nuua
+	@printf "\n"
+	@printf " -------------------------------------------\n"
+	@printf " |> Complete: $(BIN)/$(EXECUTABLE)\n"
+	@printf " -------------------------------------------\n"
+	@printf "\n"
+
+.PHONY: nuua
+nuua: $(BIN)/$(EXECUTABLE)
+
+# $(DEPS)
+# $(call generateDependency, nuua.cpp)
+# $(foreach module,$(MODULES),$(foreach file,$(wildcard $(module)/src/*.cpp),$(call generateDependency, $(file))${\n}))
+
 
 # Build the nuua programming language
 $(BIN)/$(EXECUTABLE): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
-build/nuua.o: nuua.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-build/Logger/%.o: Logger/src/%.cpp Logger/include/%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-build/Lexer/%.o: Lexer/src/%.cpp Lexer/include/%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-build/Parser/%.o: Parser/src/%.cpp Parser/include/%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-build/Compiler/%.o: Compiler/src/%.cpp Compiler/include/%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-build/Virtual-Machine/%.o: Virtual-Machine/src/%.cpp Virtual-Machine/include/%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@printf "\n"
+	@printf " -------------------------------------------\n"
+	@printf " |> Linking Nuua                            \n"
+	@printf " -------------------------------------------\n"
+	@printf "\n"
+	@printf " -> Linking Nuua:\n"
+	@printf "    { %s }\n" $^
+	@$(CXX) $(CXXFLAGS) -o $@ $^
+
+$(DEPS):
+	$(call GENERATE_DEPENDENCY, $(subst build/,,$(patsubst %.d,%.cpp,$@)))
+$(OBJS):
+	@printf " -> Compiling %s\n" $<
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
+
+-include $(DEPS)
 
 .PHONY: clean
 clean:
-	rm build/*.o
-	rm build/Lexer/*.o
-	rm build/Logger/*.o
-	rm build/Parser/*.o
+	@printf " -> Cleaning Nuua\n"
+	@rm -f build/*.o
+	$(foreach module,$(MODULES),@printf " -> Cleaning %s\n" $(module)${\n}@rm -f build/$(module)/src/*.o build/$(module)/src/*.d${\n})
 
 .PHONY: push
 push:
-	git push
-	git subtree push --prefix=Lexer Lexer master
-	git subtree push --prefix=Logger Logger master
-	git subtree push --prefix=Parser Parser master
-	git subtree push --prefix=Compiler Compiler master
+	@printf " -> Pushing Nuua\n"
+	@git push
+	$(foreach module,$(MODULES),@printf " -> Pushing %s\n" $(module)${\n}@git subtree push --prefix=$(module) $(module) master${\n})

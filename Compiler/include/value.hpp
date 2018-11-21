@@ -17,16 +17,16 @@ typedef enum : uint8_t {
     VALUE_NONE
 } ValueType;
 
-// Forward declare the Value class
+class Frame;
 class Value;
 
 class ValueDictionary
 {
     public:
-        std::unordered_map<std::string, Value> values;
+        std::unordered_map<std::string, Value*> values;
         std::vector<std::string> key_order;
 
-        ValueDictionary(std::unordered_map<std::string, Value> values, std::vector<std::string> key_order)
+        ValueDictionary(std::unordered_map<std::string, Value*> values, std::vector<std::string> key_order)
             : values(values), key_order(key_order) {}
 };
 
@@ -63,7 +63,7 @@ class Value
             : type(VALUE_STRING), svalue(new std::string(a)) {}
         Value(std::vector<Value> a)
             : type(VALUE_LIST), lvalues(new std::vector(a)) {}
-        Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b)
+        Value(std::unordered_map<std::string, Value*> a, std::vector<std::string> b)
             : type(VALUE_DICTIONARY), dvalues(new ValueDictionary(a, b)) {}
         Value(uint64_t index, Frame *frame)
             : type(VALUE_FUNCTION), fvalue(new ValueFunction(index, frame)) {}
