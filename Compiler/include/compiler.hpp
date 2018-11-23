@@ -14,7 +14,10 @@ class Compiler
     void compile(Token op, bool unary = false);
     void add_opcode(OpCode opcode);
     void add_constant(Value *value);
-    void add_constant_only(Value *value);
+    void modify_constant(uint64_t index, Value *value);
+    Memory *get_current_memory();
+    uint64_t add_constant_only(Value *value);
+    uint32_t current_code_line();
 
     public:
         Program program;

@@ -8,13 +8,8 @@
 #include <unordered_map>
 
 typedef enum : uint8_t {
-    VALUE_NUMBER,
-    VALUE_BOOLEAN,
-    VALUE_STRING,
-    VALUE_LIST,
-    VALUE_DICTIONARY,
-    VALUE_FUNCTION,
-    VALUE_NONE
+    VALUE_NUMBER, VALUE_BOOLEAN, VALUE_STRING, VALUE_LIST,
+    VALUE_DICTIONARY, VALUE_FUNCTION, VALUE_NONE
 } ValueType;
 
 class Frame;
@@ -67,6 +62,10 @@ class Value
             : type(VALUE_DICTIONARY), dvalues(new ValueDictionary(a, b)) {}
         Value(uint64_t index, Frame *frame)
             : type(VALUE_FUNCTION), fvalue(new ValueFunction(index, frame)) {}
+
+        double to_double();
+        std::string to_string();
+        void print();
 };
 
 #endif

@@ -25,13 +25,13 @@
  * SOFTWARE.
  */
 
-#include "Parser/include/parser.hpp"
+#include "Compiler/include/compiler.hpp"
 
 int main()
 {
-    auto parser = new Parser;
+    auto compiler = new Compiler;
 
-    parser->parse("1 + 1");
+    compiler->compile("1 + 1");
 
-    delete parser;
+    delete compiler;
 }
