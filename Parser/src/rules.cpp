@@ -1,3 +1,11 @@
+/**
+ * |------------|
+ * | Nuua Rules |
+ * |------------|
+ *
+ * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/parser.hpp"
 
 static std::vector<std::string> RuleNames = {

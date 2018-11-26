@@ -1,3 +1,11 @@
+/**
+ * |------------------------|
+ * | Nuua Program Structure |
+ * |------------------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #ifndef PROGRAM_HPP
 #define PROGRAM_HPP
 

@@ -1,3 +1,11 @@
+/**
+ * |---------------|
+ * | Nuua Compiler |
+ * |---------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #ifndef COMPILER_HPP
 #define COMPILER_HPP
 

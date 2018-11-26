@@ -1,3 +1,11 @@
+/**
+ * |--------------------|
+ * | Nuua Native Values |
+ * |--------------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
@@ -43,7 +51,7 @@ class Value
             double nvalue;
             bool bvalue;
             std::string *svalue;
-            std::vector<Value> *lvalues;
+            std::vector<Value *> *lvalues;
             ValueDictionary *dvalues;
             ValueFunction *fvalue;
         };
@@ -56,7 +64,7 @@ class Value
             : type(VALUE_BOOLEAN), bvalue(a) {}
         Value(std::string a)
             : type(VALUE_STRING), svalue(new std::string(a)) {}
-        Value(std::vector<Value> a)
+        Value(std::vector<Value *> a)
             : type(VALUE_LIST), lvalues(new std::vector(a)) {}
         Value(std::unordered_map<std::string, Value*> a, std::vector<std::string> b)
             : type(VALUE_DICTIONARY), dvalues(new ValueDictionary(a, b)) {}
@@ -64,8 +72,10 @@ class Value
             : type(VALUE_FUNCTION), fvalue(new ValueFunction(index, frame)) {}
 
         double to_double();
+        bool to_bool();
         std::string to_string();
         void print();
+        void println();
 };
 
 #endif

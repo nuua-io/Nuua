@@ -1,3 +1,11 @@
+/**
+ * |------------------------|
+ * | Nuua Program Structure |
+ * |------------------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/program.hpp"
 #include "../../Logger/include/logger.hpp"
 

@@ -3,7 +3,7 @@
  * | Nuua Lexer |
  * |------------|
  *
- * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
 

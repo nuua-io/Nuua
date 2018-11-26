@@ -25,13 +25,13 @@
  * SOFTWARE.
  */
 
-#include "Compiler/include/compiler.hpp"
+#include "Virtual-Machine/include/virtual_machine.hpp"
 
 int main()
 {
-    auto compiler = new Compiler;
+    auto virtual_machine = new VirtualMachine;
 
-    compiler->compile("1 + 1");
+    virtual_machine->interpret("1 + 1");
 
-    delete compiler;
+    delete virtual_machine;
 }

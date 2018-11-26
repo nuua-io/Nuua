@@ -1,3 +1,11 @@
+/**
+ * |---------------|
+ * | Nuua Compiler |
+ * |---------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/compiler.hpp"
 #include "../../Parser/include/parser.hpp"
 #include "../../Logger/include/logger.hpp"

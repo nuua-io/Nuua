@@ -6,11 +6,9 @@
  * Copyright 2018 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
-
 #ifndef RULES_HPP
 #define RULES_HPP
 
-// #include "program.hpp"
 #include "../../Lexer/include/tokens.hpp"
 #include <string>
 #include <vector>

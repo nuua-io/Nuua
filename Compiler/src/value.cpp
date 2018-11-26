@@ -1,3 +1,11 @@
+/**
+ * |--------------------|
+ * | Nuua Native Values |
+ * |--------------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/value.hpp"
 
 double Value::to_double()
@@ -13,6 +21,11 @@ double Value::to_double()
     }
 }
 
+bool Value::to_bool()
+{
+    return this->to_double() != 0;
+}
+
 std::string Value::to_string()
 {
     switch (this->type) {
@@ -23,7 +36,7 @@ std::string Value::to_string()
             std::string list = "[";
             if (this->lvalues->size() > 0) {
                 for (auto element : *this->lvalues) {
-                    list += (element.type == VALUE_STRING ? '\'' + element.to_string() + '\'' : element.to_string()) + ", ";
+                    list += (element->type == VALUE_STRING ? '\'' + element->to_string() + '\'' : element->to_string()) + ", ";
                 }
                 list.pop_back(); list.pop_back(); // Pop the space and the comma
             }
@@ -52,4 +65,10 @@ std::string Value::to_string()
 void Value::print()
 {
     printf("%s", this->to_string().c_str());
+}
+
+void Value::println()
+{
+    this->print();
+    printf("\n");
 }
