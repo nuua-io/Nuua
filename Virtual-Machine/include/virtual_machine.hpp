@@ -37,6 +37,9 @@ class VirtualMachine
 
     public:
         void interpret(const char *source);
+
+        // Resets the virtual machine program memories.
+        void reset();
 };
 
 #endif

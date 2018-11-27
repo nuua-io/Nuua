@@ -76,6 +76,20 @@ void Memory::dump()
     printf("\n");
 }
 
+void Memory::reset()
+{
+    this->code.clear();
+    this->constants.clear();
+    this->lines.clear();
+}
+
+void Program::reset()
+{
+    this->program.reset();
+    this->functions.reset();
+    this->classes.reset();
+}
+
 std::string opcode_to_string(uint64_t opcode)
 {
     if (opcode > (opcode_names.size() - 1)) {

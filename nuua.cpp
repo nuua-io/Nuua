@@ -24,14 +24,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include "Application/include/application.hpp"
 
-#include "Virtual-Machine/include/virtual_machine.hpp"
-
-int main()
+int main(int argc, char *argv[])
 {
-    auto virtual_machine = new VirtualMachine;
+    // This creates a new nuua application, given the command line attributes
+    auto application = new Application(argc, argv);
 
-    virtual_machine->interpret("1 + 1");
+    // Run the application. This will automatically determine the application
+    // type (For example, if it is a prompt application or a file application)
+    application->start();
 
-    delete virtual_machine;
+    // Delete the allocated space of the application
+    delete application;
+
+    // Returns a success exit
+    return EXIT_SUCCESS;
 }

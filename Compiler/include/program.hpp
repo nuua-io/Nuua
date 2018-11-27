@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <stdint.h>
 
+// Defines the known opcodes for the program.
 typedef enum : uint8_t {
     OP_CONSTANT,
 
@@ -41,22 +42,34 @@ typedef enum : uint8_t {
     OP_LEN, OP_PRINT, OP_EXIT
 } OpCode;
 
+// Defines the basic memories that exist in the program.
 typedef enum : uint8_t {
     PROGRAM_MEMORY, FUNCTIONS_MEMORY, CLASSES_MEMORY
 } MemoryType;
 
 class Value;
 
+// Defines a basic memory for nuua.
 class Memory
 {
     public:
+        // This stores the opcodes and consant indexes of the code.
         std::vector<uint64_t> code;
+
+        // Stores the value constants.
         std::vector<Value *> constants;
+
+        // Stores the lines corresponding to the opcodes.
         std::vector<uint32_t> lines;
 
+        // Dumps the memory.
         void dump();
+
+        // Reset the memory.
+        void reset();
 };
 
+// A frame is the one responsible for storing variables in a program.
 class Frame
 {
     public:
@@ -64,15 +77,27 @@ class Frame
         uint64_t *return_address;
 };
 
+// The base program class that represents a nuua program.
 class Program
 {
     public:
+        // Stores the program memory (The main code).
         Memory program;
+
+        // Stores the code regarding to functions.
         Memory functions;
+
+        // Stores the code regarding to classes.
         Memory classes;
+
+        // Resets the whole program memory.
+        void reset();
 };
 
+// Basic conversation from opcode to string.
 std::string opcode_to_string(uint64_t opcode);
+
+// Prints a given opcode to the screen.
 void print_opcode(uint64_t opcode);
 
 #endif

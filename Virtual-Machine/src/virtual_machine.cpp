@@ -158,4 +158,9 @@ void VirtualMachine::interpret(const char *source)
     logger->success("Finished interpreting");
 }
 
+void VirtualMachine::reset()
+{
+    this->program.reset();
+}
+
 #undef BINARY_POP

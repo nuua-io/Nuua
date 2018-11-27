@@ -5,7 +5,7 @@ BIN = bin
 BUILD = build
 
 # Dependency list for each layered tier
-MODULES = Logger Lexer Parser Compiler Virtual-Machine
+MODULES = Logger Lexer Parser Compiler Virtual-Machine Application
 
 # Objects required to build nuua
 OBJS = $(BUILD)/nuua.o $(foreach module,$(MODULES),$(patsubst $(module)/src/%.cpp,$(BUILD)/$(module)/src/%.o,$(wildcard $(module)/src/*.cpp)))
