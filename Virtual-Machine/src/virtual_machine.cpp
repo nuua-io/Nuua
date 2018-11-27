@@ -56,14 +56,15 @@ void VirtualMachine::do_list()
 
 void VirtualMachine::do_dictionary()
 {
-    std::unordered_map<std::string, Value *> v; std::vector<std::string> ko;
+    std::unordered_map<std::string, Value *> dictionary;
+    std::vector<std::string> key_order;
     for (int e = this->read_integer(); e > 0; e--) {
         auto val = this->pop();
         auto n = *this->pop()->svalue;
-        v[n] = val;
-        ko.push_back(n);
+        dictionary[n] = val;
+        key_order.push_back(n);
     }
-    this->push(new Value(v, ko));
+    this->push(new Value(dictionary, key_order));
 }
 
 void VirtualMachine::do_access()
