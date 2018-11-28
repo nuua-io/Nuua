@@ -16,6 +16,7 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 
 Nuua is structured as a layered system. It have diferent tiers (ordered):
 
+- [Application](https://github.com/nuua-io/Application)
 - [Virtual Machine](https://github.com/nuua-io/Virtual-Machine)
 - [Compiler](https://github.com/nuua-io/Compiler)
 - [Parser](https://github.com/nuua-io/Parser)

@@ -1,3 +1,11 @@
+/**
+ * |------------------|
+ * | Nuua Application |
+ * |------------------|
+ *
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
+ * https://nuua.io
+ */
 #include "../include/application.hpp"
 #include <iostream>
 #include <fstream>

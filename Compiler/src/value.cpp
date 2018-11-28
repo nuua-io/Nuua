@@ -13,10 +13,10 @@ double Value::to_double()
     switch (this->type) {
         case VALUE_NUMBER: { return this->nvalue; }
         case VALUE_BOOLEAN: { return this->bvalue ? 1.0 : 0.0; }
-        case VALUE_STRING: { return (double) this->svalue->length(); }
-        case VALUE_LIST: { return (double) this->lvalues->size(); }
-        case VALUE_DICTIONARY: { return (double) this->dvalues->values.size(); }
-        case VALUE_FUNCTION: { return (double) reinterpret_cast<std::uintptr_t>(this->fvalue); } // This looks a bit bad...
+        case VALUE_STRING: { return static_cast<double>(this->svalue->length()); }
+        case VALUE_LIST: { return static_cast<double>(this->lvalues->size()); }
+        case VALUE_DICTIONARY: { return static_cast<double>(this->dvalues->values.size()); }
+        case VALUE_FUNCTION: { return static_cast<double>(reinterpret_cast<std::uintptr_t>(this->fvalue)); } // This looks a bit bad...
         default: { return 0.0; }
     }
 }

@@ -96,10 +96,10 @@ void Compiler::compile(Statement *rule)
 
             for (auto stmt : rwhile->body) this->compile(stmt);
 
-            this->add_opcode(OP_JUMP);
-            this->add_constant_only(new Value(initial_index));
+            this->add_opcode(OP_RJUMP);
+            this->add_constant_only(new Value(-(this->current_code_line() - initial_index)));
 
-            this->modify_constant(constant_index, new Value(static_cast<double>(this->current_code_line() - start_index)));
+            this->modify_constant(constant_index, new Value(static_cast<double>(this->current_code_line() - start_index + 1)));
 
             break;
         }
@@ -130,7 +130,8 @@ void Compiler::compile(Expression *rule)
         case RULE_LIST: {
             auto list = static_cast<List *>(rule);
             for (int i = list->value.size() - 1; i >= 0; i--) this->compile(list->value.at(i));
-            this->add_constant(new Value(static_cast<double>(list->value.size())));
+            this->add_opcode(OP_LIST);
+            this->add_constant_only(new Value(static_cast<double>(list->value.size())));
             break;
         }
         case RULE_DICTIONARY: {
@@ -139,7 +140,8 @@ void Compiler::compile(Expression *rule)
                 this->add_constant(new Value(dictionary->key_order[i]));
                 this->compile(dictionary->value.at(dictionary->key_order[i]));
             }
-            this->add_constant(new Value(static_cast<double>(dictionary->value.size())));
+            this->add_opcode(OP_DICTIONARY);
+            this->add_constant_only(new Value(static_cast<double>(dictionary->value.size())));
             break;
         }
         case RULE_NONE: {

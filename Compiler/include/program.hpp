@@ -27,7 +27,7 @@ typedef enum : uint8_t {
     OP_HT, OP_HTE,
 
     // Jumps and conditional jumps
-    OP_JUMP, OP_RJUMP, OP_BRANCH_TRUE, OP_BRANCH_FALSE,
+    /*OP_JUMP,*/ OP_RJUMP, OP_BRANCH_TRUE, OP_BRANCH_FALSE,
 
     // Store and load
     OP_STORE, OP_LOAD, OP_STORE_ACCESS,

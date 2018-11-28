@@ -347,6 +347,7 @@ Expression *Parser::assignment()
         switch (result->rule) {
             case RULE_VARIABLE: { return new Assign(static_cast<Variable *>(result)->name, this->expression()); }
             case RULE_ACCESS: {
+                printf("Found assign access.\n");
                 auto res = static_cast<Access *>(result);
                 return new AssignAccess(res->name, res->index, this->expression());
             }

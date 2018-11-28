@@ -34,7 +34,7 @@ uint64_t VirtualMachine::read_instruction()
 
 Value *VirtualMachine::read_constant()
 {
-    return this->get_current_memory()->constants.at(this->read_instruction());
+    return new Value(*this->get_current_memory()->constants.at(this->read_instruction()));
 }
 
 int VirtualMachine::read_integer()
@@ -107,6 +107,7 @@ void VirtualMachine::run()
 {
     for (uint64_t instruction;;) {
         instruction = this->read_instruction();
+        printf("=> %s\n", opcode_to_string(instruction).c_str());
         switch (instruction) {
             case OP_CONSTANT: { this->push(this->read_constant()); break; }
             case OP_MINUS: { this->push(Operation::iminus(this->pop())); break; }
@@ -121,12 +122,12 @@ void VirtualMachine::run()
             case OP_LTE: { BINARY_POP(); this->push(Operation::ilte(a, b)); break; }
             case OP_HT: { BINARY_POP(); this->push(Operation::iht(a, b)); break; }
             case OP_HTE: { BINARY_POP(); this->push(Operation::ihte(a, b)); break; }
-            case OP_JUMP: { this->program_counter = &this->get_current_memory()->code.front() + (this->read_integer() - 1); break; }
+            // case OP_JUMP: { this->program_counter = &this->get_current_memory()->code.front() + (this->read_integer() - 1); break; }
             case OP_RJUMP: { this->program_counter += this->read_integer() - 1; break; }
-            case OP_BRANCH_TRUE: { if (this->pop()->to_bool()) this->program_counter += this->read_integer() - 1; break; }
-            case OP_BRANCH_FALSE: { if (!this->pop()->to_bool()) this->program_counter += this->read_integer() - 1; break; }
-            case OP_STORE: { this->frames.back().heap.at(this->read_variable()) = this->pop(); break; }
-            case OP_STORE_ACCESS: { BINARY_POP(); this->frames.back().heap.at(this->read_variable())->lvalues->at(b->nvalue) = a; break; }
+            case OP_BRANCH_TRUE: { auto to = this->read_integer() - 1; if (this->pop()->to_bool()) this->program_counter += to; break; }
+            case OP_BRANCH_FALSE: { auto to = this->read_integer() - 1; if (!this->pop()->to_bool()) this->program_counter += to; break; }
+            case OP_STORE: { this->frames.back().heap[this->read_variable()] = this->pop(); break; }
+            case OP_STORE_ACCESS: { BINARY_POP(); (*this->frames.back().heap.at(this->read_variable())->lvalues)[b->nvalue] = a; break; }
             case OP_LOAD: { this->push(this->frames.back().heap.at(this->read_variable())); break; }
             case OP_LIST: { this->do_list(); break; }
             case OP_DICTIONARY: { this->do_dictionary(); break; }

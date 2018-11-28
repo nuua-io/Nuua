@@ -21,7 +21,7 @@ namespace Operation
 
         auto result = new Value(-a->to_double());
 
-        delete a;
+        //delete a;
 
         return result;
     }
@@ -30,7 +30,7 @@ namespace Operation
     {
         auto result = new Value(!a->to_bool());
 
-        delete a;
+        //delete a;
 
         return result;
     }
@@ -40,8 +40,7 @@ namespace Operation
         Value *result;
         if (a->type == VALUE_STRING || b->type == VALUE_STRING) result = new Value(a->to_string() + b->to_string());
         else result = new Value(a->to_double() + b->to_double());
-
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -49,7 +48,7 @@ namespace Operation
     Value *isub(Value *a, Value *b)
     {
         auto result = new Value(a->to_double() - b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -57,7 +56,7 @@ namespace Operation
     Value *imul(Value *a, Value *b)
     {
         auto result = new Value(a->to_double() * b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -67,7 +66,7 @@ namespace Operation
         auto bn = b->to_double();
         if (bn == 0) { logger->error("Division by zero."); exit(EXIT_FAILURE); }
         auto result = new Value(a->to_double() / bn);
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -77,7 +76,7 @@ namespace Operation
         Value *result;
         if (a->type == VALUE_STRING && b->type == VALUE_STRING) result = new Value(a->to_string() == b->to_string());
         else result = new Value(a->to_double() == b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -87,7 +86,7 @@ namespace Operation
         Value *result;
         if (a->type == VALUE_STRING && b->type == VALUE_STRING) result = new Value(*a->svalue != *b->svalue);
         else result = new Value(a->to_double() != b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -95,7 +94,7 @@ namespace Operation
     Value *ilt(Value *a, Value *b)
     {
         auto result = new Value(a->to_double() < b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -103,7 +102,7 @@ namespace Operation
     Value *ilte(Value *a, Value *b)
     {
         auto result = new Value(a->to_double() <= b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -111,7 +110,7 @@ namespace Operation
     Value *iht(Value *a, Value *b)
     {
         auto result = new Value(a->to_double() > b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -119,7 +118,7 @@ namespace Operation
     Value *ihte(Value *a, Value *b)
     {
         auto result = new Value(a->to_double() >= b->to_double());
-        delete a; delete b;
+        //delete a; //delete b;
 
         return result;
     }
@@ -127,7 +126,7 @@ namespace Operation
     Value *ilen(Value *a)
     {
         auto result = new Value(a->to_double());
-        delete a;
+        //delete a;
 
         return result;
     }

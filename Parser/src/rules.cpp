@@ -26,7 +26,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_ASSIGN_ACCESS",
     "RULE_LOGICAL",
     "RULE_FUNCTION",
-    "RULE_",
+    "RULE_CALL",
     "RULE_ACCESS",
     "RULE_IF",
     "RULE_WHILE",

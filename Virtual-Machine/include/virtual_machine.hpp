@@ -16,7 +16,7 @@ class VirtualMachine
     Program program;
     uint64_t *program_counter;
     std::vector<Value *> stack;
-    std::vector<Frame> frames;
+    std::vector<Frame> frames = { Frame() };
     MemoryType current_memory = PROGRAM_MEMORY;
 
     void push(Value *value);
