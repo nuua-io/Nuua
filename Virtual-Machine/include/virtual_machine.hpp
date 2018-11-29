@@ -11,6 +11,9 @@
 
 #include "../../Compiler/include/program.hpp"
 
+#define STACK_SIZE 256
+#define FRAME_SIZE 256
+
 class VirtualMachine
 {
     // The program the virtual machine is going to run.
@@ -19,32 +22,20 @@ class VirtualMachine
     // The current instruction to execute.
     uint64_t *program_counter;
 
-    // The value stack to perform operations (it's a stack based virtua machine).
-    std::vector<Value *> stack;
+    // The value stack to perform operations (it's a stack based virtual machine).
+    Value *stack[STACK_SIZE];
+
+    // The top of the stack.
+    Value **top_stack;
 
     // The frame list (latest is the current).
-    std::vector<Frame> frames = { Frame() };
+    Frame frames[FRAME_SIZE] = { Frame() };
+
+    // The top frame (current frame).
+    Frame *top_frame;
 
     // The current memory where the program counter is pointing.
     MemoryType current_memory = PROGRAM_MEMORY;
-
-    // Push a new value to the stack.
-    void push(Value *value);
-
-    // Pop the latest value in the stack and returns it.
-    Value *pop();
-
-    // Reads the next instruction to execute.
-    uint64_t read_instruction();
-
-    // Read the next instruction as a constant value.
-    Value *read_constant();
-
-    // read the next instruction as an integer.
-    int read_integer();
-
-    // Read the next instruction as a string.
-    std::string read_variable();
 
     // Helper to perform the OP_LIST.
     void do_list();

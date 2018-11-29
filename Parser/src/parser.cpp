@@ -433,7 +433,9 @@ std::vector<Statement *> Parser::parse(const char *source)
         code.push_back(this->statement());
     }
 
-    Parser::debug_rules(code);
+    #if DEBUG
+        Parser::debug_rules(code);
+    #endif
 
     logger->success("Parsing completed");
 

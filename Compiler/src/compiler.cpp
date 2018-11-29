@@ -42,12 +42,14 @@ Program Compiler::compile(const char *source)
     for (auto node : structure) this->compile(node);
     this->add_opcode(OP_EXIT);
 
-    logger->info("Program memory:");
-    this->program.program.dump();
-    logger->info("Functions memory:");
-    this->program.functions.dump();
-    logger->info("Classes memory:");
-    this->program.classes.dump();
+    #if DEBUG
+        logger->info("Program memory:");
+        this->program.program.dump();
+        logger->info("Functions memory:");
+        this->program.functions.dump();
+        logger->info("Classes memory:");
+        this->program.classes.dump();
+    #endif
 
     logger->success("Compiling completed");
 

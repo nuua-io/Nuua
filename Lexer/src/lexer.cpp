@@ -173,7 +173,9 @@ std::vector<Token> Lexer::scan(const char *source)
 
     tokens.push_back(this->make_token(TOKEN_EOF));
 
-    Token::debug_tokens(tokens);
+    #if DEBUG
+        Token::debug_tokens(tokens);
+    #endif
 
     logger->success("Scanning complete");
 

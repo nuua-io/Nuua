@@ -11,8 +11,11 @@
 
 Logger *logger = new Logger;
 
+#define DEBUG_CHECK() if (!this->debug) return
+
 void Logger::info(const std::string error, int line)
 {
+    DEBUG_CHECK();
     std::cout
         << rang::style::bold
         << rang::fg::cyan
@@ -27,6 +30,7 @@ void Logger::info(const std::string error, int line)
 
 void Logger::success(const std::string error, int line)
 {
+    DEBUG_CHECK();
     std::cout
         << rang::style::bold
         << rang::fg::green
@@ -41,6 +45,7 @@ void Logger::success(const std::string error, int line)
 
 void Logger::warning(const std::string error, int line)
 {
+    DEBUG_CHECK();
     std::cout
         << rang::style::bold
         << "!> "
@@ -65,3 +70,5 @@ void Logger::error(const std::string error, int line)
     if (line >= 0) std::cout << " [Line " << line << "]";
     std::cout << rang::style::reset << std::endl;
 }
+
+#undef DEBUG_CHECK
