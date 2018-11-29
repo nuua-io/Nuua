@@ -34,7 +34,9 @@ uint64_t VirtualMachine::read_instruction()
 
 Value *VirtualMachine::read_constant()
 {
-    return new Value(*this->get_current_memory()->constants.at(this->read_instruction()));
+    auto con = this->get_current_memory()->constants.at(this->read_instruction());
+    auto result = new Value( *con );
+    return result;
 }
 
 int VirtualMachine::read_integer()
@@ -73,16 +75,13 @@ void VirtualMachine::do_access()
     auto index = this->pop();
     if (var->type == VALUE_LIST && index->type == VALUE_NUMBER) {
         this->push(var->lvalues->at(index->nvalue));
-    }
-    else if (var->type == VALUE_DICTIONARY && index->type == VALUE_STRING) {
+    } else if (var->type == VALUE_DICTIONARY && index->type == VALUE_STRING) {
         this->push(var->dvalues->values.at(*index->svalue));
-    }
-    else {
+    } else {
         if (var->type == VALUE_DICTIONARY) {
             logger->error("Invalid access instruction. You need to use a string as a key", this->get_current_line());
             exit(EXIT_FAILURE);
-        }
-        else {
+        } else {
             logger->error("Invalid access instruction. You need to use a number as a key", this->get_current_line());
             exit(EXIT_FAILURE);
         }
@@ -100,7 +99,9 @@ Memory *VirtualMachine::get_current_memory()
 
 uint32_t VirtualMachine::get_current_line()
 {
-    return this->get_current_memory()->lines[static_cast<uint64_t>(this->program_counter - &this->get_current_memory()->code.front())];
+    return this->get_current_memory()->lines.at(
+        static_cast<uint64_t>(this->program_counter - &this->get_current_memory()->code.front())
+    );
 }
 
 void VirtualMachine::run()
@@ -128,7 +129,7 @@ void VirtualMachine::run()
             case OP_BRANCH_FALSE: { auto to = this->read_integer() - 1; if (!this->pop()->to_bool()) this->program_counter += to; break; }
             case OP_STORE: { this->frames.back().heap[this->read_variable()] = this->pop(); break; }
             case OP_STORE_ACCESS: { BINARY_POP(); (*this->frames.back().heap.at(this->read_variable())->lvalues)[b->nvalue] = a; break; }
-            case OP_LOAD: { this->push(this->frames.back().heap.at(this->read_variable())); break; }
+            case OP_LOAD: { this->push(new Value(*this->frames.back().heap.at(this->read_variable()))); break; }
             case OP_LIST: { this->do_list(); break; }
             case OP_DICTIONARY: { this->do_dictionary(); break; }
             case OP_ACCESS: { this->do_access(); break; }
