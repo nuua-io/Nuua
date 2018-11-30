@@ -12,122 +12,82 @@
 
 namespace Operation
 {
-    Value *iminus(Value *a)
+    Value iminus(Value *a)
     {
         if (a->type == VALUE_STRING) {
             std::reverse(a->svalue->begin(), a->svalue->end());
-            return new Value(*a->svalue);
+            return Value(*a->svalue);
         }
 
-        auto result = new Value(-a->to_double());
-
-        delete a;
-
-        return result;
+        return Value(-a->to_double());
     }
 
-    Value *inot(Value *a)
+    Value inot(Value *a)
     {
-        auto result = new Value(!a->to_bool());
-
-        delete a;
-
-        return result;
+        return Value(!a->to_bool());
     }
 
-    Value *iadd(Value *a, Value *b)
+    Value iadd(Value *a, Value *b)
     {
-        Value *result;
-        if (a->type == VALUE_STRING || b->type == VALUE_STRING) result = new Value(a->to_string() + b->to_string());
-        else result = new Value(a->to_double() + b->to_double());
-        delete a; delete b;
+        if (a->type == VALUE_STRING || b->type == VALUE_STRING) return Value(a->to_string() + b->to_string());
 
-        return result;
+        return Value(a->to_double() + b->to_double());
     }
 
-    Value *isub(Value *a, Value *b)
+    Value isub(Value *a, Value *b)
     {
-        auto result = new Value(a->to_double() - b->to_double());
-        delete a; delete b;
-
-        return result;
+        return Value(a->to_double() - b->to_double());
     }
 
-    Value *imul(Value *a, Value *b)
+    Value imul(Value *a, Value *b)
     {
-        auto result = new Value(a->to_double() * b->to_double());
-        delete a; delete b;
-
-        return result;
+        return Value(a->to_double() * b->to_double());
     }
 
-    Value *idiv(Value *a, Value *b)
+    Value idiv(Value *a, Value *b)
     {
         auto bn = b->to_double();
         if (bn == 0) { logger->error("Division by zero."); exit(EXIT_FAILURE); }
-        auto result = new Value(a->to_double() / bn);
-        delete a; delete b;
 
-        return result;
+        return Value(a->to_double() / bn);
     }
 
-    Value *ieq(Value *a, Value *b)
+    Value ieq(Value *a, Value *b)
     {
-        Value *result;
-        if (a->type == VALUE_STRING && b->type == VALUE_STRING) result = new Value(a->to_string() == b->to_string());
-        else result = new Value(a->to_double() == b->to_double());
-        delete a; delete b;
+        if (a->type == VALUE_STRING && b->type == VALUE_STRING) return Value(a->to_string() == b->to_string());
 
-        return result;
+        return Value(a->to_double() == b->to_double());
     }
 
-    Value *ineq(Value *a, Value *b)
+    Value ineq(Value *a, Value *b)
     {
-        Value *result;
-        if (a->type == VALUE_STRING && b->type == VALUE_STRING) result = new Value(*a->svalue != *b->svalue);
-        else result = new Value(a->to_double() != b->to_double());
-        delete a; delete b;
+        if (a->type == VALUE_STRING && b->type == VALUE_STRING) return Value(*a->svalue != *b->svalue);
 
-        return result;
+        return Value(a->to_double() != b->to_double());
     }
 
-    Value *ilt(Value *a, Value *b)
+    Value ilt(Value *a, Value *b)
     {
-        auto result = new Value(a->to_double() < b->to_double());
-        delete a; delete b;
-
-        return result;
+        return Value(a->to_double() < b->to_double());
     }
 
-    Value *ilte(Value *a, Value *b)
+    Value ilte(Value *a, Value *b)
     {
-        auto result = new Value(a->to_double() <= b->to_double());
-        delete a; delete b;
-
-        return result;
+        return Value(a->to_double() <= b->to_double());
     }
 
-    Value *iht(Value *a, Value *b)
+    Value iht(Value *a, Value *b)
     {
-        auto result = new Value(a->to_double() > b->to_double());
-        delete a; delete b;
-
-        return result;
+        return Value(a->to_double() > b->to_double());
     }
 
-    Value *ihte(Value *a, Value *b)
+    Value ihte(Value *a, Value *b)
     {
-        auto result = new Value(a->to_double() >= b->to_double());
-        delete a; delete b;
-
-        return result;
+        return Value(a->to_double() >= b->to_double());
     }
 
-    Value *ilen(Value *a)
+    Value ilen(Value *a)
     {
-        auto result = new Value(a->to_double());
-        delete a;
-
-        return result;
+        return Value(a->to_double());
     }
 }

@@ -9,7 +9,7 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
-#include "program.hpp"
+// #include "program.hpp"
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -22,39 +22,8 @@ typedef enum : uint8_t {
 } ValueType;
 
 class Frame;
-class Value;
-
-// Defines how a dictionary value is.
-class ValueDictionary
-{
-    public:
-        // Represents the hashmap of the dictionary.
-        std::unordered_map<std::string, Value*> values;
-
-        // Represent the current key order of the hashmap.
-        // Even with an ordered map, the key order is still
-        // important.
-        std::vector<std::string> key_order;
-
-        // The basic constructor of the dictionary.
-        ValueDictionary(std::unordered_map<std::string, Value*> values, std::vector<std::string> key_order)
-            : values(values), key_order(key_order) {}
-};
-
-// Defines how a function value is.
-class ValueFunction
-{
-    public:
-        // Stores the function index where it's code begin.
-        uint64_t index;
-
-        // Stores the frame where the function relies on.
-        Frame *frame;
-
-        // Basic constructor for the function value.
-        ValueFunction(uint64_t index, Frame *frame)
-            : index(index), frame(frame) {}
-};
+class ValueDictionary;
+class ValueFunction;
 
 // Base value class representing a nuua value.
 class Value
@@ -75,7 +44,7 @@ class Value
             std::string *svalue;
 
             // Stores the representation of the VALUE_LIST.
-            std::vector<Value *> *lvalues;
+            std::vector<Value> *lvalues;
 
             // Stores the representation of the VALUE_DICTIONARY.
             ValueDictionary *dvalues;
@@ -94,12 +63,13 @@ class Value
             : type(VALUE_BOOLEAN), bvalue(a) {}
         Value(std::string a)
             : type(VALUE_STRING), svalue(new std::string(a)) {}
-        Value(std::vector<Value *> a)
+        Value(std::vector<Value> a)
             : type(VALUE_LIST), lvalues(new std::vector(a)) {}
-        Value(std::unordered_map<std::string, Value*> a, std::vector<std::string> b)
-            : type(VALUE_DICTIONARY), dvalues(new ValueDictionary(a, b)) {}
-        Value(uint64_t index, Frame *frame)
-            : type(VALUE_FUNCTION), fvalue(new ValueFunction(index, frame)) {}
+
+        // The following two constructors are basically defined in the value.cpp since
+        // They make use of a forward declared constructor.
+        Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b);
+        Value(uint64_t index, Frame *frame);
 
         // Converts the current value to a valid double.
         double to_double();
@@ -115,6 +85,38 @@ class Value
 
         // Prints the value to the screen with a new line (\n) at the end.
         void println();
+};
+
+// Defines how a dictionary value is.
+class ValueDictionary
+{
+    public:
+        // Represents the hashmap of the dictionary.
+        std::unordered_map<std::string, Value> values;
+
+        // Represent the current key order of the hashmap.
+        // Even with an ordered map, the key order is still
+        // important.
+        std::vector<std::string> key_order;
+
+        // The basic constructor of the dictionary.
+        ValueDictionary(std::unordered_map<std::string, Value> values, std::vector<std::string> key_order)
+            : values(values), key_order(key_order) {}
+};
+
+// Defines how a function value is.
+class ValueFunction
+{
+    public:
+        // Stores the function index where it's code begin.
+        uint64_t index;
+
+        // Stores the frame where the function relies on.
+        Frame *frame;
+
+        // Basic constructor for the function value.
+        ValueFunction(uint64_t index, Frame *frame)
+            : index(index), frame(frame) {}
 };
 
 #endif

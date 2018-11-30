@@ -58,7 +58,7 @@ void Memory::dump()
             // It's a constant load
             print_opcode(this->code.at(i++));
             printf(" ");
-            this->constants.at(this->code.at(i))->print();
+            this->constants.at(this->code.at(i)).print();
             printf("\n");
             continue;
         }
@@ -68,7 +68,7 @@ void Memory::dump()
 
     printf("\nCONSTANTS: (size: %zu)\n", this->constants.size());
     for (auto c : this->constants) {
-        c->print();
+        c.print();
         printf("\n");
     }
     printf("\nLITERAL OPCODE NUMBERS: (size: %zu)\n", this->code.size());

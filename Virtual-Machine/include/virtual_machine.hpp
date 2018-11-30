@@ -23,16 +23,16 @@ class VirtualMachine
     uint64_t *program_counter;
 
     // The value stack to perform operations (it's a stack based virtual machine).
-    Value *stack[STACK_SIZE];
+    Value stack[STACK_SIZE];
 
     // The top of the stack.
-    Value **top_stack;
+    Value *top_stack = this->stack;
 
     // The frame list (latest is the current).
     Frame frames[FRAME_SIZE] = { Frame() };
 
     // The top frame (current frame).
-    Frame *top_frame;
+    Frame *top_frame = this->frames;
 
     // The current memory where the program counter is pointing.
     MemoryType current_memory = PROGRAM_MEMORY;

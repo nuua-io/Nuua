@@ -8,6 +8,12 @@
  */
 #include "../include/value.hpp"
 
+Value::Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b)
+    : type(VALUE_DICTIONARY), dvalues(new ValueDictionary(a, b)) {}
+
+Value::Value(uint64_t index, Frame *frame)
+    : type(VALUE_FUNCTION), fvalue(new ValueFunction(index, frame)) {}
+
 double Value::to_double()
 {
     switch (this->type) {
@@ -36,7 +42,7 @@ std::string Value::to_string()
             std::string list = "[";
             if (this->lvalues->size() > 0) {
                 for (auto element : *this->lvalues) {
-                    list += (element->type == VALUE_STRING ? '\'' + element->to_string() + '\'' : element->to_string()) + ", ";
+                    list += (element.type == VALUE_STRING ? '\'' + element.to_string() + '\'' : element.to_string()) + ", ";
                 }
                 list.pop_back(); list.pop_back(); // Pop the space and the comma
             }
@@ -47,7 +53,7 @@ std::string Value::to_string()
             if (this->dvalues->values.size() > 0) {
                 for (auto element : this->dvalues->key_order) {
                     auto value = this->dvalues->values.at(element);
-                    dictionary += element + ": " + (value->type == VALUE_STRING ? '\'' + value->to_string() + '\'' : value->to_string()) + ", ";
+                    dictionary += element + ": " + (value.type == VALUE_STRING ? '\'' + value.to_string() + '\'' : value.to_string()) + ", ";
                 }
                 dictionary.pop_back(); dictionary.pop_back(); // Pop the space and the comma
             }

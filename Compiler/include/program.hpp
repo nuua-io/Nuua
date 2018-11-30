@@ -47,8 +47,6 @@ typedef enum : uint8_t {
     PROGRAM_MEMORY, FUNCTIONS_MEMORY, CLASSES_MEMORY
 } MemoryType;
 
-class Value;
-
 // Defines a basic memory for nuua.
 class Memory
 {
@@ -57,7 +55,7 @@ class Memory
         std::vector<uint64_t> code;
 
         // Stores the value constants.
-        std::vector<Value *> constants;
+        std::vector<Value> constants;
 
         // Stores the lines corresponding to the opcodes.
         std::vector<uint32_t> lines;
@@ -73,7 +71,7 @@ class Memory
 class Frame
 {
     public:
-        std::unordered_map<std::string, Value *> heap;
+        std::unordered_map<std::string, Value> heap;
         uint64_t *return_address;
 };
 

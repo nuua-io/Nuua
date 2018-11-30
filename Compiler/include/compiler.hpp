@@ -34,13 +34,13 @@ class Compiler
     void add_opcode(OpCode opcode);
 
     // Adds a constant with it's respective OP_CONSTANT opcode.
-    void add_constant(Value *value);
+    void add_constant(Value value);
 
     // Adds a constant without it's OP_CONSTANT.
-    uint64_t add_constant_only(Value *value);
+    uint64_t add_constant_only(Value value);
 
     // Modifies a constant given it's index in the current memory to the given value.
-    void modify_constant(uint64_t index, Value *value);
+    void modify_constant(uint64_t index, Value value);
 
     // Returns the currently used memory.
     Memory *get_current_memory();
