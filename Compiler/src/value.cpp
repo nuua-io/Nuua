@@ -7,6 +7,8 @@
  * https://nuua.io
  */
 #include "../include/value.hpp"
+#include "../../Logger/include/logger.hpp"
+#include <algorithm>
 
 Value::Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b)
     : type(VALUE_DICTIONARY), dvalues(new ValueDictionary(a, b)) {}
@@ -68,6 +70,11 @@ std::string Value::to_string()
     }
 }
 
+Value Value::length()
+{
+    return Value(this->to_double());
+}
+
 void Value::print()
 {
     printf("%s", this->to_string().c_str());
@@ -77,4 +84,78 @@ void Value::println()
 {
     this->print();
     printf("\n");
+}
+
+Value Value::operator -()
+{
+    if (this->type == VALUE_STRING) {
+        std::reverse(this->svalue->begin(), this->svalue->end());
+        return Value(*this->svalue);
+    }
+
+    return Value(-this->to_double());
+}
+
+Value Value::operator !()
+{
+    return Value(!this->to_bool());
+}
+
+Value Value::operator +(Value &b)
+{
+    if (this->type == VALUE_STRING || b.type == VALUE_STRING) return Value(this->to_string() + b.to_string());
+
+    return Value(this->to_double() + b.to_double());
+}
+
+Value Value::operator -(Value &b)
+{
+    return Value(this->to_double() - b.to_double());
+}
+
+Value Value::operator *(Value &b)
+{
+    return Value(this->to_double() * b.to_double());
+}
+
+Value Value::operator /(Value &b)
+{
+    auto bn = b.to_double();
+    if (bn == 0) { logger->error("Division by zero."); exit(EXIT_FAILURE); }
+
+    return Value(this->to_double() / bn);
+}
+
+Value Value::operator ==(Value &b)
+{
+    if (this->type == VALUE_STRING && b.type == VALUE_STRING) return Value(this->to_string() == b.to_string());
+
+    return Value(this->to_double() == b.to_double());
+}
+
+Value Value::operator !=(Value &b)
+{
+    if (this->type == VALUE_STRING && b.type == VALUE_STRING) return Value(this->to_string() != b.to_string());
+
+    return Value(this->to_double() != b.to_double());
+}
+
+Value Value::operator <(Value &b)
+{
+    return Value(this->to_double() < b.to_double());
+}
+
+Value Value::operator <=(Value &b)
+{
+    return Value(this->to_double() <= b.to_double());
+}
+
+Value Value::operator >(Value &b)
+{
+    return Value(this->to_double() > b.to_double());
+}
+
+Value Value::operator >=(Value &b)
+{
+    return Value(this->to_double() >= b.to_double());
 }

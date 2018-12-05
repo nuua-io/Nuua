@@ -80,11 +80,29 @@ class Value
         // Converts the current value to a valid string.
         std::string to_string();
 
+        // Returns a new value representing the length of the current value.
+        Value length();
+
         // Prints the value to the screen.
         void print();
 
-        // Prints the value to the screen with a new line (\n) at the end.
+        // Prints the value to the screen with a new line '\n' at the end.
         void println();
+
+        // The following are the operations to perform diferent taks between values.
+        // They simply overload the default C++ operators.
+        Value operator -();
+        Value operator !();
+        Value operator +(Value &b);
+        Value operator -(Value &b);
+        Value operator *(Value &b);
+        Value operator /(Value &b);
+        Value operator ==(Value &b);
+        Value operator !=(Value &b);
+        Value operator <(Value &b);
+        Value operator <=(Value &b);
+        Value operator >(Value &b);
+        Value operator >=(Value &b);
 };
 
 // Defines how a dictionary value is.

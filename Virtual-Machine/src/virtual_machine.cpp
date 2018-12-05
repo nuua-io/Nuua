@@ -8,7 +8,6 @@
  */
 
 #include "../include/virtual_machine.hpp"
-#include "../include/operation.hpp"
 #include "../../Compiler/include/compiler.hpp"
 #include "../../Logger/include/logger.hpp"
 
@@ -84,18 +83,18 @@ void VirtualMachine::run()
         #endif
         switch (instruction) {
             case OP_CONSTANT: { PUSH(READ_CONSTANT()); break; }
-            case OP_MINUS: { PUSH(Operation::iminus(POP())); break; }
-            case OP_NOT: { PUSH(Operation::inot(POP())); break; }
-            case OP_ADD: { BINARY_POP(); PUSH(Operation::iadd(a, b)); break; }
-            case OP_SUB: { BINARY_POP(); PUSH(Operation::isub(a, b)); break; }
-            case OP_MUL: { BINARY_POP(); PUSH(Operation::imul(a, b)); break; }
-            case OP_DIV: { BINARY_POP(); PUSH(Operation::idiv(a, b)); break; }
-            case OP_EQ: { BINARY_POP(); PUSH(Operation::ieq(a, b)); break; }
-            case OP_NEQ: { BINARY_POP(); PUSH(Operation::ineq(a, b)); break; }
-            case OP_LT: { BINARY_POP(); PUSH(Operation::ilt(a, b)); break; }
-            case OP_LTE: { BINARY_POP(); PUSH(Operation::ilte(a, b)); break; }
-            case OP_HT: { BINARY_POP(); PUSH(Operation::iht(a, b)); break; }
-            case OP_HTE: { BINARY_POP(); PUSH(Operation::ihte(a, b)); break; }
+            case OP_MINUS: { PUSH(-*POP()); break; }
+            case OP_NOT: { PUSH(!*POP()); break; }
+            case OP_ADD: { BINARY_POP(); PUSH(*a + *b); break; }
+            case OP_SUB: { BINARY_POP(); PUSH(*a - *b); break; }
+            case OP_MUL: { BINARY_POP(); PUSH(*a * *b); break; }
+            case OP_DIV: { BINARY_POP(); PUSH(*a / *b); break; }
+            case OP_EQ: { BINARY_POP(); PUSH(*a == *b); break; }
+            case OP_NEQ: { BINARY_POP(); PUSH(*a != *b); break; }
+            case OP_LT: { BINARY_POP(); PUSH(*a < *b); break; }
+            case OP_LTE: { BINARY_POP(); PUSH(*a <= *b); break; }
+            case OP_HT: { BINARY_POP(); PUSH(*a > *b); break; }
+            case OP_HTE: { BINARY_POP(); PUSH(*a >= *b); break; }
             // case OP_JUMP: { this->program_counter = &this->get_current_memory()->code.front() + (READ_INTEGER() - 1); break; }
             case OP_RJUMP: { this->program_counter += READ_INTEGER() - 1; break; }
             case OP_BRANCH_TRUE: { auto to = READ_INTEGER() - 1; if (POP()->to_bool()) this->program_counter += to; break; }
@@ -108,7 +107,7 @@ void VirtualMachine::run()
             case OP_ACCESS: { this->do_access(); break; }
             case OP_FUNCTION: { PUSH(Value(READ_INTEGER(), new Frame(*this->top_frame))); break; }
             case OP_CALL: { break; }
-            case OP_LEN: { PUSH(Operation::ilen(POP())); break; }
+            case OP_LEN: { PUSH(POP()->length()); break; }
             case OP_PRINT: { POP()->println(); break; }
             case OP_EXIT: { for (auto i = this->stack; i < this->top_stack; i++) i->println(); return; }
             default: { logger->error("Unknown instruction at line", this->get_current_line()); exit(EXIT_FAILURE); break; }
