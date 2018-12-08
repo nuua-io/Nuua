@@ -117,8 +117,12 @@ void Compiler::compile(Expression *rule)
     this->current_line = rule->line;
 
     switch (rule->rule) {
-        case RULE_NUMBER: {
-            this->add_constant(Value(static_cast<Number *>(rule)->value));
+        case RULE_INTEGER: {
+            this->add_constant(Value(static_cast<Integer *>(rule)->value));
+            break;
+        }
+        case RULE_FLOAT: {
+            this->add_constant(Value(static_cast<Float *>(rule)->value));
             break;
         }
         case RULE_STRING: {

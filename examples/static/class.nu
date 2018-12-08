@@ -8,5 +8,5 @@ Person: class = {
         self.age = age
     }
 
-    older_than: fun = (p: Person) -> self.age > p.age
+    older_than: fun = (p: Person): bool -> self.age > p.age
 }

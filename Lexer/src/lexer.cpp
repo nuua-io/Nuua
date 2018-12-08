@@ -94,9 +94,10 @@ TokenType Lexer::is_number()
     if (PEEK() == '.' && IS_DIGIT(PEEK_ON(1))) {
         NEXT(); // The . itelf
         while (IS_DIGIT(PEEK())) NEXT();
+        return TOKEN_FLOAT;
     }
 
-    return TOKEN_NUMBER;
+    return TOKEN_INTEGER;
 }
 
 TokenType Lexer::is_identifier()

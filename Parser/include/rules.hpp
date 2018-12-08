@@ -18,7 +18,8 @@ typedef enum : uint8_t {
     RULE_EXPRESSION,
     RULE_STATEMENT,
     RULE_EXPRESSION_STATEMENT,
-    RULE_NUMBER,
+    RULE_INTEGER,
+    RULE_FLOAT,
     RULE_STRING,
     RULE_BOOLEAN,
     RULE_LIST,
@@ -67,13 +68,22 @@ class ExpressionStatement : public Statement
             : Statement(RULE_EXPRESSION_STATEMENT), expression(expression) {}
 };
 
-class Number : public Expression
+class Integer : public Expression
+{
+    public:
+        int64_t value;
+
+        Integer(int64_t value)
+            : Expression(RULE_INTEGER), value(value) {};
+};
+
+class Float : public Expression
 {
     public:
         double value;
 
-        Number(double value)
-            : Expression(RULE_NUMBER), value(value) {};
+        Float(double value)
+            : Expression(RULE_FLOAT), value(value) {};
 };
 
 class String : public Expression

@@ -17,8 +17,8 @@
 
 // Determines the available native types in nuua.
 typedef enum : uint8_t {
-    VALUE_NUMBER, VALUE_BOOLEAN, VALUE_STRING, VALUE_LIST,
-    VALUE_DICTIONARY, VALUE_FUNCTION, VALUE_NONE
+    VALUE_INT, VALUE_FLOAT, VALUE_BOOLEAN, VALUE_STRING,
+    VALUE_LIST, VALUE_DICTIONARY, VALUE_FUNCTION, VALUE_NONE
 } ValueType;
 
 class Frame;
@@ -34,42 +34,62 @@ class Value
 
         // Using a union to avoid unessesary memory.
         union {
-            // Stores the representation of the VALUE_NUMBER.
-            double nvalue;
+            // Stores the reporesentation of the VALUE_INT.
+            int64_t value_int;
+
+            // Stores the representation of the VALUE_FLOAT.
+            double value_float;
 
             // Stores the representation of the VALUE_BOOLEAN.
-            bool bvalue;
+            bool value_bool;
 
             // Stores the representation of the VALUE_STRING.
-            std::string *svalue;
+            std::string *value_string;
 
             // Stores the representation of the VALUE_LIST.
-            std::vector<Value> *lvalues;
+            std::vector<Value> *value_list;
 
             // Stores the representation of the VALUE_DICTIONARY.
-            ValueDictionary *dvalues;
+            ValueDictionary *value_dict;
 
             // Stores the representation of the VALUE_FUNCTION.
-            ValueFunction *fvalue;
+            ValueFunction *value_fun;
         };
 
         // The following are the basic constructors for the value. Each one respresents
         // a diferent value to be stored. They pretty much speak by themselves.
+
+        // None value.
         Value()
             : type(VALUE_NONE) {}
-        Value(double a)
-            : type(VALUE_NUMBER), nvalue(a) {}
+
+        // Integer (int) value.
+        Value(int64_t a)
+            : type(VALUE_INT), value_int(a) {}
+
+        // Float value (double in C/C++) implemented in the .cpp due to the
+        // conversion to int value if double can be safely converted to int.
+        Value(double a);
+
+        // Boolean value.
         Value(bool a)
-            : type(VALUE_BOOLEAN), bvalue(a) {}
+            : type(VALUE_BOOLEAN), value_bool(a) {}
+
+        // String value.
         Value(std::string a)
-            : type(VALUE_STRING), svalue(new std::string(a)) {}
+            : type(VALUE_STRING), value_string(new std::string(a)) {}
+
+        // List value.
         Value(std::vector<Value> a)
-            : type(VALUE_LIST), lvalues(new std::vector(a)) {}
+            : type(VALUE_LIST), value_list(new std::vector(a)) {}
 
         // The following two constructors are basically defined in the value.cpp since
         // They make use of a forward declared constructor.
         Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b);
         Value(uint64_t index, Frame *frame);
+
+        // returns true if the Value is of the given type.
+        bool is(ValueType type);
 
         // Converts the current value to a valid double.
         double to_double();

@@ -17,7 +17,7 @@
 #define IS_AT_END() (this->current->type == TOKEN_EOF)
 #define LOOKAHEAD(n) (*(this->current + n))
 
-const std::unordered_map<char, char> Parser::escapedChars = {
+const std::unordered_map<char, char> Parser::escaped_chars = {
     { '\\', '\\' },
     { '\'', '\'' },
     { '"', '"' },
@@ -48,7 +48,7 @@ bool Parser::match(TokenType token)
     return false;
 }
 
-bool Parser::matchAny(std::vector<TokenType> tokens)
+bool Parser::match_any(std::vector<TokenType> tokens)
 {
     for (auto token : tokens) {
         if (CHECK(token)) {
@@ -60,7 +60,7 @@ bool Parser::matchAny(std::vector<TokenType> tokens)
     return false;
 }
 
-std::vector<Statement *> Parser::getBlockBody()
+std::vector<Statement *> Parser::get_block_body()
 {
     std::vector<Statement *> body;
     while (!CHECK(TOKEN_RIGHT_BRACE) && !IS_AT_END()) {
@@ -69,7 +69,7 @@ std::vector<Statement *> Parser::getBlockBody()
     return body;
 }
 
-std::string Parser::toString(Token token)
+std::string Parser::to_string(Token token)
 {
     std::string s;
     for (uint32_t i = 0; i < token.length; i++) {
@@ -77,9 +77,9 @@ std::string Parser::toString(Token token)
         s += *c;
         if (*c == '\\') {
             auto nc = *(c + 1);
-            if (Parser::escapedChars.find(nc) != Parser::escapedChars.end()) {
+            if (Parser::escaped_chars.find(nc) != Parser::escaped_chars.end()) {
                 s.pop_back();
-                s += Parser::escapedChars.at(nc);
+                s += Parser::escaped_chars.at(nc);
                 i++; // Increment i to avoid char repetition
             }
         }
@@ -88,7 +88,7 @@ std::string Parser::toString(Token token)
     return s;
 }
 
-bool Parser::isFunction()
+bool Parser::is_function()
 {
     uint32_t current = 0;
     for (uint32_t skip = 0; skip == 0 && LOOKAHEAD(current).type != TOKEN_RIGHT_PAREN; current++) {
@@ -134,7 +134,7 @@ Expression *Parser::function()
     // Get the function body
     if (this->match(TOKEN_LEFT_BRACE)) {
         this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
-        body = this->getBlockBody();
+        body = this->get_block_body();
         this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
         // This is checked already since it's an expression statement
         // this->consume(TOKEN_NEW_LINE, "Expected a new line after the '}'");
@@ -201,13 +201,14 @@ Expression *Parser::primary()
     if (this->match(TOKEN_FALSE)) return new Boolean(false);
     if (this->match(TOKEN_TRUE)) return new Boolean(true);
     if (this->match(TOKEN_NONE)) return new None();
-    if (this->match(TOKEN_NUMBER)) return new Number(std::stof(this->toString(PREVIOUS())));
-    if (this->match(TOKEN_STRING)) return new String(this->toString(PREVIOUS()));
-    if (this->match(TOKEN_IDENTIFIER)) return new Variable(this->toString(PREVIOUS()));
+    if (this->match(TOKEN_INTEGER)) return new Integer(std::stoi(this->to_string(PREVIOUS())));
+    if (this->match(TOKEN_FLOAT)) return new Float(std::stof(this->to_string(PREVIOUS())));
+    if (this->match(TOKEN_STRING)) return new String(this->to_string(PREVIOUS()));
+    if (this->match(TOKEN_IDENTIFIER)) return new Variable(this->to_string(PREVIOUS()));
     if (this->match(TOKEN_LEFT_SQUARE)) return this->list();
     if (this->match(TOKEN_LEFT_BRACE)) return this->dictionary();
     if (this->match(TOKEN_LEFT_PAREN)) {
-        if (this->isFunction()) return this->function();
+        if (this->is_function()) return this->function();
         auto value = this->expression();
         this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after a group expression");
 
@@ -219,7 +220,7 @@ Expression *Parser::primary()
     exit(EXIT_FAILURE);
 }
 
-Expression *Parser::finishCall(Expression *callee)
+Expression *Parser::finish_call(Expression *callee)
 {
     if (callee->rule != RULE_VARIABLE) {
         logger->error("Expected an identifier as the function name.", this->current->line);
@@ -236,7 +237,7 @@ Expression *Parser::finishCall(Expression *callee)
     return new Call(static_cast<Variable *>(callee)->name, arguments);
 }
 
-Expression *Parser::finishAccess(Expression *item)
+Expression *Parser::finish_access(Expression *item)
 {
     if (item->rule != RULE_VARIABLE) {
         logger->error("Expected an identifier as the access variable.", this->current->line);
@@ -253,9 +254,9 @@ Expression *Parser::call()
     auto result = this->primary();
     for (;;) {
         if (this->match(TOKEN_LEFT_PAREN)) {
-            result = this->finishCall(result);
+            result = this->finish_call(result);
         } else if (this->match(TOKEN_LEFT_SQUARE)) {
-            result = this->finishAccess(result);
+            result = this->finish_access(result);
         } else {
             break;
         }
@@ -266,7 +267,7 @@ Expression *Parser::call()
 
 Expression *Parser::unary()
 {
-    if (this->matchAny(std::vector<TokenType>({ TOKEN_BANG, TOKEN_MINUS }))) {
+    if (this->match_any(std::vector<TokenType>({ TOKEN_BANG, TOKEN_MINUS }))) {
         auto op = PREVIOUS();
         return new Unary(op, this->unary());
     }
@@ -274,10 +275,10 @@ Expression *Parser::unary()
     return this->call();
 }
 
-Expression *Parser::mulDivMod()
+Expression *Parser::mul_div_mod()
 {
     auto result = this->unary();
-    while (this->matchAny(std::vector<TokenType>({ TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT }))) {
+    while (this->match_any(std::vector<TokenType>({ TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT }))) {
         auto op = PREVIOUS();
         result = new Binary(result, op, this->unary());
     }
@@ -287,10 +288,10 @@ Expression *Parser::mulDivMod()
 
 Expression *Parser::addition()
 {
-    auto result = this->mulDivMod();
-    while (this->matchAny(std::vector<TokenType>({ TOKEN_MINUS, TOKEN_PLUS }))) {
+    auto result = this->mul_div_mod();
+    while (this->match_any(std::vector<TokenType>({ TOKEN_MINUS, TOKEN_PLUS }))) {
         auto op = PREVIOUS();
-        result = new Binary(result, op, this->mulDivMod());
+        result = new Binary(result, op, this->mul_div_mod());
     }
 
     return result;
@@ -299,7 +300,7 @@ Expression *Parser::addition()
 Expression *Parser::comparison()
 {
     auto result = this->addition();
-    while (this->matchAny(std::vector<TokenType>({ TOKEN_HIGHER, TOKEN_HIGHER_EQUAL, TOKEN_LOWER, TOKEN_LOWER_EQUAL }))) {
+    while (this->match_any(std::vector<TokenType>({ TOKEN_HIGHER, TOKEN_HIGHER_EQUAL, TOKEN_LOWER, TOKEN_LOWER_EQUAL }))) {
         auto op = PREVIOUS();
         result = new Binary(result, op, this->addition());
     }
@@ -310,7 +311,7 @@ Expression *Parser::comparison()
 Expression *Parser::equality()
 {
     auto result = this->comparison();
-    while (this->matchAny(std::vector<TokenType>({ TOKEN_BANG_EQUAL, TOKEN_EQUAL_EQUAL }))) {
+    while (this->match_any(std::vector<TokenType>({ TOKEN_BANG_EQUAL, TOKEN_EQUAL_EQUAL }))) {
         auto op = PREVIOUS();
         result = new Binary(result, op, this->comparison());
     }
@@ -318,7 +319,7 @@ Expression *Parser::equality()
     return result;
 }
 
-Expression *Parser::andOperator()
+Expression *Parser::and_operator()
 {
     auto result = this->equality();
     while (this->match(TOKEN_AND)) {
@@ -329,12 +330,12 @@ Expression *Parser::andOperator()
     return result;
 }
 
-Expression *Parser::orOperator()
+Expression *Parser::or_operator()
 {
-    auto result = this->andOperator();
+    auto result = this->and_operator();
     while (this->match(TOKEN_AND)) {
         auto op = PREVIOUS();
-        result = new Logical(result, op, this->andOperator());
+        result = new Logical(result, op, this->and_operator());
     }
 
     return result;
@@ -342,7 +343,7 @@ Expression *Parser::orOperator()
 
 Expression *Parser::assignment()
 {
-    auto result = this->orOperator();
+    auto result = this->or_operator();
     if (this->match(TOKEN_EQUAL)) {
         switch (result->rule) {
             case RULE_VARIABLE: { return new Assign(static_cast<Variable *>(result)->name, this->expression()); }
@@ -362,26 +363,26 @@ Expression *Parser::expression()
     return this->assignment();
 }
 
-Statement *Parser::expressionStatement()
+Statement *Parser::expression_statement()
 {
     auto expr = this->expression();
-    if (!this->matchAny(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
+    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
         logger->error("Expected a new line or EOF after expression statement", this->current->line);
         exit(EXIT_FAILURE);
     }
     return new ExpressionStatement(expr);
 }
 
-Statement *Parser::ifStatement()
+Statement *Parser::if_statement()
 {
     this->consume(TOKEN_LEFT_PAREN, "Expected a '(' after 'if'");
     auto condition = this->expression();
     this->consume(TOKEN_RIGHT_PAREN, "Expected a ')' after 'if' condition");
     this->consume(TOKEN_LEFT_BRACE, "Expected a '{' after the ')'");
     this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
-    auto thenBranch = this->getBlockBody();
+    auto thenBranch = this->get_block_body();
     this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
-    if (!this->matchAny(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
+    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
         logger->error("Expected a new line after the '}'", this->current->line);
         exit(EXIT_FAILURE);
     }
@@ -389,16 +390,16 @@ Statement *Parser::ifStatement()
     return new If(condition, thenBranch, std::vector<Statement *>({}));
 }
 
-Statement *Parser::whileStatement()
+Statement *Parser::while_statement()
 {
     this->consume(TOKEN_LEFT_PAREN, "Expected '(' after 'while'");
     auto condition = this->expression();
     this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after 'while' condition");
     this->consume(TOKEN_LEFT_BRACE, "Expected a '{' after the ')'");
     this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
-    auto body = this->getBlockBody();
+    auto body = this->get_block_body();
     this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
-    if (!this->matchAny(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
+    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
         logger->error("Expected a new line after the '}'", this->current->line);
         exit(EXIT_FAILURE);
     }
@@ -407,10 +408,10 @@ Statement *Parser::whileStatement()
 
 Statement *Parser::statement()
 {
-    if (this->match(TOKEN_IF)) return this->ifStatement();
-    else if (this->match(TOKEN_WHILE)) return this->whileStatement();
+    if (this->match(TOKEN_IF)) return this->if_statement();
+    else if (this->match(TOKEN_WHILE)) return this->while_statement();
 
-    return this->expressionStatement();
+    return this->expression_statement();
 }
 
 std::vector<Statement *> Parser::parse(const char *source)

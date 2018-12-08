@@ -1,6 +1,6 @@
 # Configuration
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -flto -Ofast
+CXXFLAGS = -std=c++17 -Wall -Wextra -flto -Ofast -D DEBUG
 BIN = bin
 BUILD = build
 

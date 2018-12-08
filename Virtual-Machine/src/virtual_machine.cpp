@@ -15,9 +15,9 @@
 #define POP() (--this->top_stack)
 #define BINARY_POP() Value *b = POP(); Value *a = POP()
 #define READ_INSTRUCTION() (*this->program_counter++)
-#define READ_CONSTANT() (this->get_current_memory()->constants.at(READ_INSTRUCTION()))
-#define READ_INTEGER() (static_cast<int>(READ_CONSTANT().nvalue))
-#define READ_VARIABLE() (*READ_CONSTANT().svalue)
+#define READ_CONSTANT() (this->get_current_memory()->constants[READ_INSTRUCTION()])
+#define READ_INTEGER() (static_cast<int>(READ_CONSTANT().value_int))
+#define READ_VARIABLE() (*READ_CONSTANT().value_string)
 
 void VirtualMachine::do_list()
 {
@@ -32,7 +32,7 @@ void VirtualMachine::do_dictionary()
     std::vector<std::string> key_order;
     for (int e = READ_INTEGER(); e > 0; e--) {
         auto val = *POP();
-        auto n = *POP()->svalue;
+        auto n = *POP()->value_string;
         dictionary[n] = val;
         key_order.push_back(n);
     }
@@ -43,10 +43,10 @@ void VirtualMachine::do_access()
 {
     auto var = this->top_frame->heap.at(READ_VARIABLE());
     auto index = POP();
-    if (var.type == VALUE_LIST && index->type == VALUE_NUMBER) {
-        PUSH(var.lvalues->at(index->nvalue));
-    } else if (var.type == VALUE_DICTIONARY && index->type == VALUE_STRING) {
-        PUSH(var.dvalues->values.at(*index->svalue));
+    if (var.is(VALUE_LIST) && index->is(VALUE_INT)) {
+        PUSH((*var.value_list)[index->value_int]);
+    } else if (var.is(VALUE_DICTIONARY) && index->is(VALUE_STRING)) {
+        PUSH(var.value_dict->values[*index->value_string]);
     } else {
         if (var.type == VALUE_DICTIONARY) {
             logger->error("Invalid access instruction. You need to use a string as a key", this->get_current_line());
@@ -100,7 +100,8 @@ void VirtualMachine::run()
             case OP_BRANCH_TRUE: { auto to = READ_INTEGER() - 1; if (POP()->to_bool()) this->program_counter += to; break; }
             case OP_BRANCH_FALSE: { auto to = READ_INTEGER() - 1; if (!POP()->to_bool()) this->program_counter += to; break; }
             case OP_STORE: { this->top_frame->heap[READ_VARIABLE()] = *POP(); break; }
-            case OP_STORE_ACCESS: { BINARY_POP(); (*this->top_frame->heap[READ_VARIABLE()].lvalues)[b->nvalue] = a; break; }
+            // OP_STORE_ACCESS needs a re-write for dicts.
+            case OP_STORE_ACCESS: { BINARY_POP(); (*this->top_frame->heap[READ_VARIABLE()].value_list)[b->value_int] = a; break; }
             case OP_LOAD: { PUSH(this->top_frame->heap[READ_VARIABLE()]); break; }
             case OP_LIST: { this->do_list(); break; }
             case OP_DICTIONARY: { this->do_dictionary(); break; }
