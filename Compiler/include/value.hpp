@@ -91,18 +91,18 @@ class Value
 
         // The following are the operations to perform diferent taks between values.
         // They simply overload the default C++ operators.
-        Value operator -();
-        Value operator !();
-        Value operator +(Value &b);
-        Value operator -(Value &b);
-        Value operator *(Value &b);
-        Value operator /(Value &b);
-        Value operator ==(Value &b);
-        Value operator !=(Value &b);
-        Value operator <(Value &b);
-        Value operator <=(Value &b);
-        Value operator >(Value &b);
-        Value operator >=(Value &b);
+        Value operator -(); // -Value
+        Value operator !(); // !Value
+        Value operator +(Value &b); // Value + Value
+        Value operator -(Value &b); // Value - Value
+        Value operator *(Value &b); // Value * Value
+        Value operator /(Value &b); // Value / Value
+        Value operator ==(Value &b); // Value == Value
+        Value operator !=(Value &b); // Value != Value
+        Value operator <(Value &b); // Value < Value
+        Value operator <=(Value &b); // Value <= Value
+        Value operator >(Value &b); // Value > Value
+        Value operator >=(Value &b); // Value >= Value
 };
 
 // Defines how a dictionary value is.

@@ -100,8 +100,8 @@ void VirtualMachine::run()
             case OP_BRANCH_TRUE: { auto to = READ_INTEGER() - 1; if (POP()->to_bool()) this->program_counter += to; break; }
             case OP_BRANCH_FALSE: { auto to = READ_INTEGER() - 1; if (!POP()->to_bool()) this->program_counter += to; break; }
             case OP_STORE: { this->top_frame->heap[READ_VARIABLE()] = *POP(); break; }
-            case OP_STORE_ACCESS: { BINARY_POP(); (*this->top_frame->heap.at(READ_VARIABLE()).lvalues)[b->nvalue] = a; break; }
-            case OP_LOAD: { PUSH(this->top_frame->heap.at(READ_VARIABLE())); break; }
+            case OP_STORE_ACCESS: { BINARY_POP(); (*this->top_frame->heap[READ_VARIABLE()].lvalues)[b->nvalue] = a; break; }
+            case OP_LOAD: { PUSH(this->top_frame->heap[READ_VARIABLE()]); break; }
             case OP_LIST: { this->do_list(); break; }
             case OP_DICTIONARY: { this->do_dictionary(); break; }
             case OP_ACCESS: { this->do_access(); break; }
