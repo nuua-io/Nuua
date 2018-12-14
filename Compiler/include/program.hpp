@@ -30,7 +30,7 @@ typedef enum : uint8_t {
     /*OP_JUMP,*/ OP_RJUMP, OP_BRANCH_TRUE, OP_BRANCH_FALSE,
 
     // Store and load
-    OP_STORE, OP_LOAD, OP_STORE_ACCESS,
+    OP_DECLARE, OP_STORE, OP_LOAD, OP_STORE_ACCESS,
 
     // Lists and dictionaries
     OP_LIST, OP_DICTIONARY, OP_ACCESS,

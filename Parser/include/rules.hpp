@@ -28,6 +28,7 @@ typedef enum : uint8_t {
     RULE_GROUP,
     RULE_UNARY,
     RULE_BINARY,
+    RULE_DECLARATION,
     RULE_VARIABLE,
     RULE_ASSIGN,
     RULE_ASSIGN_ACCESS,
@@ -232,6 +233,17 @@ class Access : public Expression
 };
 
 /* Statements */
+class Declaration : public Statement
+{
+    public:
+        std::string name;
+        std::string type;
+        Expression *initializer;
+
+        Declaration(std::string name, std::string type, Expression *initializer)
+            : Statement(RULE_DECLARATION), name(name), type(type), initializer(initializer) {};
+};
+
 class If : public Statement
 {
     public:
@@ -251,17 +263,6 @@ class While : public Statement
 
     While(Expression *condition, std::vector<Statement *> body)
         : Statement(RULE_WHILE), condition(condition), body(body) {};
-};
-
-class Unroll : public Statement
-{
-    public:
-        uint32_t iterations;
-        uint32_t chunks;
-        std::vector<Statement *> body;
-
-    Unroll(uint32_t iterations, uint32_t chunks, std::vector<Statement *> body)
-        : Statement(RULE_UNROLL), iterations(iterations), chunks(chunks), body(body) {};
 };
 
 void debug_rules(std::vector<Rule> rules);

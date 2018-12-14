@@ -19,7 +19,7 @@ class Lexer
     const char *current;
     uint32_t line;
 
-    static const std::unordered_map<std::string, TokenType> reservedWords;
+    static const std::unordered_map<std::string, TokenType> reserved_words;
 
     const std::string token_error();
     Token make_token(TokenType type);

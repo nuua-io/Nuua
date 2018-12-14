@@ -22,6 +22,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_GROUP",
     "RULE_UNARY",
     "RULE_BINARY",
+    "RULE_DECLARATION",
     "RULE_VARIABLE",
     "RULE_ASSIGN",
     "RULE_ASSIGN_ACCESS",

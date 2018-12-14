@@ -12,27 +12,14 @@
 
 #define CURRENT() (*(this->current))
 #define PREVIOUS() (*(this->current - 1))
-#define CHECK(token) (token == CURRENT().type)
+#define CHECK(token) (CURRENT().is(token))
 #define NEXT() (*(this->current++))
-#define IS_AT_END() (this->current->type == TOKEN_EOF)
+#define IS_AT_END() (this->current->is(TOKEN_EOF))
 #define LOOKAHEAD(n) (*(this->current + n))
-
-const std::unordered_map<char, char> Parser::escaped_chars = {
-    { '\\', '\\' },
-    { '\'', '\'' },
-    { '"', '"' },
-    { 'n', '\n' },
-    { 't', '\t'},
-    { 'r', '\r'},
-    { 'b', '\b'},
-    { 'f', '\f'},
-    { 'v', '\v'},
-    { '0', '\0'}
-};
 
 Token Parser::consume(TokenType type, const char* message)
 {
-    if (this->current->type == type) return NEXT();
+    if (this->current->is(type)) return NEXT();
 
     logger->error(std::string(message), this->current->line);
     exit(EXIT_FAILURE);
@@ -69,41 +56,22 @@ std::vector<Statement *> Parser::get_block_body()
     return body;
 }
 
-std::string Parser::to_string(Token token)
-{
-    std::string s;
-    for (uint32_t i = 0; i < token.length; i++) {
-        auto c = token.start + i;
-        s += *c;
-        if (*c == '\\') {
-            auto nc = *(c + 1);
-            if (Parser::escaped_chars.find(nc) != Parser::escaped_chars.end()) {
-                s.pop_back();
-                s += Parser::escaped_chars.at(nc);
-                i++; // Increment i to avoid char repetition
-            }
-        }
-    }
-
-    return s;
-}
-
 bool Parser::is_function()
 {
     uint32_t current = 0;
-    for (uint32_t skip = 0; skip == 0 && LOOKAHEAD(current).type != TOKEN_RIGHT_PAREN; current++) {
-        if (LOOKAHEAD(current).type == TOKEN_EOF) {
+    for (uint32_t skip = 0; skip == 0 && !LOOKAHEAD(current).is(TOKEN_RIGHT_PAREN); current++) {
+        if (LOOKAHEAD(current).is(TOKEN_EOF)) {
             logger->error("Unterminated grouping or function. Did you close the parenthesis?", this->current->line);
             exit(EXIT_FAILURE);
         }
-        else if (LOOKAHEAD(current).type == TOKEN_LEFT_PAREN) skip++;
-        else if (LOOKAHEAD(current).type == TOKEN_RIGHT_PAREN) skip--;
+        else if (LOOKAHEAD(current).is(TOKEN_LEFT_PAREN)) skip++;
+        else if (LOOKAHEAD(current).is(TOKEN_RIGHT_PAREN)) skip--;
     }
-    if (LOOKAHEAD(current + 1).type == TOKEN_EOF) return false;
+    if (LOOKAHEAD(current + 1).is(TOKEN_EOF)) return false;
 
-    return LOOKAHEAD(current + 1).type == TOKEN_LEFT_BRACE
-        || LOOKAHEAD(current + 1).type == TOKEN_RIGHT_ARROW
-        || LOOKAHEAD(current + 1).type == TOKEN_BIG_RIGHT_ARROW;
+    return LOOKAHEAD(current + 1).is(TOKEN_LEFT_BRACE)
+        || LOOKAHEAD(current + 1).is(TOKEN_RIGHT_ARROW)
+        || LOOKAHEAD(current + 1).is(TOKEN_BIG_RIGHT_ARROW);
 }
 
 Expression *Parser::function()
@@ -201,10 +169,10 @@ Expression *Parser::primary()
     if (this->match(TOKEN_FALSE)) return new Boolean(false);
     if (this->match(TOKEN_TRUE)) return new Boolean(true);
     if (this->match(TOKEN_NONE)) return new None();
-    if (this->match(TOKEN_INTEGER)) return new Integer(std::stoi(this->to_string(PREVIOUS())));
-    if (this->match(TOKEN_FLOAT)) return new Float(std::stof(this->to_string(PREVIOUS())));
-    if (this->match(TOKEN_STRING)) return new String(this->to_string(PREVIOUS()));
-    if (this->match(TOKEN_IDENTIFIER)) return new Variable(this->to_string(PREVIOUS()));
+    if (this->match(TOKEN_INTEGER)) return new Integer(std::stoi(PREVIOUS().to_string()));
+    if (this->match(TOKEN_FLOAT)) return new Float(std::stof(PREVIOUS().to_string()));
+    if (this->match(TOKEN_STRING)) return new String(PREVIOUS().to_string());
+    if (this->match(TOKEN_IDENTIFIER)) return new Variable(PREVIOUS().to_string());
     if (this->match(TOKEN_LEFT_SQUARE)) return this->list();
     if (this->match(TOKEN_LEFT_BRACE)) return this->dictionary();
     if (this->match(TOKEN_LEFT_PAREN)) {
@@ -373,6 +341,23 @@ Statement *Parser::expression_statement()
     return new ExpressionStatement(expr);
 }
 
+Statement *Parser::declaration_statement()
+{
+    auto variable = this->consume(TOKEN_IDENTIFIER, "Expected an identifier in a declaration statement");
+    this->consume(TOKEN_COLON, "Expected ':' after identifier in a declaration statement");
+    auto type = this->consume(TOKEN_IDENTIFIER, "Expected a type after the ':' in a declaration statement");
+    Expression *initializer = nullptr;
+
+    if (this->match(TOKEN_EQUAL)) initializer = this->expression();
+
+    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
+        logger->error("Expected a new line after the '}'", this->current->line);
+        exit(EXIT_FAILURE);
+    }
+
+    return new Declaration(variable.to_string(), type.to_string(), initializer);
+}
+
 Statement *Parser::if_statement()
 {
     this->consume(TOKEN_LEFT_PAREN, "Expected a '(' after 'if'");
@@ -382,6 +367,7 @@ Statement *Parser::if_statement()
     this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
     auto thenBranch = this->get_block_body();
     this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
+
     if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
         logger->error("Expected a new line after the '}'", this->current->line);
         exit(EXIT_FAILURE);
@@ -399,16 +385,19 @@ Statement *Parser::while_statement()
     this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
     auto body = this->get_block_body();
     this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
+
     if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
         logger->error("Expected a new line after the '}'", this->current->line);
         exit(EXIT_FAILURE);
     }
+
     return new While(condition, body);
 }
 
 Statement *Parser::statement()
 {
-    if (this->match(TOKEN_IF)) return this->if_statement();
+    if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).is(TOKEN_COLON)) return this->declaration_statement();
+    else if (this->match(TOKEN_IF)) return this->if_statement();
     else if (this->match(TOKEN_WHILE)) return this->while_statement();
 
     return this->expression_statement();

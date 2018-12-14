@@ -11,6 +11,7 @@
 #define TOKEN_HPP
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <stdint.h>
 
@@ -71,12 +72,18 @@ class Token
         uint32_t length;
         uint32_t line;
 
-        static std::vector<std::string> tokenNames;
+        static std::vector<std::string> token_names;
+
+        // Contains the escaped chars of the language.
+        static const std::unordered_map<char, char> escaped_chars;
 
         Token(TokenType type, const char *start, uint32_t length, uint32_t line)
             : type(type), start(start), length(length), line(line) {}
 
         void debug_token();
+
+        bool is(TokenType type);
+        std::string to_string();
 
         static void debug_token(TokenType token);
         static void debug_tokens(std::vector<Token> tokens);

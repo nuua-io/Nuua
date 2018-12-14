@@ -11,44 +11,52 @@
 #include "../../Compiler/include/compiler.hpp"
 #include "../../Logger/include/logger.hpp"
 
-#define PUSH(value) (*this->top_stack++ = value)
-#define POP() (--this->top_stack)
-#define BINARY_POP() Value *b = POP(); Value *a = POP()
+#define BINARY_POP() Value *b = this->pop(); Value *a = this->pop()
 #define READ_INSTRUCTION() (*this->program_counter++)
 #define READ_CONSTANT() (this->get_current_memory()->constants[READ_INSTRUCTION()])
-#define READ_INTEGER() (static_cast<int>(READ_CONSTANT().value_int))
+#define READ_INT() (static_cast<int>(READ_CONSTANT().value_int))
 #define READ_VARIABLE() (*READ_CONSTANT().value_string)
+
+void VirtualMachine::push(Value value)
+{
+    *this->top_stack++ = value;
+}
+
+Value *VirtualMachine::pop()
+{
+    return --this->top_stack;
+}
 
 void VirtualMachine::do_list()
 {
     std::vector<Value> v;
-    for (int pops = READ_INTEGER(); pops > 0; pops--) v.push_back(*POP());
-    PUSH(Value(v));
+    for (int pops = READ_INT(); pops > 0; pops--) v.push_back(*this->pop());
+    this->push(Value(v));
 }
 
 void VirtualMachine::do_dictionary()
 {
     std::unordered_map<std::string, Value> dictionary;
     std::vector<std::string> key_order;
-    for (int e = READ_INTEGER(); e > 0; e--) {
-        auto val = *POP();
-        auto n = *POP()->value_string;
+    for (int e = READ_INT(); e > 0; e--) {
+        auto val = *this->pop();
+        auto n = *this->pop()->value_string;
         dictionary[n] = val;
         key_order.push_back(n);
     }
-    PUSH(Value(dictionary, key_order));
+    this->push(Value(dictionary, key_order));
 }
 
 void VirtualMachine::do_access()
 {
     auto var = this->top_frame->heap.at(READ_VARIABLE());
-    auto index = POP();
+    auto index = this->pop();
     if (var.is(VALUE_LIST) && index->is(VALUE_INT)) {
-        PUSH((*var.value_list)[index->value_int]);
-    } else if (var.is(VALUE_DICTIONARY) && index->is(VALUE_STRING)) {
-        PUSH(var.value_dict->values[*index->value_string]);
+        this->push((*var.value_list)[index->value_int]);
+    } else if (var.is(VALUE_DICT) && index->is(VALUE_STRING)) {
+        this->push(var.value_dict->values[*index->value_string]);
     } else {
-        if (var.type == VALUE_DICTIONARY) {
+        if (var.is(VALUE_DICT)) {
             logger->error("Invalid access instruction. You need to use a string as a key", this->get_current_line());
             exit(EXIT_FAILURE);
         } else {
@@ -56,6 +64,54 @@ void VirtualMachine::do_access()
             exit(EXIT_FAILURE);
         }
     }
+}
+
+void VirtualMachine::do_declare()
+{
+    // Get the variable name
+    auto name = READ_VARIABLE();
+    auto default_value = READ_CONSTANT();
+
+    if (this->variable_declared(name)) {
+        logger->error("Variable '" + name + "' is already declared.", this->get_current_line());
+        exit(EXIT_FAILURE);
+    }
+
+    this->top_frame->heap[name] = default_value;
+}
+
+bool VirtualMachine::variable_declared(std::string name)
+{
+    return this->top_frame->heap.find(name) != this->top_frame->heap.end();
+}
+
+Value VirtualMachine::load_variable(std::string name)
+{
+    // Check if exists
+    if (!this->variable_declared(name)) {
+        logger->error("Undeclared variable '" + name + "'.", this->get_current_line());
+        exit(EXIT_FAILURE);
+    }
+
+    return this->top_frame->heap[name];
+}
+
+void VirtualMachine::store_variable(std::string name, Value *new_value)
+{
+    // Check if exists
+    if (!this->variable_declared(name)) {
+        logger->error("Undeclared variable '" + name + "'.", this->get_current_line());
+        exit(EXIT_FAILURE);
+    }
+
+    // Check the types
+    auto current_value = this->top_frame->heap[name];
+    if (!current_value.type.same_as(&new_value->type)) {
+        this->top_frame->heap[name] = new_value->cast(current_value.type);
+        return;
+    }
+
+    this->top_frame->heap[name] = *new_value;
 }
 
 Memory *VirtualMachine::get_current_memory()
@@ -69,9 +125,9 @@ Memory *VirtualMachine::get_current_memory()
 
 uint32_t VirtualMachine::get_current_line()
 {
-    return this->get_current_memory()->lines.at(
-        static_cast<uint64_t>(this->program_counter - &this->get_current_memory()->code.front())
-    );
+    return this->get_current_memory()->lines[
+        static_cast<uint64_t>(this->program_counter - &this->get_current_memory()->code.front()) - 1
+    ];
 }
 
 void VirtualMachine::run()
@@ -82,34 +138,35 @@ void VirtualMachine::run()
             // printf("=> %s\n", opcode_to_string(instruction).c_str());
         #endif
         switch (instruction) {
-            case OP_CONSTANT: { PUSH(READ_CONSTANT()); break; }
-            case OP_MINUS: { PUSH(-*POP()); break; }
-            case OP_NOT: { PUSH(!*POP()); break; }
-            case OP_ADD: { BINARY_POP(); PUSH(*a + *b); break; }
-            case OP_SUB: { BINARY_POP(); PUSH(*a - *b); break; }
-            case OP_MUL: { BINARY_POP(); PUSH(*a * *b); break; }
-            case OP_DIV: { BINARY_POP(); PUSH(*a / *b); break; }
-            case OP_EQ: { BINARY_POP(); PUSH(*a == *b); break; }
-            case OP_NEQ: { BINARY_POP(); PUSH(*a != *b); break; }
-            case OP_LT: { BINARY_POP(); PUSH(*a < *b); break; }
-            case OP_LTE: { BINARY_POP(); PUSH(*a <= *b); break; }
-            case OP_HT: { BINARY_POP(); PUSH(*a > *b); break; }
-            case OP_HTE: { BINARY_POP(); PUSH(*a >= *b); break; }
-            // case OP_JUMP: { this->program_counter = &this->get_current_memory()->code.front() + (READ_INTEGER() - 1); break; }
-            case OP_RJUMP: { this->program_counter += READ_INTEGER() - 1; break; }
-            case OP_BRANCH_TRUE: { auto to = READ_INTEGER() - 1; if (POP()->to_bool()) this->program_counter += to; break; }
-            case OP_BRANCH_FALSE: { auto to = READ_INTEGER() - 1; if (!POP()->to_bool()) this->program_counter += to; break; }
-            case OP_STORE: { this->top_frame->heap[READ_VARIABLE()] = *POP(); break; }
+            case OP_CONSTANT: { this->push(READ_CONSTANT()); break; }
+            case OP_MINUS: { this->push(-*this->pop()); break; }
+            case OP_NOT: { this->push(!*this->pop()); break; }
+            case OP_ADD: { BINARY_POP(); this->push(*a + *b); break; }
+            case OP_SUB: { BINARY_POP(); this->push(*a - *b); break; }
+            case OP_MUL: { BINARY_POP(); this->push(*a * *b); break; }
+            case OP_DIV: { BINARY_POP(); this->push(*a / *b); break; }
+            case OP_EQ: { BINARY_POP(); this->push(*a == *b); break; }
+            case OP_NEQ: { BINARY_POP(); this->push(*a != *b); break; }
+            case OP_LT: { BINARY_POP(); this->push(*a < *b); break; }
+            case OP_LTE: { BINARY_POP(); this->push(*a <= *b); break; }
+            case OP_HT: { BINARY_POP(); this->push(*a > *b); break; }
+            case OP_HTE: { BINARY_POP(); this->push(*a >= *b); break; }
+            // case OP_JUMP: { this->program_counter = &this->get_current_memory()->code.front() + (READ_INT() - 1); break; }
+            case OP_RJUMP: { this->program_counter += READ_INT() - 1; break; }
+            case OP_BRANCH_TRUE: { auto to = READ_INT() - 1; if (this->pop()->to_bool()) this->program_counter += to; break; }
+            case OP_BRANCH_FALSE: { auto to = READ_INT() - 1; if (!this->pop()->to_bool()) this->program_counter += to; break; }
+            case OP_DECLARE: { this->do_declare(); break; }
+            case OP_STORE: { this->store_variable(READ_VARIABLE(), this->pop()); break; }
             // OP_STORE_ACCESS needs a re-write for dicts.
             case OP_STORE_ACCESS: { BINARY_POP(); (*this->top_frame->heap[READ_VARIABLE()].value_list)[b->value_int] = a; break; }
-            case OP_LOAD: { PUSH(this->top_frame->heap[READ_VARIABLE()]); break; }
+            case OP_LOAD: { this->push(this->load_variable(READ_VARIABLE())); break; }
             case OP_LIST: { this->do_list(); break; }
             case OP_DICTIONARY: { this->do_dictionary(); break; }
             case OP_ACCESS: { this->do_access(); break; }
-            case OP_FUNCTION: { PUSH(Value(READ_INTEGER(), new Frame(*this->top_frame))); break; }
+            case OP_FUNCTION: { this->push(Value(READ_INT(), new Frame(*this->top_frame))); break; }
             case OP_CALL: { break; }
-            case OP_LEN: { PUSH(POP()->length()); break; }
-            case OP_PRINT: { POP()->println(); break; }
+            case OP_LEN: { this->push(this->pop()->length()); break; }
+            case OP_PRINT: { this->pop()->println(); break; }
             case OP_EXIT: { for (auto i = this->stack; i < this->top_stack; i++) i->println(); return; }
             default: { logger->error("Unknown instruction at line", this->get_current_line()); exit(EXIT_FAILURE); break; }
         }
@@ -138,10 +195,8 @@ void VirtualMachine::reset()
     this->program.reset();
 }
 
-#undef PUSH
-#undef POP
 #undef BINARY_POP
 #undef READ_INSTRUCTION
 #undef READ_CONSTANT
-#undef READ_INTEGER
+#undef READ_INT
 #undef READ_VARIABLE

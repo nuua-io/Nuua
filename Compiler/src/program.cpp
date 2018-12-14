@@ -24,7 +24,7 @@ static auto opcode_names = std::vector<std::string>({
     /*"OP_JUMP",*/ "OP_RJUMP", "OP_BRANCH_TRUE", "OP_BRANCH_FALSE",
 
     // Store and load
-    "OP_STORE", "OP_LOAD", "OP_STORE_ACCESS",
+    "OP_DECLARE", "OP_STORE", "OP_LOAD", "OP_STORE_ACCESS",
 
     // Lists and dictionaries
     "OP_LIST", "OP_DICTIONARY", "OP_ACCESS",
@@ -40,7 +40,7 @@ void Memory::dump()
 {
     printf("Memory Dump: (size: %zu)\n",  this->code.size());
     for (uint64_t i = 0; i < this->code.size(); i++) {
-        auto opcode = this->code.at(i);
+        auto opcode = this->code[i];
         if (
             opcode == OP_CONSTANT
             || opcode == OP_LOAD
@@ -54,15 +54,20 @@ void Memory::dump()
             || opcode == OP_STORE_ACCESS
             || opcode == OP_FUNCTION
             || opcode == OP_CALL
+            || opcode == OP_DECLARE
         ) {
             // It's a constant load
-            print_opcode(this->code.at(i++));
+            print_opcode(this->code[i++]);
             printf(" ");
-            this->constants.at(this->code.at(i)).print();
+            this->constants[this->code[i]].print();
+            if (opcode == OP_DECLARE) {
+                printf(" ");
+                this->constants[this->code[++i]].print();
+            }
             printf("\n");
             continue;
         }
-        print_opcode(this->code.at(i));
+        print_opcode(this->code[i]);
         printf("\n");
     }
 

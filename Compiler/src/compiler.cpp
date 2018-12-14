@@ -71,6 +71,22 @@ void Compiler::compile(Statement *rule)
             this->compile(static_cast<ExpressionStatement *>(rule)->expression);
             break;
         }
+        case RULE_DECLARATION : {
+            auto declaration = static_cast<Declaration *>(rule);
+
+            this->add_opcode(OP_DECLARE);
+            this->add_constant_only(declaration->name);
+            this->add_constant_only(Type(declaration->type));
+            // this->add_constant_only(Value(Type(declaration->type))); // This is the long version
+
+            if (declaration->initializer) {
+                this->compile(declaration->initializer);
+                this->add_opcode(OP_STORE);
+                this->add_constant_only(declaration->name);
+            }
+
+            break;
+        }
         case RULE_IF: {
             //! Still needs to finish what happens if the else branch is present!!
             auto rif = static_cast<If *>(rule);
@@ -78,7 +94,7 @@ void Compiler::compile(Statement *rule)
                 this->compile(rif->condition);
 
                 this->add_opcode(OP_BRANCH_FALSE);
-                auto constant_index = this->add_constant_only(Value(0.0));
+                auto constant_index = this->add_constant_only(0.0);
                 auto start_index = this->current_code_line();
 
                 for (auto stmt : rif->thenBranch) this->compile(stmt);
@@ -93,13 +109,13 @@ void Compiler::compile(Statement *rule)
             this->compile(rwhile->condition);
 
             this->add_opcode(OP_BRANCH_FALSE);
-            auto constant_index = this->add_constant_only(Value(0.0));
+            auto constant_index = this->add_constant_only(0.0);
             auto start_index = this->current_code_line();
 
             for (auto stmt : rwhile->body) this->compile(stmt);
 
             this->add_opcode(OP_RJUMP);
-            this->add_constant_only(Value(-(this->current_code_line() - initial_index)));
+            this->add_constant_only(-(this->current_code_line() - initial_index));
 
             this->modify_constant(constant_index, Value(static_cast<double>(this->current_code_line() - start_index + 1)));
 
@@ -137,7 +153,7 @@ void Compiler::compile(Expression *rule)
             auto list = static_cast<List *>(rule);
             for (int i = list->value.size() - 1; i >= 0; i--) this->compile(list->value.at(i));
             this->add_opcode(OP_LIST);
-            this->add_constant_only(Value(static_cast<double>(list->value.size())));
+            this->add_constant_only(static_cast<double>(list->value.size()));
             break;
         }
         case RULE_DICTIONARY: {
@@ -147,7 +163,7 @@ void Compiler::compile(Expression *rule)
                 this->compile(dictionary->value.at(dictionary->key_order[i]));
             }
             this->add_opcode(OP_DICTIONARY);
-            this->add_constant_only(Value(static_cast<double>(dictionary->value.size())));
+            this->add_constant_only(static_cast<double>(dictionary->value.size()));
             break;
         }
         case RULE_NONE: {
@@ -173,14 +189,14 @@ void Compiler::compile(Expression *rule)
         }
         case RULE_VARIABLE: {
             this->add_opcode(OP_LOAD);
-            this->add_constant_only(Value(static_cast<Variable*>(rule)->name));
+            this->add_constant_only(static_cast<Variable*>(rule)->name);
             break;
         }
         case RULE_ASSIGN: {
             auto assign = static_cast<Assign *>(rule);
             this->compile(assign->value);
             this->add_opcode(OP_STORE);
-            this->add_constant_only(Value(assign->name));
+            this->add_constant_only(assign->name);
             break;
         }
         case RULE_ASSIGN_ACCESS: {
@@ -188,7 +204,7 @@ void Compiler::compile(Expression *rule)
             this->compile(assign_access->value);
             this->compile(assign_access->index);
             this->add_opcode(OP_STORE_ACCESS);
-            this->add_constant_only(Value(assign_access->name));
+            this->add_constant_only(assign_access->name);
             break;
         }
         case RULE_LOGICAL: {
@@ -211,7 +227,7 @@ void Compiler::compile(Expression *rule)
                 switch (argument->rule) {
                     case RULE_VARIABLE: {
                         this->add_opcode(OP_STORE);
-                        this->add_constant_only(Value(static_cast<Variable *>(argument)->name));
+                        this->add_constant_only(static_cast<Variable *>(argument)->name);
                         break;
                     }
                     default: {
@@ -227,7 +243,7 @@ void Compiler::compile(Expression *rule)
             this->current_memory = memory;
 
             this->add_opcode(OP_FUNCTION);
-            this->add_constant_only(Value(index));
+            this->add_constant_only(index);
 
             break;
         }
@@ -235,15 +251,15 @@ void Compiler::compile(Expression *rule)
             auto call = static_cast<Call *>(rule);
             for (auto argument : call->arguments) this->compile(argument);
             this->add_opcode(OP_CALL);
-            this->add_constant_only(Value(call->callee));
-            this->add_constant_only(Value(static_cast<double>(call->arguments.size())));
+            this->add_constant_only(call->callee);
+            this->add_constant_only(static_cast<double>(call->arguments.size()));
             break;
         }
         case RULE_ACCESS: {
             auto access = static_cast<Access *>(rule);
             this->compile(access->index);
             this->add_opcode(OP_ACCESS);
-            this->add_constant_only(Value(access->name));
+            this->add_constant_only(access->name);
             break;
         }
         default: {
@@ -289,7 +305,7 @@ uint64_t Compiler::add_constant_only(Value value)
 
 void Compiler::modify_constant(uint64_t index, Value value)
 {
-    this->get_current_memory()->constants.at(index) = value;
+    this->get_current_memory()->constants[index] = value;
 }
 
 uint32_t Compiler::current_code_line()

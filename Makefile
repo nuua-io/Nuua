@@ -50,6 +50,12 @@ all:
 	@$(MAKE) --no-print-directory nuua
 	@printf "\n"
 	@printf " -------------------------------------------\n"
+	@printf " |> Cleaning:                               \n"
+	@printf " -------------------------------------------\n"
+	@printf "\n"
+	@$(MAKE) --no-print-directory clean_deps
+	@printf "\n"
+	@printf " -------------------------------------------\n"
 	@printf " |> Complete: $(BIN)/$(EXECUTABLE)\n"
 	@printf " -------------------------------------------\n"
 	@printf "\n"
@@ -81,6 +87,10 @@ clean:
 	@printf " -> Cleaning Nuua\n"
 	@rm -f build/*.o
 	$(foreach module,$(MODULES),@printf " -> Cleaning %s\n" $(module)${\n}@rm -f build/$(module)/src/*.o build/$(module)/src/*.d${\n})
+
+.PHONY: clean_deps
+clean_deps:
+	$(foreach module,$(MODULES),@printf " -> Cleaning dependencies: %s\n" "build/$(module)/src/*.d"${\n}@rm -f build/$(module)/src/*.d${\n})
 
 .PHONY: push
 push:

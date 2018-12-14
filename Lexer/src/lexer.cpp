@@ -21,7 +21,7 @@
 #define IS_ALPHA(character) (((character) >= 'a' && (character) <= 'z') || ((character) >= 'A' && (character) <= 'Z') || (character) == '_')
 #define IS_ALPHANUM(character) (IS_ALPHA(character) || IS_DIGIT(character))
 
-const std::unordered_map<std::string, TokenType> Lexer::reservedWords = {
+const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "true", TOKEN_TRUE },
     { "false", TOKEN_FALSE },
     { "or", TOKEN_OR },
@@ -111,12 +111,12 @@ TokenType Lexer::is_identifier()
     printf(
         "Word is: '%s' - Found: %d - Number: %d\n",
         key.c_str(),
-        Lexer::reservedWords.find(key) != Lexer::reservedWords.end(),
-        (Lexer::reservedWords.find(key) != Lexer::reservedWords.end()) ? Lexer::reservedWords.at(key) : TOKEN_IDENTIFIER
+        Lexer::reserved_words.find(key) != Lexer::reserved_words.end(),
+        (Lexer::reserved_words.find(key) != Lexer::reserved_words.end()) ? Lexer::reserved_words.at(key) : TOKEN_IDENTIFIER
     );
     */
 
-    return (Lexer::reservedWords.find(key) != Lexer::reservedWords.end()) ? Lexer::reservedWords.at(key) : TOKEN_IDENTIFIER;
+    return (Lexer::reserved_words.find(key) != Lexer::reserved_words.end()) ? Lexer::reserved_words.at(key) : TOKEN_IDENTIFIER;
 }
 
 std::vector<Token> Lexer::scan(const char *source)

@@ -18,14 +18,10 @@ class Parser
     // Stores a pointer to the current token beeing parsed.
     Token *current;
 
-    // Contains the escaped chars of the language.
-    static const std::unordered_map<char, char> escaped_chars;
-
     Token consume(TokenType type, const char* message);
     bool match(TokenType token);
     bool match_any(std::vector<TokenType> tokens);
     std::vector<Statement *> get_block_body();
-    std::string to_string(Token token);
     bool is_function();
 
     // Parser basic operations.
@@ -46,6 +42,7 @@ class Parser
     Expression *assignment();
     Expression *expression();
     Statement *expression_statement();
+    Statement *declaration_statement();
     Statement *if_statement();
     Statement *while_statement();
     Statement *statement();

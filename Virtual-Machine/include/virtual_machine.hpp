@@ -37,6 +37,14 @@ class VirtualMachine
     // The current memory where the program counter is pointing.
     MemoryType current_memory = PROGRAM_MEMORY;
 
+    static std::unordered_map<std::string, ValueType> value_types;
+
+    // Push a new value to the stack.
+    void push(Value value);
+
+    // Pops and returns a value from the stack.
+    Value *pop();
+
     // Helper to perform the OP_LIST.
     void do_list();
 
@@ -45,6 +53,18 @@ class VirtualMachine
 
     // Helper to perform OP_ACCESS.
     void do_access();
+
+    // Helper to perform OP_DECLARE.
+    void do_declare();
+
+    // Returns true if the value has been declared.
+    bool variable_declared(std::string name);
+
+    // Loads a variable or fails with an error.
+    Value load_variable(std::string name);
+
+    // Stores a value
+    void store_variable(std::string name, Value *new_value);
 
     // Returns the current used memory.
     Memory *get_current_memory();

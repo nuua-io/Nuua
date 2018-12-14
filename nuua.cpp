@@ -28,16 +28,16 @@
 
 int main(int argc, char *argv[])
 {
-    // This creates a new nuua application, given the command line attributes
+    // This creates a new nuua application, given the command line attributes.
     auto application = new Application(argc, argv);
 
     // Run the application. This will automatically determine the application
-    // type (For example, if it is a prompt application or a file application)
+    // type (For example, if it is a prompt application or a file application).
     application->start();
 
-    // Delete the allocated space of the application
+    // Delete the allocated space of the application.
     delete application;
 
-    // Returns a success exit
+    // Returns a success exit.
     return EXIT_SUCCESS;
 }

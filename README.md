@@ -3,7 +3,7 @@
 This is the official nuua programming language repository
 
 Nuua is a new high level programming language. It acts as a generic language and it's built using pure C++, no dependencies required.
-Nuua is an dynamic and interpreted language similar to other high level languages like JavaScript or Python.
+Nuua is ~~dynamic~~ static typed and interpreted language similar to other high level languages like JavaScript or Python.
 
 The syntax is familiar with no strange structures. However, emphasis on arrows and anonymous functions (also called arrow functions)
 is there to stay.
@@ -11,6 +11,34 @@ is there to stay.
 ## Nuua website
 
 Nuua homepage is <https://nuua.io>. You may subscribe to recieve further information.
+
+## Nuua Roadmap
+
+- From ~~dynamic~~ to static
+- Implement functions
+- Implement classes
+- Implement function overloading
+- Implement modules (imports)
+- NSL (Nuua Standard Library)
+- NPM (Nuua Package Manager)
+- Optimizations + Better error reporting
+- **Initial Release**
+- Cross device and cross platform compilation (yep, that's it)
+    -   Android (Dart)
+    -   iOS (Dart)
+    -   Windows (C++)
+    -   Linux (C++)
+    -   MacOS (C++)
+    -   Web (Javascript)
+- **Second Release**
+- Nuua UI (Cross device & cross platform User Interface)
+    -   Android (Dart Widgets)
+    -   iOS (Dart Widgets)
+    -   Windows (libui)
+    -   Linux (libui)
+    -   MacOS (libui)
+    -   Web (Vue / React)
+- **Third Release**
 
 ## How is nuua structured?
 

@@ -19,7 +19,7 @@ void Logger::info(const std::string error, int line)
     std::cout
         << rang::style::bold
         << rang::fg::cyan
-        << "-> "
+        << " > "
         << rang::fg::yellow
         << error
         << rang::style::reset
@@ -34,7 +34,7 @@ void Logger::success(const std::string error, int line)
     std::cout
         << rang::style::bold
         << rang::fg::green
-        << ">> "
+        << " > "
         << rang::fg::yellow
         << error
         << rang::style::reset
@@ -48,7 +48,7 @@ void Logger::warning(const std::string error, int line)
     DEBUG_CHECK();
     std::cout
         << rang::style::bold
-        << "!> "
+        << " > "
         << rang::fg::yellow
         << error
         << rang::style::reset
@@ -62,7 +62,7 @@ void Logger::error(const std::string error, int line)
     std::cout
         << rang::style::bold
         << rang::fg::red
-        << ">< "
+        << " > "
         << rang::fg::yellow
         << error
         << rang::style::reset
