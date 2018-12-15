@@ -13,6 +13,7 @@
 
 #define STACK_SIZE 256
 #define FRAME_SIZE 256
+#define MEMORY_SIZE 256
 
 class VirtualMachine
 {
@@ -20,7 +21,7 @@ class VirtualMachine
     Program program;
 
     // The current instruction to execute.
-    uint64_t *program_counter;
+    uint64_t *program_counter = nullptr;
 
     // The value stack to perform operations (it's a stack based virtual machine).
     Value stack[STACK_SIZE];
@@ -34,10 +35,11 @@ class VirtualMachine
     // The top frame (current frame).
     Frame *top_frame = this->frames;
 
-    // The current memory where the program counter is pointing.
-    MemoryType current_memory = PROGRAM_MEMORY;
+    // Stores the stack of the memories used.
+    MemoryType memories[MEMORY_SIZE] = { PROGRAM_MEMORY };
 
-    static std::unordered_map<std::string, ValueType> value_types;
+    // The current memory where the program counter is pointing.
+    MemoryType *current_memory = this->memories;
 
     // Push a new value to the stack.
     void push(Value value);
@@ -56,6 +58,12 @@ class VirtualMachine
 
     // Helper to perform OP_DECLARE.
     void do_declare();
+
+    // Helper to perform OP_RETURN.
+    void do_return();
+
+    // Helper to perform OP_CALL.
+    void do_call();
 
     // Returns true if the value has been declared.
     bool variable_declared(std::string name);

@@ -36,7 +36,7 @@ typedef enum : uint8_t {
     OP_LIST, OP_DICTIONARY, OP_ACCESS,
 
     // Functions
-    OP_FUNCTION, OP_CALL,
+    OP_FUNCTION, OP_RETURN, OP_CALL,
 
     // Others
     OP_LEN, OP_PRINT, OP_EXIT

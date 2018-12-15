@@ -76,22 +76,20 @@ bool Parser::is_function()
 
 Expression *Parser::function()
 {
-    std::vector<Expression *> arguments;
+    std::vector<Statement *> arguments;
     std::vector<Statement *> body;
 
     // Get the function arguments
     if (!CHECK(TOKEN_RIGHT_PAREN)) {
         do {
-            Expression *argument = this->expression();
+            // Get statement without new line ending
+            Statement *argument = this->statement(false);
 
             // Check if it's a correct argument type
-            // Checked already when compiling :)
-            /*
-            switch (argument->type) {
-                case RULE_VARIABLE: { break; }
-                default: { logger->error("Invalid argument type when defining the function", this->current->line); exit(EXIT_FAILURE); }
+            if (argument->rule != RULE_DECLARATION) {
+                logger->error("Invalid argument when defining the function. Expected a declaration.", argument->line);
+                exit(EXIT_FAILURE);
             }
-            */
 
             arguments.push_back(argument);
         } while (this->match(TOKEN_COMMA));
@@ -102,6 +100,7 @@ Expression *Parser::function()
     // Get the function body
     if (this->match(TOKEN_LEFT_BRACE)) {
         this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
+        CURRENT().debug_token();
         body = this->get_block_body();
         this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
         // This is checked already since it's an expression statement
@@ -333,12 +332,7 @@ Expression *Parser::expression()
 
 Statement *Parser::expression_statement()
 {
-    auto expr = this->expression();
-    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
-        logger->error("Expected a new line or EOF after expression statement", this->current->line);
-        exit(EXIT_FAILURE);
-    }
-    return new ExpressionStatement(expr);
+    return new ExpressionStatement(this->expression());
 }
 
 Statement *Parser::declaration_statement()
@@ -349,11 +343,6 @@ Statement *Parser::declaration_statement()
     Expression *initializer = nullptr;
 
     if (this->match(TOKEN_EQUAL)) initializer = this->expression();
-
-    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
-        logger->error("Expected a new line after the '}'", this->current->line);
-        exit(EXIT_FAILURE);
-    }
 
     return new Declaration(variable.to_string(), type.to_string(), initializer);
 }
@@ -368,11 +357,6 @@ Statement *Parser::if_statement()
     auto thenBranch = this->get_block_body();
     this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
 
-    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
-        logger->error("Expected a new line after the '}'", this->current->line);
-        exit(EXIT_FAILURE);
-    }
-
     return new If(condition, thenBranch, std::vector<Statement *>({}));
 }
 
@@ -386,21 +370,27 @@ Statement *Parser::while_statement()
     auto body = this->get_block_body();
     this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
 
-    if (!this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
+    return new While(condition, body);
+}
+
+Statement *Parser::statement(bool new_line_ending)
+{
+    Statement *result;
+
+    // Remove blank lines
+    while (this->match(TOKEN_NEW_LINE));
+
+    if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).is(TOKEN_COLON)) result = this->declaration_statement();
+    else if (this->match(TOKEN_IF)) result = this->if_statement();
+    else if (this->match(TOKEN_WHILE)) result = this->while_statement();
+    else result = this->expression_statement();
+
+    if (new_line_ending && !this->match_any(std::vector<TokenType>({ TOKEN_NEW_LINE, TOKEN_EOF }))) {
         logger->error("Expected a new line after the '}'", this->current->line);
         exit(EXIT_FAILURE);
     }
 
-    return new While(condition, body);
-}
-
-Statement *Parser::statement()
-{
-    if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).is(TOKEN_COLON)) return this->declaration_statement();
-    else if (this->match(TOKEN_IF)) return this->if_statement();
-    else if (this->match(TOKEN_WHILE)) return this->while_statement();
-
-    return this->expression_statement();
+    return result;
 }
 
 std::vector<Statement *> Parser::parse(const char *source)
@@ -417,11 +407,7 @@ std::vector<Statement *> Parser::parse(const char *source)
 
     std::vector<Statement *> code;
 
-    while (!IS_AT_END()) {
-        // printf("Looking for statement... Starting at ");
-        // CURRENT().debug_token();
-        code.push_back(this->statement());
-    }
+    while (!IS_AT_END()) code.push_back(this->statement());
 
     #if DEBUG
         Parser::debug_rules(code);

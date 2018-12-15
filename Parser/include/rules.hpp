@@ -205,10 +205,10 @@ class Logical : public Expression
 class Function : public Expression
 {
     public:
-        std::vector<Expression *> arguments;
+        std::vector<Statement *> arguments;
         std::vector<Statement *> body;
 
-        Function(std::vector<Expression *> arguments, std::vector<Statement *> body)
+        Function(std::vector<Statement *> arguments, std::vector<Statement *> body)
             : Expression(RULE_FUNCTION), arguments(arguments), body(body) {}
 };
 

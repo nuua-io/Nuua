@@ -45,7 +45,7 @@ class Parser
     Statement *declaration_statement();
     Statement *if_statement();
     Statement *while_statement();
-    Statement *statement();
+    Statement *statement(bool new_line_ending = true);
 
     static void debug_rules(std::vector<Rule> rules);
     static void debug_rules(std::vector<Statement *> rules);

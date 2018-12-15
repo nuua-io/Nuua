@@ -30,7 +30,7 @@ static auto opcode_names = std::vector<std::string>({
     "OP_LIST", "OP_DICTIONARY", "OP_ACCESS",
 
     // Functions
-    "OP_FUNCTION", "OP_CALL",
+    "OP_FUNCTION", "OP_RETURN", "OP_CALL",
 
     // Others
     "OP_LEN", "OP_PRINT", "OP_EXIT"
@@ -60,7 +60,7 @@ void Memory::dump()
             print_opcode(this->code[i++]);
             printf(" ");
             this->constants[this->code[i]].print();
-            if (opcode == OP_DECLARE) {
+            if (opcode == OP_DECLARE || opcode == OP_CALL) {
                 printf(" ");
                 this->constants[this->code[++i]].print();
             }

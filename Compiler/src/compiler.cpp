@@ -223,27 +223,27 @@ void Compiler::compile(Expression *rule)
             double index = this->current_code_line();
 
             // Compile the function arguments
-            for (auto argument : function->arguments) {
-                switch (argument->rule) {
-                    case RULE_VARIABLE: {
-                        this->add_opcode(OP_STORE);
-                        this->add_constant_only(static_cast<Variable *>(argument)->name);
-                        break;
-                    }
-                    default: {
-                        logger->error("Invalid argument when defining the function.", argument->line);
-                        exit(EXIT_FAILURE);
-                    }
-                }
+            for (auto argument : function->arguments) this->compile(argument);
+
+            for (int16_t i = function->arguments.size() - 1; i >= 0; i--) {
+                this->add_opcode(OP_STORE);
+                this->add_constant_only(static_cast<Declaration *>(function->arguments[i])->name);
             }
 
             // Compile the function body
             for (auto stmt : function->body) this->compile(stmt);
 
+            // Add the default return statement.
+            // If a previous return has been hit, it will
+            // never run. However, if no return was found
+            // this is the return it will hit. It returns none
+            this->add_constant(Value());
+            this->add_opcode(OP_RETURN);
+
             this->current_memory = memory;
 
             this->add_opcode(OP_FUNCTION);
-            this->add_constant_only(index);
+            this->add_constant_only(static_cast<int64_t>(index));
 
             break;
         }
@@ -252,7 +252,7 @@ void Compiler::compile(Expression *rule)
             for (auto argument : call->arguments) this->compile(argument);
             this->add_opcode(OP_CALL);
             this->add_constant_only(call->callee);
-            this->add_constant_only(static_cast<double>(call->arguments.size()));
+            this->add_constant_only(static_cast<int64_t>(call->arguments.size()));
             break;
         }
         case RULE_ACCESS: {

@@ -80,6 +80,39 @@ void VirtualMachine::do_declare()
     this->top_frame->heap[name] = default_value;
 }
 
+void VirtualMachine::do_return()
+{
+    // Turn back the program counter to the original one.
+    this->program_counter = (this->top_frame--)->return_address;
+
+    // Change back the current memory
+    this->current_memory--;
+}
+
+void VirtualMachine::do_call()
+{
+    auto name = READ_VARIABLE();
+    auto arguments = READ_INT();
+    auto value = this->load_variable(name);
+
+    if (!value.type.is(VALUE_FUN)) {
+        logger->error("Target is not callable. Are you sure that '" + name + "' is a function?");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set the new frame to work on.
+    *(++this->top_frame) = *value.value_fun->frame;
+
+    // Set the return address
+    this->top_frame->return_address = this->program_counter; // +3 becuase of the OP_CALL and it's 2 arguments.
+
+    // Set the memory to the functions memory.
+    *(++this->current_memory) = FUNCTIONS_MEMORY;
+
+    // Set the program counter depending on the function index.
+    this->program_counter = &this->get_current_memory()->code[value.value_fun->index];
+}
+
 bool VirtualMachine::variable_declared(std::string name)
 {
     return this->top_frame->heap.find(name) != this->top_frame->heap.end();
@@ -116,7 +149,7 @@ void VirtualMachine::store_variable(std::string name, Value *new_value)
 
 Memory *VirtualMachine::get_current_memory()
 {
-    switch (this->current_memory) {
+    switch (*this->current_memory) {
         case FUNCTIONS_MEMORY: { return &this->program.functions; }
         case CLASSES_MEMORY: { return &this->program.classes; }
         default: { return &this->program.program; }
@@ -132,6 +165,8 @@ uint32_t VirtualMachine::get_current_line()
 
 void VirtualMachine::run()
 {
+    this->program_counter = &this->program.program.code[0];
+
     for (uint64_t instruction;;) {
         instruction = READ_INSTRUCTION();
         #if DEBUG
@@ -164,7 +199,8 @@ void VirtualMachine::run()
             case OP_DICTIONARY: { this->do_dictionary(); break; }
             case OP_ACCESS: { this->do_access(); break; }
             case OP_FUNCTION: { this->push(Value(READ_INT(), new Frame(*this->top_frame))); break; }
-            case OP_CALL: { break; }
+            case OP_RETURN: { this->do_return(); break; }
+            case OP_CALL: { this->do_call(); break; }
             case OP_LEN: { this->push(this->pop()->length()); break; }
             case OP_PRINT: { this->pop()->println(); break; }
             case OP_EXIT: { for (auto i = this->stack; i < this->top_stack; i++) i->println(); return; }
@@ -172,7 +208,6 @@ void VirtualMachine::run()
         }
     }
 }
-
 
 void VirtualMachine::interpret(const char *source)
 {
@@ -182,10 +217,7 @@ void VirtualMachine::interpret(const char *source)
 
     logger->info("Started interpreting...");
 
-    if (this->program.program.code.size() > 0) {
-        this->program_counter = &this->program.program.code[0];
-        this->run();
-    }
+    if (this->program.program.code.size() > 0) this->run();
 
     logger->success("Finished interpreting");
 }
