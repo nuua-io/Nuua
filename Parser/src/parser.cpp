@@ -69,9 +69,11 @@ bool Parser::is_function()
     }
     if (LOOKAHEAD(current + 1).is(TOKEN_EOF)) return false;
 
-    return LOOKAHEAD(current + 1).is(TOKEN_LEFT_BRACE)
-        || LOOKAHEAD(current + 1).is(TOKEN_RIGHT_ARROW)
-        || LOOKAHEAD(current + 1).is(TOKEN_BIG_RIGHT_ARROW);
+    return LOOKAHEAD(current + 1).is(TOKEN_COLON)
+        && (LOOKAHEAD(current + 2).is(TOKEN_IDENTIFIER) || LOOKAHEAD(current + 2).is(TOKEN_NONE))
+        && (LOOKAHEAD(current + 3).is(TOKEN_LEFT_BRACE)
+        || LOOKAHEAD(current + 3).is(TOKEN_BIG_RIGHT_ARROW)
+        || LOOKAHEAD(current + 3).is(TOKEN_RIGHT_ARROW));
 }
 
 Expression *Parser::function()
@@ -97,6 +99,18 @@ Expression *Parser::function()
 
     this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after function arguments");
 
+    // Get the function return type
+    this->consume(TOKEN_COLON, "You need to specify ':' after the function arguments to further indicate the function's return type");
+    std::string return_type;
+    if (CURRENT().is(TOKEN_IDENTIFIER)) {
+        return_type = this->consume(TOKEN_IDENTIFIER, "You need to specify the return type after the ':'").to_string();
+    } else if (CURRENT().is(TOKEN_NONE)) {
+        return_type = this->consume(TOKEN_NONE, "You need to specify the return type after the ':'").to_string();
+    } else {
+        logger->error("You need to specify the return type after the ':'", this->current->line);
+        exit(EXIT_FAILURE);
+    }
+
     // Get the function body
     if (this->match(TOKEN_LEFT_BRACE)) {
         this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
@@ -105,12 +119,16 @@ Expression *Parser::function()
         this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
         // This is checked already since it's an expression statement
         // this->consume(TOKEN_NEW_LINE, "Expected a new line after the '}'");
+    } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
+        body.push_back(this->statement());
+    } else if (this->match(TOKEN_RIGHT_ARROW)) {
+        body.push_back(new Return(this->expression()));
     } else {
-        logger->error("Unknown function body found. You need to use '{' or '=>' or '->' after the arguments to define the function's body.", this->current->line);
+        logger->error("Unknown function body found. You need to use '{' or '=>' or '->' after the arguments to define the function's body", this->current->line);
         exit(EXIT_FAILURE);
     }
 
-    return new Function(arguments, body);
+    return new Function(arguments, return_type, body);
 }
 
 Expression *Parser::list()
@@ -381,6 +399,8 @@ Statement *Parser::statement(bool new_line_ending)
     while (this->match(TOKEN_NEW_LINE));
 
     if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).is(TOKEN_COLON)) result = this->declaration_statement();
+    else if (this->match(TOKEN_PRINT)) result = new Print(this->expression());
+    else if (this->match(TOKEN_RETURN)) result = new Return(this->expression());
     else if (this->match(TOKEN_IF)) result = this->if_statement();
     else if (this->match(TOKEN_WHILE)) result = this->while_statement();
     else result = this->expression_statement();
@@ -395,11 +415,7 @@ Statement *Parser::statement(bool new_line_ending)
 
 std::vector<Statement *> Parser::parse(const char *source)
 {
-    auto lexer = new Lexer;
-
-    std::vector<Token> tokens = lexer->scan(source);
-
-    delete lexer;
+    std::vector<Token> tokens = Lexer().scan(source);
 
     logger->info("Started parsing...");
 
@@ -414,6 +430,12 @@ std::vector<Statement *> Parser::parse(const char *source)
     #endif
 
     logger->success("Parsing completed");
+
+    logger->info("Started optimizing AST...");
+
+    ParserOptimizer().optimize(&code);
+
+    logger->success("AST Optimized");
 
     return code;
 }

@@ -1,6 +1,5 @@
-add: fun = (a: int, b: int) {
-    b - a
+add: fun = (a: int, b: int): int {
+    return a + b
 }
 
-add(10, 20)
-add(20, 40)
+print add(10, add(20, 40))

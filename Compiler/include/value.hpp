@@ -78,7 +78,7 @@ class Value
         // The following two constructors are basically defined in the value.cpp since
         // They make use of a forward declared constructor.
         Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b);
-        Value(uint64_t index, Frame *frame);
+        Value(uint64_t index, Type return_type, Frame *frame);
 
         // Create default initialized value, given the type.
         Value(Type type);
@@ -150,12 +150,15 @@ class ValueFunction
         // Stores the function index where it's code begin.
         uint64_t index;
 
+        // Stores the return type of the function.
+        Type return_type;
+
         // Stores the frame where the function relies on.
         Frame *frame;
 
         // Basic constructor for the function value.
-        ValueFunction(uint64_t index, Frame *frame)
-            : index(index), frame(frame) {}
+        ValueFunction(uint64_t index, Type return_type, Frame *frame)
+            : index(index), return_type(return_type), frame(frame) {}
 };
 
 #endif

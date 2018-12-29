@@ -14,8 +14,11 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 
 ## Nuua Roadmap
 
-- From ~~dynamic~~ to static
-- Implement functions
+- ~~From dynamic to static~~ :white_check_mark:
+- ~~Implement functions~~ :white_check_mark:
+- Polish internals :construction:
+    - Add a proper tree walker and use it for the compiler & AST optimizator
+    - Optimize dead code elimination using OP_ONLY_STORE opcode
 - Implement classes
 - Implement function overloading
 - Implement modules (imports)
@@ -23,6 +26,9 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 - NPM (Nuua Package Manager)
 - Optimizations + Better error reporting
 - **Initial Release**
+
+The following are wishes, not yet decided how or when.
+
 - Cross device and cross platform compilation (yep, that's it)
     -   Android (Dart)
     -   iOS (Dart)

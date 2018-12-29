@@ -11,6 +11,7 @@
 static std::vector<std::string> RuleNames = {
     "RULE_EXPRESSION",
     "RULE_STATEMENT",
+    "RULE_PRINT",
     "RULE_EXPRESSION_STATEMENT",
     "RULE_INTEGER",
     "RULE_FLOAT",
@@ -30,9 +31,9 @@ static std::vector<std::string> RuleNames = {
     "RULE_FUNCTION",
     "RULE_CALL",
     "RULE_ACCESS",
+    "RULE_RETURN",
     "RULE_IF",
     "RULE_WHILE",
-    "RULE_UNROLL",
 };
 
 void Parser::debug_rules(std::vector<Rule> rules)

@@ -16,7 +16,7 @@
 
 // Defines the known opcodes for the program.
 typedef enum : uint8_t {
-    OP_CONSTANT,
+    OP_PUSH, OP_POP,
 
     // Unary operations
     OP_MINUS, OP_NOT,
@@ -30,7 +30,7 @@ typedef enum : uint8_t {
     /*OP_JUMP,*/ OP_RJUMP, OP_BRANCH_TRUE, OP_BRANCH_FALSE,
 
     // Store and load
-    OP_DECLARE, OP_STORE, OP_LOAD, OP_STORE_ACCESS,
+    OP_DECLARE, OP_STORE, OP_ONLY_STORE, OP_LOAD, OP_STORE_ACCESS,
 
     // Lists and dictionaries
     OP_LIST, OP_DICTIONARY, OP_ACCESS,
@@ -71,8 +71,15 @@ class Memory
 class Frame
 {
     public:
+
+        // Stores the heap of the frame (where variables are stroed).
         std::unordered_map<std::string, Value> heap;
-        uint64_t *return_address;
+
+        // Stores the return address to get back to the original program counter.
+        uint64_t *return_address = nullptr;
+
+        // Stores the frame caller (the function)
+        Value caller;
 };
 
 // The base program class that represents a nuua program.

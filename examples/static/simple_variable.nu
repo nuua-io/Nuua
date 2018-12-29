@@ -1,8 +1,8 @@
 a: int = 10
-a
+print a
 a = 25
-a
+print a
 b: float
-b
+print b
 b = 2.5
-b
+print b

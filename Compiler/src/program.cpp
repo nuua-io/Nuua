@@ -10,7 +10,7 @@
 #include "../../Logger/include/logger.hpp"
 
 static auto opcode_names = std::vector<std::string>({
-    "OP_CONSTANT",
+    "OP_PUSH", "OP_POP",
 
     // Unary operations
     "OP_MINUS", "OP_NOT",
@@ -21,10 +21,10 @@ static auto opcode_names = std::vector<std::string>({
     "OP_HT", "OP_HTE",
 
     // Jumps and conditional jumps
-    /*"OP_JUMP",*/ "OP_RJUMP", "OP_BRANCH_TRUE", "OP_BRANCH_FALSE",
+    /*OP_JUMP,*/ "OP_RJUMP", "OP_BRANCH_TRUE", "OP_BRANCH_FALSE",
 
     // Store and load
-    "OP_DECLARE", "OP_STORE", "OP_LOAD", "OP_STORE_ACCESS",
+    "OP_DECLARE", "OP_STORE", "OP_ONLY_STORE", "OP_LOAD", "OP_STORE_ACCESS",
 
     // Lists and dictionaries
     "OP_LIST", "OP_DICTIONARY", "OP_ACCESS",
@@ -38,13 +38,17 @@ static auto opcode_names = std::vector<std::string>({
 
 void Memory::dump()
 {
-    printf("Memory Dump: (size: %zu)\n",  this->code.size());
+    printf("Size: %zu\n\n",  this->code.size());
     for (uint64_t i = 0; i < this->code.size(); i++) {
         auto opcode = this->code[i];
+        printf("(%lli, ", opcode);
+        print_opcode(opcode);
+        printf(") [");
         if (
-            opcode == OP_CONSTANT
+            opcode == OP_PUSH
             || opcode == OP_LOAD
             || opcode == OP_STORE
+            || opcode == OP_ONLY_STORE
             || opcode == OP_BRANCH_FALSE
             || opcode == OP_BRANCH_TRUE
             || opcode == OP_RJUMP
@@ -56,21 +60,18 @@ void Memory::dump()
             || opcode == OP_CALL
             || opcode == OP_DECLARE
         ) {
-            // It's a constant load
-            print_opcode(this->code[i++]);
-            printf(" ");
-            this->constants[this->code[i]].print();
+            this->constants[this->code[++i]].print();
+
             if (opcode == OP_DECLARE || opcode == OP_CALL) {
-                printf(" ");
+                // Requires 2 parameters
+                printf(", ");
                 this->constants[this->code[++i]].print();
             }
-            printf("\n");
-            continue;
-        }
-        print_opcode(this->code[i]);
-        printf("\n");
-    }
 
+        }
+        printf("]\n");
+    }
+    /*
     printf("\nCONSTANTS: (size: %zu)\n", this->constants.size());
     for (auto c : this->constants) {
         c.print();
@@ -79,6 +80,7 @@ void Memory::dump()
     printf("\nLITERAL OPCODE NUMBERS: (size: %zu)\n", this->code.size());
     for (auto c : this->code) printf("%llu ", c);
     printf("\n");
+    */
 }
 
 void Memory::reset()

@@ -10,13 +10,17 @@
 #define PARSER_HPP
 
 #include "../../Lexer/include/tokens.hpp"
-#include "rules.hpp"
+// #include "rules.hpp" // Included already on parser_optimizer
+#include "parser_optimizer.hpp"
 
 // Base parser class for nuua.
 class Parser
 {
     // Stores a pointer to the current token beeing parsed.
     Token *current;
+
+    // Stores the AST optimizer for the parser.
+    ParserOptimizer optimizer;
 
     Token consume(TokenType type, const char* message);
     bool match(TokenType token);
@@ -43,6 +47,7 @@ class Parser
     Expression *expression();
     Statement *expression_statement();
     Statement *declaration_statement();
+    Statement *return_statement();
     Statement *if_statement();
     Statement *while_statement();
     Statement *statement(bool new_line_ending = true);

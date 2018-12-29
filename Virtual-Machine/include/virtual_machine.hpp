@@ -72,7 +72,7 @@ class VirtualMachine
     Value load_variable(std::string name);
 
     // Stores a value
-    void store_variable(std::string name, Value *new_value);
+    void store_variable(std::string name, Value *new_value, bool only_store);
 
     // Returns the current used memory.
     Memory *get_current_memory();

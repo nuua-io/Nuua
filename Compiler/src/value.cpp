@@ -14,8 +14,8 @@
 Value::Value(std::unordered_map<std::string, Value> a, std::vector<std::string> b)
     : type(Type(VALUE_DICT)), value_dict(new ValueDictionary(a, b)) {}
 
-Value::Value(uint64_t index, Frame *frame)
-    : type(Type(VALUE_FUN)), value_fun(new ValueFunction(index, frame)) {}
+Value::Value(uint64_t index, Type return_type, Frame *frame)
+    : type(Type(VALUE_FUN)), value_fun(new ValueFunction(index, return_type, frame)) {}
 
 Value::Value(Type type)
 {
@@ -28,7 +28,7 @@ Value::Value(Type type)
         case VALUE_STRING: { this->value_string = new std::string(""); break; }
         case VALUE_LIST: { this->value_list = new std::vector<Value>(); break; }
         case VALUE_DICT: { this->value_dict = new ValueDictionary(std::unordered_map<std::string, Value>(), std::vector<std::string>()); break; }
-        case VALUE_FUN: { this->value_fun = new ValueFunction(0, nullptr); break; }
+        case VALUE_FUN: { this->value_fun = new ValueFunction(0, Type(), nullptr); break; }
         default: { logger->error("Can't declare this value type without an initializer."); exit(EXIT_FAILURE); }
     }
 }
@@ -213,6 +213,7 @@ Value Value::operator !()
 
 Value Value::operator +(Value &b)
 {
+    //printf("Addition on:"); this->type.print();
     if (this->is(VALUE_STRING) || b.is(VALUE_STRING)) return Value(this->to_string() + b.to_string());
     else if (this->is(VALUE_INT) && b.is(VALUE_INT)) return Value(this->value_int + b.value_int);
 

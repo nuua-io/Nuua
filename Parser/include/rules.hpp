@@ -17,6 +17,7 @@
 typedef enum : uint8_t {
     RULE_EXPRESSION,
     RULE_STATEMENT,
+    RULE_PRINT,
     RULE_EXPRESSION_STATEMENT,
     RULE_INTEGER,
     RULE_FLOAT,
@@ -36,9 +37,9 @@ typedef enum : uint8_t {
     RULE_FUNCTION,
     RULE_CALL,
     RULE_ACCESS,
+    RULE_RETURN,
     RULE_IF,
     RULE_WHILE,
-    RULE_UNROLL,
 } Rule;
 
 class Expression
@@ -60,15 +61,7 @@ class Statement
             : rule(rule) {};
 };
 
-class ExpressionStatement : public Statement
-{
-    public:
-        Expression *expression;
-
-        ExpressionStatement(Expression *expression)
-            : Statement(RULE_EXPRESSION_STATEMENT), expression(expression) {}
-};
-
+/* Expressions */
 class Integer : public Expression
 {
     public:
@@ -206,10 +199,11 @@ class Function : public Expression
 {
     public:
         std::vector<Statement *> arguments;
+        std::string return_type;
         std::vector<Statement *> body;
 
-        Function(std::vector<Statement *> arguments, std::vector<Statement *> body)
-            : Expression(RULE_FUNCTION), arguments(arguments), body(body) {}
+        Function(std::vector<Statement *> arguments, std::string return_type, std::vector<Statement *> body)
+            : Expression(RULE_FUNCTION), arguments(arguments), return_type(return_type), body(body) {}
 };
 
 class Call : public Expression
@@ -233,6 +227,25 @@ class Access : public Expression
 };
 
 /* Statements */
+
+class Print : public Statement
+{
+    public:
+        Expression *expression;
+
+        Print(Expression *expression)
+            : Statement(RULE_PRINT), expression(expression) {}
+};
+
+class ExpressionStatement : public Statement
+{
+    public:
+        Expression *expression;
+
+        ExpressionStatement(Expression *expression)
+            : Statement(RULE_EXPRESSION_STATEMENT), expression(expression) {}
+};
+
 class Declaration : public Statement
 {
     public:
@@ -242,6 +255,15 @@ class Declaration : public Statement
 
         Declaration(std::string name, std::string type, Expression *initializer)
             : Statement(RULE_DECLARATION), name(name), type(type), initializer(initializer) {};
+};
+
+class Return : public Statement
+{
+    public:
+        Expression *value;
+
+        Return(Expression *value)
+            : Statement(RULE_RETURN), value(value) {}
 };
 
 class If : public Statement
@@ -261,8 +283,8 @@ class While : public Statement
         Expression *condition;
         std::vector<Statement *> body;
 
-    While(Expression *condition, std::vector<Statement *> body)
-        : Statement(RULE_WHILE), condition(condition), body(body) {};
+        While(Expression *condition, std::vector<Statement *> body)
+            : Statement(RULE_WHILE), condition(condition), body(body) {};
 };
 
 void debug_rules(std::vector<Rule> rules);

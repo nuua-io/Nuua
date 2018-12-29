@@ -1,12 +1,12 @@
 a: int = 10 + 5
-a
+print a
 b: float = a + 10
-b
+print b
 c: int = 20.5
-c
+print c
 d: float = c
-d
+print d
 e: float = 30.5
-e
+print e
 f: int = e
-f
+print f

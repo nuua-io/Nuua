@@ -14,11 +14,16 @@
 #define BINARY_POP() Value *b = this->pop(); Value *a = this->pop()
 #define READ_INSTRUCTION() (*this->program_counter++)
 #define READ_CONSTANT() (this->get_current_memory()->constants[READ_INSTRUCTION()])
-#define READ_INT() (static_cast<int>(READ_CONSTANT().value_int))
+#define READ_INT() (READ_CONSTANT().value_int)
 #define READ_VARIABLE() (*READ_CONSTANT().value_string)
 
 void VirtualMachine::push(Value value)
 {
+    if (this->top_stack - this->stack >= STACK_SIZE) {
+        logger->error("Stack overflow", this->get_current_line());
+        exit(EXIT_FAILURE);
+    }
+
     *this->top_stack++ = value;
 }
 
@@ -82,6 +87,11 @@ void VirtualMachine::do_declare()
 
 void VirtualMachine::do_return()
 {
+    // Check the return type
+    auto return_value = this->top_frame->caller;
+    auto returned_value = *(this->top_stack - 1);
+    *(this->top_stack - 1) = returned_value.cast(return_value.value_fun->return_type);
+
     // Turn back the program counter to the original one.
     this->program_counter = (this->top_frame--)->return_address;
 
@@ -106,6 +116,9 @@ void VirtualMachine::do_call()
     // Set the return address
     this->top_frame->return_address = this->program_counter; // +3 becuase of the OP_CALL and it's 2 arguments.
 
+    // Set the frame caller.
+    this->top_frame->caller = value;
+
     // Set the memory to the functions memory.
     *(++this->current_memory) = FUNCTIONS_MEMORY;
 
@@ -129,7 +142,7 @@ Value VirtualMachine::load_variable(std::string name)
     return this->top_frame->heap[name];
 }
 
-void VirtualMachine::store_variable(std::string name, Value *new_value)
+void VirtualMachine::store_variable(std::string name, Value *new_value, bool only_store)
 {
     // Check if exists
     if (!this->variable_declared(name)) {
@@ -137,14 +150,15 @@ void VirtualMachine::store_variable(std::string name, Value *new_value)
         exit(EXIT_FAILURE);
     }
 
-    // Check the types
     auto current_value = this->top_frame->heap[name];
-    if (!current_value.type.same_as(&new_value->type)) {
-        this->top_frame->heap[name] = new_value->cast(current_value.type);
-        return;
-    }
 
-    this->top_frame->heap[name] = *new_value;
+    // Store and push the value to the stack to make it available as an expression.
+    // It also checks the types and casts if nessesary.
+    this->top_frame->heap[name] = current_value.type.same_as(&new_value->type)
+            ? *new_value
+            : new_value->cast(current_value.type);
+
+    if (!only_store) this->push(this->top_frame->heap[name]);
 }
 
 Memory *VirtualMachine::get_current_memory()
@@ -167,13 +181,18 @@ void VirtualMachine::run()
 {
     this->program_counter = &this->program.program.code[0];
 
+    #if DEBUG
+        uint64_t times = 0;
+    #endif
+
     for (uint64_t instruction;;) {
         instruction = READ_INSTRUCTION();
         #if DEBUG
-            // printf("=> %s\n", opcode_to_string(instruction).c_str());
+            // printf("=> %s (%llu) [%llu]\n", opcode_to_string(instruction).c_str(), instruction, times++);
         #endif
         switch (instruction) {
-            case OP_CONSTANT: { this->push(READ_CONSTANT()); break; }
+            case OP_PUSH: { this->push(READ_CONSTANT()); break; }
+            case OP_POP: { this->pop(); break; }
             case OP_MINUS: { this->push(-*this->pop()); break; }
             case OP_NOT: { this->push(!*this->pop()); break; }
             case OP_ADD: { BINARY_POP(); this->push(*a + *b); break; }
@@ -191,19 +210,20 @@ void VirtualMachine::run()
             case OP_BRANCH_TRUE: { auto to = READ_INT() - 1; if (this->pop()->to_bool()) this->program_counter += to; break; }
             case OP_BRANCH_FALSE: { auto to = READ_INT() - 1; if (!this->pop()->to_bool()) this->program_counter += to; break; }
             case OP_DECLARE: { this->do_declare(); break; }
-            case OP_STORE: { this->store_variable(READ_VARIABLE(), this->pop()); break; }
+            case OP_STORE: { this->store_variable(READ_VARIABLE(), this->pop(), false); break; }
+            case OP_ONLY_STORE: { this->store_variable(READ_VARIABLE(), this->pop(), true); break; }
             // OP_STORE_ACCESS needs a re-write for dicts.
             case OP_STORE_ACCESS: { BINARY_POP(); (*this->top_frame->heap[READ_VARIABLE()].value_list)[b->value_int] = a; break; }
             case OP_LOAD: { this->push(this->load_variable(READ_VARIABLE())); break; }
             case OP_LIST: { this->do_list(); break; }
             case OP_DICTIONARY: { this->do_dictionary(); break; }
             case OP_ACCESS: { this->do_access(); break; }
-            case OP_FUNCTION: { this->push(Value(READ_INT(), new Frame(*this->top_frame))); break; }
+            case OP_FUNCTION: { auto index = READ_INT(); auto return_type = READ_VARIABLE(); this->push(Value(index, return_type, new Frame(*this->top_frame))); break; }
             case OP_RETURN: { this->do_return(); break; }
             case OP_CALL: { this->do_call(); break; }
             case OP_LEN: { this->push(this->pop()->length()); break; }
             case OP_PRINT: { this->pop()->println(); break; }
-            case OP_EXIT: { for (auto i = this->stack; i < this->top_stack; i++) i->println(); return; }
+            case OP_EXIT: { return; }
             default: { logger->error("Unknown instruction at line", this->get_current_line()); exit(EXIT_FAILURE); break; }
         }
     }
@@ -220,6 +240,16 @@ void VirtualMachine::interpret(const char *source)
     if (this->program.program.code.size() > 0) this->run();
 
     logger->success("Finished interpreting");
+
+    #if DEBUG
+        if (this->top_stack - this->stack == 0) {
+            logger->success("No memory leak detected");
+        } else {
+            logger->warning("Memory leak detected!");
+            for (auto i = this->stack; i < this->top_stack; i++) i->println();
+        }
+    #endif
+
 }
 
 void VirtualMachine::reset()

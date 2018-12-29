@@ -27,15 +27,15 @@ void Compiler::add_opcode(OpCode opcode)
 
 void Compiler::add_constant(Value value)
 {
-    this->add_opcode(OP_CONSTANT);
+    this->add_opcode(OP_PUSH);
     this->add_constant_only(value);
 }
 
 Program Compiler::compile(const char *source)
 {
-    auto parser = new Parser;
-    auto structure = parser->parse(source);
-    delete parser;
+    Parser parser;
+
+    auto structure = parser.parse(source);
 
     logger->info("Started compiling...");
 
@@ -67,8 +67,16 @@ void Compiler::compile(Statement *rule)
             exit(EXIT_FAILURE);
             break; // I won't remove this line to keep it understandable
         }
+        case RULE_PRINT: {
+            this->compile(static_cast<Print *>(rule)->expression);
+            this->add_opcode(OP_PRINT);
+            break;
+        }
         case RULE_EXPRESSION_STATEMENT: {
             this->compile(static_cast<ExpressionStatement *>(rule)->expression);
+            // The stack needs to be cleared afterwards since this is an expression
+            // That's left alone. The stack needs to be popped.
+            this->add_opcode(OP_POP);
             break;
         }
         case RULE_DECLARATION : {
@@ -83,8 +91,17 @@ void Compiler::compile(Statement *rule)
                 this->compile(declaration->initializer);
                 this->add_opcode(OP_STORE);
                 this->add_constant_only(declaration->name);
+
+                // Pop the value of the OP_PUSH since it's a statement.
+                this->add_opcode(OP_POP);
             }
 
+            break;
+        }
+        case RULE_RETURN: {
+            auto ret = static_cast<Return *>(rule);
+            this->compile(ret->value);
+            this->add_opcode(OP_RETURN);
             break;
         }
         case RULE_IF: {
@@ -94,12 +111,12 @@ void Compiler::compile(Statement *rule)
                 this->compile(rif->condition);
 
                 this->add_opcode(OP_BRANCH_FALSE);
-                auto constant_index = this->add_constant_only(0.0);
+                auto constant_index = this->add_constant_only(static_cast<int64_t>(0));
                 auto start_index = this->current_code_line();
 
                 for (auto stmt : rif->thenBranch) this->compile(stmt);
 
-                this->modify_constant(constant_index, Value(static_cast<double>(this->current_code_line() - start_index)));
+                this->modify_constant(constant_index, Value(static_cast<int64_t>(this->current_code_line() - start_index)));
             }
             break;
         }
@@ -109,15 +126,15 @@ void Compiler::compile(Statement *rule)
             this->compile(rwhile->condition);
 
             this->add_opcode(OP_BRANCH_FALSE);
-            auto constant_index = this->add_constant_only(0.0);
+            auto constant_index = this->add_constant_only(static_cast<int64_t>(0));
             auto start_index = this->current_code_line();
 
             for (auto stmt : rwhile->body) this->compile(stmt);
 
             this->add_opcode(OP_RJUMP);
-            this->add_constant_only(-(this->current_code_line() - initial_index));
+            this->add_constant_only(static_cast<int64_t>(-(this->current_code_line() - initial_index)));
 
-            this->modify_constant(constant_index, Value(static_cast<double>(this->current_code_line() - start_index + 1)));
+            this->modify_constant(constant_index, Value(static_cast<int64_t>(this->current_code_line() - start_index + 1)));
 
             break;
         }
@@ -226,7 +243,7 @@ void Compiler::compile(Expression *rule)
             for (auto argument : function->arguments) this->compile(argument);
 
             for (int16_t i = function->arguments.size() - 1; i >= 0; i--) {
-                this->add_opcode(OP_STORE);
+                this->add_opcode(OP_ONLY_STORE);
                 this->add_constant_only(static_cast<Declaration *>(function->arguments[i])->name);
             }
 
@@ -244,6 +261,7 @@ void Compiler::compile(Expression *rule)
 
             this->add_opcode(OP_FUNCTION);
             this->add_constant_only(static_cast<int64_t>(index));
+            this->add_constant_only(function->return_type);
 
             break;
         }

@@ -32,6 +32,7 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "while", TOKEN_WHILE },
     { "none", TOKEN_NONE },
     { "return", TOKEN_RETURN },
+    { "print", TOKEN_PRINT },
     { "class", TOKEN_CLASS },
     { "self", TOKEN_SELF }
 };
