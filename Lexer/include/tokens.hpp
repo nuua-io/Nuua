@@ -41,6 +41,7 @@ typedef enum : uint8_t {
     TOKEN_STRING, // <string>
     TOKEN_INTEGER, // <integer number>
     TOKEN_FLOAT, // <integer number>.<integer number>
+    TOKEN_AS, // as
     TOKEN_OR, // or
     TOKEN_AND, // and
     TOKEN_CLASS, // class

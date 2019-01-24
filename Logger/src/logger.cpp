@@ -3,7 +3,7 @@
  * | Nuua Error Logger |
  * |-------------------|
  *
- * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
 #include "../include/logger.hpp"
@@ -59,7 +59,7 @@ void Logger::warning(const std::string error, int line)
 
 void Logger::error(const std::string error, int line)
 {
-    std::cout
+    std::cerr
         << rang::style::bold
         << rang::fg::red
         << " > "

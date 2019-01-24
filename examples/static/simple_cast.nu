@@ -1,1 +1,3 @@
-(10 + 10) as float
+a: int = 10 + 10
+print a
+print a as float

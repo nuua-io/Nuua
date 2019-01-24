@@ -3,7 +3,7 @@
  * | Nuua Rules |
  * |------------|
  *
- * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
 #include "../include/parser.hpp"
@@ -34,7 +34,13 @@ static std::vector<std::string> RuleNames = {
     "RULE_RETURN",
     "RULE_IF",
     "RULE_WHILE",
+    "RULE_CAST"
 };
+
+void Parser::debug_rule(Rule rule)
+{
+    printf("%s\n", RuleNames[rule].c_str());
+}
 
 void Parser::debug_rules(std::vector<Rule> rules)
 {

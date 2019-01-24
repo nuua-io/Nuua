@@ -1,11 +1,12 @@
 # Configuration
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -flto -Ofast -D DEBUG
+# CXXFLAGS = -m64 -std=c++17 -flto -Ofast -D DEBUG=false -fno-signed-zeros -fno-trapping-math -funroll-loops -fopenmp -D_GLIBCXX_PARALLEL
+CXXFLAGS = -m64 -std=c++17 -Wall -Wextra -D DEBUG=true
 BIN = bin
 BUILD = build
 
 # Dependency list for each layered tier
-MODULES = Logger Lexer Parser Compiler Virtual-Machine Application
+MODULES = Logger Lexer Parser Analyzer Compiler Virtual-Machine Application
 
 # Objects required to build nuua
 OBJS = $(BUILD)/nuua.o $(foreach module,$(MODULES),$(patsubst $(module)/src/%.cpp,$(BUILD)/$(module)/src/%.o,$(wildcard $(module)/src/*.cpp)))
@@ -22,6 +23,10 @@ ifeq ($(OS),Windows_NT)
 EXECUTABLE	:= nuua.exe
 else
 EXECUTABLE	:= nuua
+endif
+
+ifeq ($(CXX),clang++)
+CXXFLAGS += -Xclang -flto-visibility-public-std
 endif
 
 # Main entry point

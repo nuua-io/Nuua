@@ -26,6 +26,9 @@ typedef enum : uint8_t {
     OP_EQ, OP_NEQ, OP_LT, OP_LTE,
     OP_HT, OP_HTE,
 
+    // The cast operator
+    OP_CAST,
+
     // Jumps and conditional jumps
     /*OP_JUMP,*/ OP_RJUMP, OP_BRANCH_TRUE, OP_BRANCH_FALSE,
 

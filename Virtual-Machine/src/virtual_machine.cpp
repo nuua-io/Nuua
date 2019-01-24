@@ -3,7 +3,7 @@
  * | Nuua Stack Based Virtual Machine |
  * |----------------------------------|
  *
- * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
 
@@ -144,6 +144,7 @@ Value VirtualMachine::load_variable(std::string name)
 
 void VirtualMachine::store_variable(std::string name, Value *new_value, bool only_store)
 {
+    logger->info("Storing " + new_value->to_string() + " to " + name);
     // Check if exists
     if (!this->variable_declared(name)) {
         logger->error("Undeclared variable '" + name + "'.", this->get_current_line());
@@ -152,13 +153,19 @@ void VirtualMachine::store_variable(std::string name, Value *new_value, bool onl
 
     auto current_value = this->top_frame->heap[name];
 
+    logger->info("C 2");
+
     // Store and push the value to the stack to make it available as an expression.
     // It also checks the types and casts if nessesary.
     this->top_frame->heap[name] = current_value.type.same_as(&new_value->type)
             ? *new_value
             : new_value->cast(current_value.type);
 
+    logger->info("C 3");
+
     if (!only_store) this->push(this->top_frame->heap[name]);
+
+    logger->info("C 4");
 }
 
 Memory *VirtualMachine::get_current_memory()
@@ -188,7 +195,7 @@ void VirtualMachine::run()
     for (uint64_t instruction;;) {
         instruction = READ_INSTRUCTION();
         #if DEBUG
-            // printf("=> %s (%llu) [%llu]\n", opcode_to_string(instruction).c_str(), instruction, times++);
+            printf("=> %s (%llu) [%llu]\n", opcode_to_string(instruction).c_str(), instruction, times++);
         #endif
         switch (instruction) {
             case OP_PUSH: { this->push(READ_CONSTANT()); break; }
@@ -205,6 +212,7 @@ void VirtualMachine::run()
             case OP_LTE: { BINARY_POP(); this->push(*a <= *b); break; }
             case OP_HT: { BINARY_POP(); this->push(*a > *b); break; }
             case OP_HTE: { BINARY_POP(); this->push(*a >= *b); break; }
+            case OP_CAST: { this->push(this->pop()->cast(READ_VARIABLE())); break; }
             // case OP_JUMP: { this->program_counter = &this->get_current_memory()->code.front() + (READ_INT() - 1); break; }
             case OP_RJUMP: { this->program_counter += READ_INT() - 1; break; }
             case OP_BRANCH_TRUE: { auto to = READ_INT() - 1; if (this->pop()->to_bool()) this->program_counter += to; break; }
@@ -231,9 +239,7 @@ void VirtualMachine::run()
 
 void VirtualMachine::interpret(const char *source)
 {
-    auto compiler = new Compiler;
-    this->program = compiler->compile(source);
-    delete compiler;
+    this->program = Compiler().compile(source);
 
     logger->info("Started interpreting...");
 

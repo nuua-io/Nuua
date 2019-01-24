@@ -1,6 +1,7 @@
 #ifndef TYPE_HPP
 #define TYPE_HPP
 
+#include "../../Parser/include/rules.hpp"
 #include <stdint.h>
 #include <unordered_map>
 #include <utility>
@@ -37,6 +38,9 @@ class Type
         Type(ValueType type, std::pair<Type *, Type *> *dictType)
             : type(type), dictType(dictType) {}
         Type(std::string name);
+
+        // Gets the string representation of the type of an expression.
+        static std::string get_string(Expression *rule);
 
         // Checks to see if the current type is a given ValueType.
         // No recursion is done since it does not accept another type.

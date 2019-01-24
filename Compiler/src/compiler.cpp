@@ -7,7 +7,6 @@
  * https://nuua.io
  */
 #include "../include/compiler.hpp"
-#include "../../Parser/include/parser.hpp"
 #include "../../Logger/include/logger.hpp"
 
 Memory *Compiler::get_current_memory()
@@ -33,9 +32,10 @@ void Compiler::add_constant(Value value)
 
 Program Compiler::compile(const char *source)
 {
-    Parser parser;
-
-    auto structure = parser.parse(source);
+    auto structure = Analyzer()
+        .analyze(source)
+        ->optimize()
+        ->code;
 
     logger->info("Started compiling...");
 
@@ -143,6 +143,7 @@ void Compiler::compile(Statement *rule)
             exit(EXIT_FAILURE);
         }
     }
+    delete rule;
 }
 
 void Compiler::compile(Expression *rule)
@@ -170,7 +171,7 @@ void Compiler::compile(Expression *rule)
             auto list = static_cast<List *>(rule);
             for (int i = list->value.size() - 1; i >= 0; i--) this->compile(list->value.at(i));
             this->add_opcode(OP_LIST);
-            this->add_constant_only(static_cast<double>(list->value.size()));
+            this->add_constant_only(static_cast<int64_t>(list->value.size()));
             break;
         }
         case RULE_DICTIONARY: {
@@ -180,7 +181,7 @@ void Compiler::compile(Expression *rule)
                 this->compile(dictionary->value.at(dictionary->key_order[i]));
             }
             this->add_opcode(OP_DICTIONARY);
-            this->add_constant_only(static_cast<double>(dictionary->value.size()));
+            this->add_constant_only(static_cast<int64_t>(dictionary->value.size()));
             break;
         }
         case RULE_NONE: {
@@ -189,6 +190,13 @@ void Compiler::compile(Expression *rule)
         }
         case RULE_GROUP: {
             this->compile(static_cast<Group *>(rule)->expression);
+            break;
+        }
+        case RULE_CAST: {
+            auto cast = static_cast<Cast *>(rule);
+            this->compile(cast->expression);
+            this->add_opcode(OP_CAST);
+            this->add_constant_only(cast->type);
             break;
         }
         case RULE_UNARY: {
@@ -240,22 +248,21 @@ void Compiler::compile(Expression *rule)
             double index = this->current_code_line();
 
             // Compile the function arguments
-            for (auto argument : function->arguments) this->compile(argument);
+            // Make a copy of the argument names since they will be
+            // deleted after compilation.
+            std::vector<std::string> arguments;
+            for (auto argument : function->arguments) {
+                arguments.push_back(static_cast<Declaration *>(argument)->name);
+                this->compile(argument);
+            }
 
-            for (int16_t i = function->arguments.size() - 1; i >= 0; i--) {
+            for (int16_t i = arguments.size() - 1; i >= 0; i--) {
                 this->add_opcode(OP_ONLY_STORE);
-                this->add_constant_only(static_cast<Declaration *>(function->arguments[i])->name);
+                this->add_constant_only(arguments[i]);
             }
 
             // Compile the function body
             for (auto stmt : function->body) this->compile(stmt);
-
-            // Add the default return statement.
-            // If a previous return has been hit, it will
-            // never run. However, if no return was found
-            // this is the return it will hit. It returns none
-            this->add_constant(Value());
-            this->add_opcode(OP_RETURN);
 
             this->current_memory = memory;
 
@@ -285,6 +292,7 @@ void Compiler::compile(Expression *rule)
             exit(EXIT_FAILURE);
         }
     }
+    delete rule;
 }
 
 void Compiler::compile(Token op, bool unary)

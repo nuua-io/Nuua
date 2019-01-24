@@ -7,6 +7,7 @@
  * https://nuua.io
  */
 #include "../include/application.hpp"
+#include "../../Logger/include/logger.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -37,7 +38,7 @@ std::string Application::open_file()
 {
     auto file_stream = std::ifstream(this->file_name->c_str());
     if (!file_stream.is_open()) {
-        fprintf(stderr, "Unable to open file '%s'\n", this->file_name->c_str());
+        logger->error("Unable to open file '" + *this->file_name + "'");
         exit(EXIT_FAILURE);
     }
 
@@ -53,11 +54,13 @@ Application::Application(int argc, char *argv[])
     }
 }
 
-void Application::start()
+int Application::start()
 {
     switch (this->application_type) {
         case APPLICATION_PROMPT: { this->prompt(); break; }
         case APPLICATION_FILE: { this->string(this->open_file()); break; }
         case APPLICATION_STRING: { this->string(""); break; }
     }
+
+    return EXIT_SUCCESS;
 }

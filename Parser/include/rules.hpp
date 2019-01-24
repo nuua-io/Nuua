@@ -3,7 +3,7 @@
  * | Nuua Rules |
  * |------------|
  *
- * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
 #ifndef RULES_HPP
@@ -40,6 +40,7 @@ typedef enum : uint8_t {
     RULE_RETURN,
     RULE_IF,
     RULE_WHILE,
+    RULE_CAST,
 } Rule;
 
 class Expression
@@ -48,7 +49,8 @@ class Expression
         uint32_t line;
         Rule rule;
 
-        Expression(Rule rule = RULE_EXPRESSION) : rule(rule) {};
+        Expression(Rule rule = RULE_EXPRESSION)
+            : rule(rule) {};
 };
 
 class Statement
@@ -226,8 +228,17 @@ class Access : public Expression
             : Expression(RULE_ACCESS), name(name), index(index) {};
 };
 
-/* Statements */
+class Cast : public Expression
+{
+    public:
+        Expression *expression;
+        std::string type;
 
+        Cast(Expression *expression, std::string type)
+            : Expression(RULE_CAST), expression(expression), type(type) {}
+};
+
+/* Statements */
 class Print : public Statement
 {
     public:

@@ -24,6 +24,7 @@
 const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "true", TOKEN_TRUE },
     { "false", TOKEN_FALSE },
+    { "as", TOKEN_AS },
     { "or", TOKEN_OR },
     { "and", TOKEN_AND },
     { "if", TOKEN_IF },

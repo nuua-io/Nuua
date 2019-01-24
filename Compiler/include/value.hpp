@@ -9,7 +9,7 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
-#include "type.hpp"
+#include "../../Analyzer/include/type.hpp"
 #include <string>
 #include <vector>
 

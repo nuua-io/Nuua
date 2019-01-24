@@ -3,7 +3,7 @@
  * | Nuua Parser |
  * |-------------|
  *
- * Copyright 2018 Erik Campobadal <soc@erik.cat>
+ * Copyright 2019 Erik Campobadal <soc@erik.cat>
  * https://nuua.io
  */
 #include "../include/parser.hpp"
@@ -53,6 +53,7 @@ std::vector<Statement *> Parser::get_block_body()
     while (!CHECK(TOKEN_RIGHT_BRACE) && !IS_AT_END()) {
         body.push_back(this->statement());
     }
+
     return body;
 }
 
@@ -74,6 +75,30 @@ bool Parser::is_function()
         && (LOOKAHEAD(current + 3).is(TOKEN_LEFT_BRACE)
         || LOOKAHEAD(current + 3).is(TOKEN_BIG_RIGHT_ARROW)
         || LOOKAHEAD(current + 3).is(TOKEN_RIGHT_ARROW));
+}
+
+std::string Parser::get_type()
+{
+    std::string initial;
+
+    if (CURRENT().is(TOKEN_IDENTIFIER)) {
+        initial = this->consume(TOKEN_IDENTIFIER, "You need to specify the return type after the ':'").to_string();
+    } else if (CURRENT().is(TOKEN_NONE)) {
+        initial = this->consume(TOKEN_NONE, "You need to specify the return type after the ':'").to_string();
+    } else {
+        logger->error("You need to specify the return type after the ':'", this->current->line);
+        exit(EXIT_FAILURE);
+    }
+
+    // Check for additional type specifiers: initial[type]
+    if (this->match(TOKEN_LEFT_SQUARE)) {
+        auto type = this->get_type();
+        // The remaining ]
+        this->consume(TOKEN_RIGHT_SQUARE, "Invalid type definition.");
+        return initial + "[" + type + "]";
+    }
+
+    return initial;
 }
 
 Expression *Parser::function()
@@ -101,21 +126,17 @@ Expression *Parser::function()
 
     // Get the function return type
     this->consume(TOKEN_COLON, "You need to specify ':' after the function arguments to further indicate the function's return type");
-    std::string return_type;
-    if (CURRENT().is(TOKEN_IDENTIFIER)) {
-        return_type = this->consume(TOKEN_IDENTIFIER, "You need to specify the return type after the ':'").to_string();
-    } else if (CURRENT().is(TOKEN_NONE)) {
-        return_type = this->consume(TOKEN_NONE, "You need to specify the return type after the ':'").to_string();
-    } else {
-        logger->error("You need to specify the return type after the ':'", this->current->line);
-        exit(EXIT_FAILURE);
-    }
+    auto return_type = this->get_type();
 
     // Get the function body
     if (this->match(TOKEN_LEFT_BRACE)) {
         this->consume(TOKEN_NEW_LINE, "Expected a new line after the '{'");
-        CURRENT().debug_token();
         body = this->get_block_body();
+        // Add the default return statement.
+        // If a previous return has been hit, it will
+        // never run. However, if no return was found
+        // this is the return it will hit. It returns none
+        body.push_back(new Return(new None()));
         this->consume(TOKEN_RIGHT_BRACE, "Unterminated block. Expected '}'");
         // This is checked already since it's an expression statement
         // this->consume(TOKEN_NEW_LINE, "Expected a new line after the '}'");
@@ -234,18 +255,29 @@ Expression *Parser::finish_access(Expression *item)
     return new Access(static_cast<Variable *>(item)->name, index);
 }
 
+Expression *Parser::finish_cast(Expression *expression)
+{
+    auto type = this->primary();
+
+    if (type->rule != RULE_VARIABLE) {
+        // Parser::debug_rule(type->rule);
+        logger->error("Expected a type after the cast operator 'as'.", this->current->line);
+        exit(EXIT_FAILURE);
+    }
+
+    return new Cast(expression, static_cast<Variable *>(type)->name);
+}
+
 Expression *Parser::call()
 {
     auto result = this->primary();
     for (;;) {
-        if (this->match(TOKEN_LEFT_PAREN)) {
-            result = this->finish_call(result);
-        } else if (this->match(TOKEN_LEFT_SQUARE)) {
-            result = this->finish_access(result);
-        } else {
-            break;
-        }
+        if (this->match(TOKEN_LEFT_PAREN)) result = this->finish_call(result);
+        else if (this->match(TOKEN_LEFT_SQUARE)) result = this->finish_access(result);
+        else if (this->match(TOKEN_AS)) result = this->finish_cast(result);
+        else break;
     }
+    // Parser::debug_rule(result->rule);
 
     return result;
 }
@@ -276,6 +308,7 @@ Expression *Parser::addition()
     auto result = this->mul_div_mod();
     while (this->match_any(std::vector<TokenType>({ TOKEN_MINUS, TOKEN_PLUS }))) {
         auto op = PREVIOUS();
+        // Parser::debug_rule(result->rule);
         result = new Binary(result, op, this->mul_div_mod());
     }
 
@@ -333,7 +366,6 @@ Expression *Parser::assignment()
         switch (result->rule) {
             case RULE_VARIABLE: { return new Assign(static_cast<Variable *>(result)->name, this->expression()); }
             case RULE_ACCESS: {
-                printf("Found assign access.\n");
                 auto res = static_cast<Access *>(result);
                 return new AssignAccess(res->name, res->index, this->expression());
             }
@@ -357,12 +389,12 @@ Statement *Parser::declaration_statement()
 {
     auto variable = this->consume(TOKEN_IDENTIFIER, "Expected an identifier in a declaration statement");
     this->consume(TOKEN_COLON, "Expected ':' after identifier in a declaration statement");
-    auto type = this->consume(TOKEN_IDENTIFIER, "Expected a type after the ':' in a declaration statement");
+    auto type = this->get_type();
     Expression *initializer = nullptr;
 
     if (this->match(TOKEN_EQUAL)) initializer = this->expression();
 
-    return new Declaration(variable.to_string(), type.to_string(), initializer);
+    return new Declaration(variable.to_string(), type, initializer);
 }
 
 Statement *Parser::if_statement()
@@ -430,12 +462,6 @@ std::vector<Statement *> Parser::parse(const char *source)
     #endif
 
     logger->success("Parsing completed");
-
-    logger->info("Started optimizing AST...");
-
-    ParserOptimizer().optimize(&code);
-
-    logger->success("AST Optimized");
 
     return code;
 }

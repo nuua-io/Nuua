@@ -35,6 +35,7 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_STRING",
     "TOKEN_INTEGER",
     "TOKEN_FLOAT",
+    "TOKEN_AS",
     "TOKEN_OR",
     "TOKEN_AND",
     "TOKEN_CLASS",

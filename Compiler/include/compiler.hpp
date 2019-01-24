@@ -10,7 +10,7 @@
 #define COMPILER_HPP
 
 #include "program.hpp"
-#include "../../Parser/include/rules.hpp"
+#include "../../Analyzer/include/analyzer.hpp"
 
 // Base compiler class for nuua.
 class Compiler

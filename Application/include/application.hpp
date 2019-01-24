@@ -52,7 +52,7 @@ class Application
         Application(int argc, char *argv[]);
 
         // Starts (runs) the application.
-        void start();
+        int start();
 };
 
 #endif

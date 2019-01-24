@@ -11,9 +11,9 @@
 
 #include "../../Compiler/include/program.hpp"
 
-#define STACK_SIZE 256
-#define FRAME_SIZE 256
-#define MEMORY_SIZE 256
+#define STACK_SIZE 1024
+#define FRAME_SIZE 1024
+#define MEMORY_SIZE 1024
 
 class VirtualMachine
 {
