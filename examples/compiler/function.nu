@@ -1,4 +1,4 @@
-add: fun = (a: int, b: int): int -> a + b + 1
+add: fun = (a: int, b: int): int -> a + b
 res: int = add(10, 5)
 
 print res

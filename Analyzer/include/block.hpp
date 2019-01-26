@@ -2,6 +2,7 @@
 #define BLOCK_HPP
 
 #include <unordered_map>
+#include <vector>
 #include <utility>
 
 // The BlockVariableType determines the
@@ -33,6 +34,8 @@ class Block
         // Stores the variable name and the type of it.
         // var => {type: ..., arguments: ..., return_type: ...}
         std::unordered_map<std::string, BlockVariableType> variables;
+
+        BlockVariableType *get_variable(std::string &name);
 };
 
 #endif

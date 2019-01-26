@@ -1,7 +1,6 @@
 # Configuration
-CXX = g++
-# CXXFLAGS = -m64 -std=c++17 -flto -Ofast -D DEBUG=false -fno-signed-zeros -fno-trapping-math -funroll-loops -fopenmp -D_GLIBCXX_PARALLEL
-CXXFLAGS = -m64 -std=c++17 -Wall -Wextra -D DEBUG=true
+USECLANG = false
+DEBUG = false
 BIN = bin
 BUILD = build
 
@@ -25,8 +24,17 @@ else
 EXECUTABLE	:= nuua
 endif
 
-ifeq ($(CXX),clang++)
+ifeq ($(DEBUG),true)
+CXXFLAGS = -m64 -std=c++17 -Wall -Wextra -D DEBUG=true
+else
+CXXFLAGS = -m64 -std=c++17 -Ofast -D DEBUG=false
+endif
+
+ifeq ($(USECLANG),true)
+CXX = clang++
 CXXFLAGS += -Xclang -flto-visibility-public-std
+else
+CXX = g++
 endif
 
 # Main entry point

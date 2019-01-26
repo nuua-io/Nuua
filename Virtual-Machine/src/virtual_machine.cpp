@@ -105,7 +105,7 @@ void VirtualMachine::do_call()
     auto arguments = READ_INT();
     auto value = this->load_variable(name);
 
-    if (!value.type.is(VALUE_FUN)) {
+    if (!(value.type.type == VALUE_FUN)) {
         logger->error("Target is not callable. Are you sure that '" + name + "' is a function?");
         exit(EXIT_FAILURE);
     }

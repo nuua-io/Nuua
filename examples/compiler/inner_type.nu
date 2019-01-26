@@ -1,4 +1,4 @@
-a: list[float] = [1.0, 2.0, 3.0, 4.0]
-b: float = a[0]
+a: list[list[int]] = [[1, 2, 3, 4], [1, 2, 3, 4]]
+b: int = a
 
 print b

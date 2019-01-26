@@ -30,22 +30,12 @@ class Analyzer
     void analyze(std::vector<Statement *> block, std::vector<Statement *> arguments = {}, std::string return_type = "");
 
     // Stops the execution if the current block does not
-    // have the given variable declared.
-    void must_have(std::string name, uint32_t line);
+    // have the given variable declared. It also returns
+    // it's address to use it if nessesary.
+    BlockVariableType * must_have(std::string name, uint32_t line);
 
     // Declares a variable given a name and a type.
     void declare(std::string name, std::string type, Expression *initializer);
-
-    // Replaces the variable of the given type
-    // into the current block's variable types.
-    //
-    // <var> - Replaces <var> with the type of var.
-    // <:var:> - Replaces <:var:> with the return type of var.
-    // <|var|> - Replaces <|var|> with the inner type of var.
-    void replace_types(std::string &dest);
-
-    // A generic implementation of find and replace
-    void find_replace(std::string &dest, const std::string &find, const std::string &replace);
 
     public:
         // Stores the block of code to use.

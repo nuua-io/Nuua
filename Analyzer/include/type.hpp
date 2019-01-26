@@ -2,6 +2,7 @@
 #define TYPE_HPP
 
 #include "../../Parser/include/rules.hpp"
+#include "block.hpp"
 #include <stdint.h>
 #include <unordered_map>
 #include <utility>
@@ -19,35 +20,39 @@ class Type
     static const std::vector<std::string> types_string;
 
     public:
+        // Stores the type.
         ValueType type;
 
-        union {
-            // Stores the type of a VALUE_LIST.
-            Type *listType;
+        // Stores the inner type if needed.
+        Type *inner_type = nullptr;
 
-            // Stores the pair of value of a VALUE_DICT.
-            std::pair<Type *, Type *> *dictType;
-        };
-
+        // Create a none type.
         Type()
             : type(VALUE_NONE) {}
+
+        // Create a value type given the type.
         Type(ValueType type)
             : type(type) {}
-        Type(ValueType type, Type *listType)
-            : type(type), listType(listType) {}
-        Type(ValueType type, std::pair<Type *, Type *> *dictType)
-            : type(type), dictType(dictType) {}
+
+        // Create a type given a value type and the inner type.
+        Type(ValueType type, Type *inner_type)
+            : type(type), inner_type(inner_type) {}
+
+        // Create a type given a string representation of it.
         Type(std::string name);
 
-        // Gets the string representation of the type of an expression.
-        static std::string get_string(Expression *rule);
+        // Create a type given an expression and a
+        // list of code blocks to know the variable values.
+        Type(Expression *rule, std::vector<Block> *blocks);
 
-        // Checks to see if the current type is a given ValueType.
-        // No recursion is done since it does not accept another type.
-        bool is(ValueType type);
+        // Returns the string representation of the type.
+        std::string to_string();
+
+        // Copies the type from "this" to "type".
+        void copy_to(Type *type);
 
         // Compares if the type is the same as another provided type.
-        // Recursive function that also checks list and dict types.
+        // Recursive function that also checks inner types.
         bool same_as(Type *type);
 
         // Prints the type as a string.

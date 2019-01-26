@@ -40,7 +40,7 @@ bool Value::is(Type *type)
 
 bool Value::is(ValueType type)
 {
-    return this->type.is(type);
+    return this->type.type == type;
 }
 
 double Value::to_double()
