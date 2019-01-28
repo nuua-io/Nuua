@@ -126,7 +126,8 @@ void Analyzer::analyze(Expression *rule)
                     logger->error("List access index must be an integer. Found " + t.to_string());
                     exit(EXIT_FAILURE);
                 }
-                // All checks passed. We may break the switch.
+                // All checks passed. We may set the index type and break the switch.
+                assign_access->integer_index = true;
                 break;
             } else if (var_type.type == VALUE_DICT) {
                 // The variable is a dict. The index must be a string.
@@ -135,7 +136,8 @@ void Analyzer::analyze(Expression *rule)
                     logger->error("Dictionary access index must be a string. Found " + t.to_string());
                     exit(EXIT_FAILURE);
                 }
-                // All checks passed. We may break the switch.
+                // All checks passed. We may set the index type and break the switch.
+                assign_access->integer_index = false;
                 break;
             }
             logger->error("You can't access an inner element on " + var_type.to_string());
@@ -204,7 +206,8 @@ void Analyzer::analyze(Expression *rule)
                     logger->error("List access index must be an integer. Found " + t.to_string());
                     exit(EXIT_FAILURE);
                 }
-                // All checks passed. We may break the switch.
+                // All checks passed. We may set the index type and break the switch.
+                access->integer_index = true;
                 break;
             } else if (var_type.type == VALUE_DICT) {
                 // The variable is a dict. The index must be a string.
@@ -213,7 +216,8 @@ void Analyzer::analyze(Expression *rule)
                     logger->error("Dictionary access index must be a string. Found " + t.to_string());
                     exit(EXIT_FAILURE);
                 }
-                // All checks passed. We may break the switch.
+                // All checks passed. We may set the index type and break the switch.
+                access->integer_index = false;
                 break;
             }
             logger->error("You can't access an inner element on " + var_type.to_string());
@@ -274,9 +278,11 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
     auto block = &this->blocks.back();
 
     // Check if the variable exists already.
-    if (block->variables.find(name) != block->variables.end()) {
-        logger->error("The variable '" + name + "' is already declared in this block scope.");
-        exit(EXIT_FAILURE);
+    for (int i = this->blocks.size() - 1; i >= 0; i--) {
+        if (this->blocks[i].variables.find(name) != this->blocks[i].variables.end()) {
+            logger->error("The variable '" + name + "' is already declared in this scope.");
+            exit(EXIT_FAILURE);
+        }
     }
 
     // Set the return type if it's a function value.

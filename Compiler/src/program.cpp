@@ -27,10 +27,10 @@ static auto opcode_names = std::vector<std::string>({
     /*OP_JUMP,*/ "OP_RJUMP", "OP_BRANCH_TRUE", "OP_BRANCH_FALSE",
 
     // Store and load
-    "OP_DECLARE", "OP_STORE", "OP_ONLY_STORE", "OP_LOAD", "OP_STORE_ACCESS",
+    "OP_DECLARE", "OP_STORE", "OP_ONLY_STORE", "OP_LOAD", "OP_STORE_ACCESS_INT", "OP_STORE_ACCESS_STRING",
 
     // Lists and dictionaries
-    "OP_LIST", "OP_DICTIONARY", "OP_ACCESS",
+    "OP_LIST", "OP_DICTIONARY", "OP_ACCESS_INT", "OP_ACCESS_STRING",
 
     // Functions
     "OP_FUNCTION", "OP_RETURN", "OP_CALL",
@@ -55,10 +55,12 @@ void Memory::dump()
             || opcode == OP_BRANCH_FALSE
             || opcode == OP_BRANCH_TRUE
             || opcode == OP_RJUMP
-            || opcode == OP_ACCESS
+            || opcode == OP_ACCESS_INT
+            || opcode == OP_ACCESS_STRING
             || opcode == OP_LIST
             || opcode == OP_DICTIONARY
-            || opcode == OP_STORE_ACCESS
+            || opcode == OP_STORE_ACCESS_INT
+            || opcode == OP_STORE_ACCESS_STRING
             || opcode == OP_FUNCTION
             || opcode == OP_CALL
             || opcode == OP_DECLARE

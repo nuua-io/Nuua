@@ -181,6 +181,7 @@ class AssignAccess : public Expression
         std::string name;
         Expression *index;
         Expression *value;
+        bool integer_index; // Determines if it needs an integer or string to access.
 
         AssignAccess(std::string name, Expression *index, Expression *value)
             : Expression(RULE_ASSIGN_ACCESS), name(name), index(index), value(value) {};
@@ -223,6 +224,7 @@ class Access : public Expression
     public:
         std::string name;
         Expression *index;
+        bool integer_index; // Determines if it needs an integer or string to access.
 
         Access(std::string name, Expression *index)
             : Expression(RULE_ACCESS), name(name), index(index) {};

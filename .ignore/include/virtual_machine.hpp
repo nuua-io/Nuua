@@ -47,6 +47,33 @@ class VirtualMachine
     // Pops and returns a value from the stack.
     Value *pop();
 
+    // Helper to perform the OP_LIST.
+    void do_list();
+
+    // Helper to perform OP_DICTIONARY.
+    void do_dictionary();
+
+    // Helper to perform OP_ACCESS.
+    void do_access();
+
+    // Helper to perform OP_DECLARE.
+    void do_declare();
+
+    // Helper to perform OP_RETURN.
+    void do_return();
+
+    // Helper to perform OP_CALL.
+    void do_call();
+
+    // Returns true if the value has been declared.
+    bool variable_declared(std::string name);
+
+    // Loads a variable or fails with an error.
+    Value load_variable(std::string name);
+
+    // Stores a value
+    void store_variable(std::string name, Value *new_value, bool only_store);
+
     // Returns the current used memory.
     Memory *get_current_memory();
 

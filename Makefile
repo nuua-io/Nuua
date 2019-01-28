@@ -1,5 +1,5 @@
 # Configuration
-USECLANG = false
+USECLANG = true
 DEBUG = false
 BIN = bin
 BUILD = build

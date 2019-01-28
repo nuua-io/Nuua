@@ -228,7 +228,7 @@ void Compiler::compile(Expression *rule)
             auto assign_access = static_cast<AssignAccess *>(rule);
             this->compile(assign_access->value);
             this->compile(assign_access->index);
-            this->add_opcode(OP_STORE_ACCESS);
+            this->add_opcode(assign_access->integer_index ? OP_STORE_ACCESS_INT : OP_STORE_ACCESS_STRING);
             this->add_constant_only(assign_access->name);
             break;
         }
@@ -283,7 +283,7 @@ void Compiler::compile(Expression *rule)
         case RULE_ACCESS: {
             auto access = static_cast<Access *>(rule);
             this->compile(access->index);
-            this->add_opcode(OP_ACCESS);
+            this->add_opcode(access->integer_index ? OP_ACCESS_INT : OP_ACCESS_STRING);
             this->add_constant_only(access->name);
             break;
         }
