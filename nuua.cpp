@@ -33,6 +33,5 @@ int main(int argc, char *argv[])
     // of the application and does all the work.
     //
     // It also returns EXIT_SUCCESS if all went right.
-    return Application(argc, argv)
-        .start();
+    return Application(argc, argv).start();
 }

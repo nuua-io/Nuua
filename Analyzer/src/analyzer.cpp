@@ -65,9 +65,37 @@ void Analyzer::analyze(Expression *rule)
         case RULE_FLOAT:
         case RULE_STRING:
         case RULE_BOOLEAN:
-        case RULE_LIST:
-        case RULE_DICTIONARY:
         case RULE_NONE: { break; }
+        case RULE_LIST: {
+            auto list = static_cast<List *>(rule);
+            if (list->value.size() == 0) {
+                logger->error("You can't setup an empty list. You should declare a variable with it's type and leave the initializer empty.");
+                exit(EXIT_FAILURE);
+            }
+            auto type = Type(list->value[0], &this->blocks);
+            for (size_t i = 1; i < list->value.size(); i++) {
+                if (!Type(list->value[i], &this->blocks).same_as(&type)) {
+                    logger->error("Multiple types in a list are not supported.");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            break;
+        }
+        case RULE_DICTIONARY: {
+            auto dict = static_cast<Dictionary *>(rule);
+            if (dict->value.size() == 0) {
+                logger->error("You can't setup an empty dictionary. You should declare a variable with it's type and leave the initializer empty.");
+                exit(EXIT_FAILURE);
+            }
+            auto type = Type(dict->value[dict->key_order[0]], &this->blocks);
+            for (size_t i = 1; i < dict->key_order.size(); i++) {
+                if (!Type(dict->value[dict->key_order[i]], &this->blocks).same_as(&type)) {
+                    logger->error("Multiple types in a dictionary are not supported.");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            break;
+        }
         case RULE_GROUP: {
             this->analyze(static_cast<Group *>(rule)->expression);
             break;
