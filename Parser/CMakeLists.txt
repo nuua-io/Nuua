@@ -1,4 +1,2 @@
-add_library (Parser src/parser.cpp src/rules.cpp)
-set_property(TARGET Parser PROPERTY CXX_STANDARD 17)
-set_property(TARGET Parser PROPERTY CXX_STANDARD_REQUIRED ON)
+add_library (Parser SHARED src/parser.cpp src/rules.cpp)
 target_link_libraries (Parser Lexer Logger)

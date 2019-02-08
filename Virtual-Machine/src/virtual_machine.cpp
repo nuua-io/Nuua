@@ -59,7 +59,7 @@ void VirtualMachine::run()
     for (uint64_t instruction;;) {
         instruction = READ_INSTRUCTION();
         #if DEBUG
-            printf("=> %s (%llu) [%llu]\n", opcode_to_string(instruction).c_str(), instruction, times++);
+            // printf("=> %s (%llu) [%llu]\n", opcode_to_string(instruction).c_str(), instruction, times++);
         #endif
         switch (instruction) {
             /*
@@ -298,10 +298,6 @@ void VirtualMachine::run()
                 Performs return X.
             */
             case OP_RETURN: {
-                // Check the return type
-                auto return_value = this->top_frame->caller;
-                auto returned_value = *(this->top_stack - 1);
-                *(this->top_stack - 1) = returned_value.cast(return_value.value_fun->return_type);
                 // Turn back the program counter to the original one.
                 this->program_counter = (this->top_frame--)->return_address;
                 // Change back the current memory
@@ -320,7 +316,7 @@ void VirtualMachine::run()
                 // Set the return address
                 this->top_frame->return_address = this->program_counter;
                 // Set the frame caller.
-                this->top_frame->caller = value;
+                // this->top_frame->caller = value;
                 // Set the memory to the functions memory.
                 *(++this->current_memory) = FUNCTIONS_MEMORY;
                 // Set the program counter depending on the function index.

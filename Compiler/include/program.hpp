@@ -11,7 +11,8 @@
 
 #include "value.hpp"
 #include <vector>
-#include <unordered_map>
+// #include <unordered_map>
+#include "../../Utilities/include/robin_hood.hpp"
 #include <stdint.h>
 
 // Defines the known opcodes for the program.
@@ -76,13 +77,16 @@ class Frame
     public:
 
         // Stores the heap of the frame (where variables are stroed).
-        std::unordered_map<std::string, Value> heap;
+        robin_hood::unordered_map<std::string, Value> heap;
 
         // Stores the return address to get back to the original program counter.
         uint64_t *return_address = nullptr;
 
         // Stores the frame caller (the function)
         Value caller;
+
+        Frame()
+            : heap({{}}) {}
 };
 
 // The base program class that represents a nuua program.

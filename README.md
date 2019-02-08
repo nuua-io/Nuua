@@ -61,6 +61,8 @@ In the case of the current state, nuua have the following modules:
 
 - [Logger](https://github.com/nuua-io/Logger)
 
+![Layered System](https://i.imgur.com/vNaPz7x.png)
+
 ### How are these repositories linked with this one?
 
 They are linked using git subtrees. I mainly develop nuua in this repository and then further push all contents to each one,

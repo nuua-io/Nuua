@@ -18,19 +18,20 @@ void Analyzer::analyze(Statement *rule)
         case RULE_DECLARATION: {
             auto dec = static_cast<Declaration *>(rule);
             this->declare(dec->name, dec->type, dec->initializer);
-            this->analyze(dec->initializer);
-            // Get the type of the initializer,
-            auto type = Type(dec->initializer, &this->blocks);
-
-            // Check the types to know if it can be initialized.
-            if (!Type(dec->type).same_as(&type)) {
-                logger->error(
-                    "Incompatible types: Need "
-                    + Type(dec->type).to_string()
-                    + ", got "
-                    + type.to_string()
-                );
-                exit(EXIT_FAILURE);
+            if (dec->initializer) {
+                this->analyze(dec->initializer);
+                // Get the type of the initializer,
+                auto type = Type(dec->initializer, &this->blocks);
+                // Check the types to know if it can be initialized.
+                if (!Type(dec->type).same_as(&type)) {
+                    logger->error(
+                        "Incompatible types: Need "
+                        + Type(dec->type).to_string()
+                        + ", got "
+                        + type.to_string()
+                    );
+                    exit(EXIT_FAILURE);
+                }
             }
             break;
         }
@@ -294,7 +295,7 @@ BlockVariableType *Analyzer::must_have(std::string name, uint32_t line)
 {
     for (int16_t i = this->blocks.size() - 1; i >= 0; i--) {
         auto var = this->blocks[i].get_variable(name);
-        if (var != nullptr) return var;
+        if (var) return var;
     }
 
     logger->error("Undeclared variable", line);
