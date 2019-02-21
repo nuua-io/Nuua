@@ -15,11 +15,14 @@
 // Base compiler class for nuua.
 class Compiler
 {
-    // Stores the current compilation line (regarding to the original source file).
-    uint32_t current_line = 0;
-
     // Stores the currently used memory where compilation result is going.
     MemoryType current_memory = PROGRAM_MEMORY;
+
+    // Stores the current compilation line (in the source code).
+    uint32_t current_line;
+
+    // Stores the current block.
+    std::vector<Block*> blocks;
 
     // Defines a basic compilation for a Statement.
     void compile(Statement *rule);
@@ -31,7 +34,7 @@ class Compiler
     void compile(Token op, bool unary = false);
 
     // Adds an opcode the the currently used memory.
-    void add_opcode(OpCode opcode);
+    void add_opcode(uint64_t opcode);
 
     // Adds a constant with it's respective OP_CONSTANT opcode.
     void add_constant(Value value);

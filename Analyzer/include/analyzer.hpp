@@ -2,7 +2,7 @@
 #define ANALIZER_HPP
 
 #include "../../Parser/include/rules.hpp"
-#include "block.hpp"
+#include "../../Parser/include/block.hpp"
 
 // The base nuua analyzer and optimizer.
 //
@@ -27,12 +27,12 @@ class Analyzer
 
     // Analyzes a block of statements. Additional arguments may be used
     // to initialize the block variable types.
-    void analyze(std::vector<Statement *> block, std::vector<Statement *> arguments = {}, std::string return_type = "");
+    Block analyze(std::vector<Statement *> &block, std::vector<Statement *> arguments = {}, std::string return_type = "");
 
     // Stops the execution if the current block does not
     // have the given variable declared. It also returns
     // it's address to use it if nessesary.
-    BlockVariableType * must_have(std::string name, uint32_t line);
+    BlockVariableType *must_have(std::string name, uint32_t line);
 
     // Declares a variable given a name and a type.
     void declare(std::string name, std::string type, Expression *initializer);
@@ -41,11 +41,14 @@ class Analyzer
         // Stores the block of code to use.
         std::vector<Statement *> code;
 
+        // Stores the main block.
+        Block main_block;
+
         // Analizes the input string and finds any errors.
-        Analyzer *analyze(const char *source);
+        void analyze(const char *source);
 
         // Optimizes the input AST.
-        Analyzer *optimize();
+        void optimize();
 };
 
 #endif

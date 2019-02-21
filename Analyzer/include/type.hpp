@@ -2,7 +2,7 @@
 #define TYPE_HPP
 
 #include "../../Parser/include/rules.hpp"
-#include "block.hpp"
+#include "../../Parser/include/block.hpp"
 #include <stdint.h>
 #include <unordered_map>
 #include <utility>

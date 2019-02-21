@@ -42,14 +42,14 @@ void Analyzer::analyze(Statement *rule)
         case RULE_IF: {
             auto rif = static_cast<If *>(rule);
             this->analyze(rif->condition);
-            this->analyze(rif->thenBranch);
-            this->analyze(rif->elseBranch);
+            rif->then_block = this->analyze(rif->thenBranch);
+            rif->else_block = this->analyze(rif->elseBranch);
             break;
         }
         case RULE_WHILE: {
             auto rwhile = static_cast<While *>(rule);
             this->analyze(rwhile->condition);
-            this->analyze(rwhile->body);
+            rwhile->block = this->analyze(rwhile->body);
             break;
         }
         default: {
@@ -190,7 +190,7 @@ void Analyzer::analyze(Expression *rule)
         }
         case RULE_FUNCTION: {
             auto function = static_cast<Function *>(rule);
-            this->analyze(function->body, function->arguments, function->return_type);
+            function->block = this->analyze(function->body, function->arguments, function->return_type);
             break;
         }
         case RULE_CALL: {
@@ -260,10 +260,13 @@ void Analyzer::analyze(Expression *rule)
     }
 }
 
-void Analyzer::analyze(std::vector<Statement *> block, std::vector<Statement *> arguments, std::string return_type)
+Block Analyzer::analyze(std::vector<Statement *> &block, std::vector<Statement *> arguments, std::string return_type)
 {
+    logger->info("Block analysis...");
     // Push a new block to the analyzed blocks.
-    this->blocks.push_back(Block());
+    if (this->blocks.size() > 0) {
+        this->blocks.push_back(Block(this->blocks.back().variables, this->blocks.back().acomulative_variables));
+    } else this->blocks.push_back(Block());
 
     // Push the arguments if any.
     // The parser makes sure it's a declaration.
@@ -287,8 +290,13 @@ void Analyzer::analyze(std::vector<Statement *> block, std::vector<Statement *> 
         }
     } else for (auto stmt : block) this->analyze(stmt);
 
+    auto res = this->blocks.back();
+
     // Pop back the block since it's already analyzed.
     this->blocks.pop_back();
+
+    // Return the frame size.
+    return res;
 }
 
 BlockVariableType *Analyzer::must_have(std::string name, uint32_t line)
@@ -304,11 +312,12 @@ BlockVariableType *Analyzer::must_have(std::string name, uint32_t line)
 
 void Analyzer::declare(std::string name, std::string type, Expression *initializer)
 {
+    logger->info("Declaring...");
     auto block = &this->blocks.back();
 
     // Check if the variable exists already.
-    for (int i = this->blocks.size() - 1; i >= 0; i--) {
-        if (this->blocks[i].variables.find(name) != this->blocks[i].variables.end()) {
+    for (int16_t i = this->blocks.size() - 1; i >= 0; i--) {
+        if (this->blocks[i].get_variable(name)) {
             logger->error("The variable '" + name + "' is already declared in this scope.");
             exit(EXIT_FAILURE);
         }
@@ -324,25 +333,22 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
     }
 
     // Declare the variable with the given type.
-    block->variables[name] = BlockVariableType(type, arguments, return_type);
+    block->variables[name] = BlockVariableType(type, block->acomulative_variables++, arguments, return_type);
+    logger->info("Declared!");
 }
 
-Analyzer *Analyzer::analyze(const char *source)
+void Analyzer::analyze(const char *source)
 {
     this->code = Parser().parse(source);
 
     logger->info("Started analyzing...");
 
-    this->analyze(this->code);
+    this->main_block = this->analyze(this->code);
 
     logger->success("Analyzis complete...");
-
-    return this;
 }
 
-Analyzer *Analyzer::optimize()
+void Analyzer::optimize()
 {
     /* For future use */
-
-    return this;
 }

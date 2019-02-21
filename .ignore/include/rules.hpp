@@ -10,7 +10,6 @@
 #define RULES_HPP
 
 #include "../../Lexer/include/tokens.hpp"
-#include "block.hpp"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -205,7 +204,6 @@ class Function : public Expression
         std::vector<Statement *> arguments;
         std::string return_type;
         std::vector<Statement *> body;
-        Block block;
 
         Function(std::vector<Statement *> arguments, std::string return_type, std::vector<Statement *> body)
             : Expression(RULE_FUNCTION), arguments(arguments), return_type(return_type), body(body) {}
@@ -287,7 +285,6 @@ class If : public Statement
         Expression *condition;
         std::vector<Statement *> thenBranch;
         std::vector<Statement *> elseBranch;
-        Block then_block, else_block;
 
         If(Expression *condition, std::vector<Statement *> thenBranch, std::vector<Statement *> elseBranch)
             : Statement(RULE_IF), condition(condition), thenBranch(thenBranch), elseBranch(elseBranch) {};
@@ -298,10 +295,12 @@ class While : public Statement
     public:
         Expression *condition;
         std::vector<Statement *> body;
-        Block block;
 
         While(Expression *condition, std::vector<Statement *> body)
             : Statement(RULE_WHILE), condition(condition), body(body) {};
 };
+
+void debug_rules(std::vector<Rule> rules);
+void debug_rules(std::vector<Statement *> rules);
 
 #endif

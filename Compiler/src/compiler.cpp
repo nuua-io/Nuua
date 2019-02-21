@@ -18,7 +18,7 @@ Memory *Compiler::get_current_memory()
     }
 }
 
-void Compiler::add_opcode(OpCode opcode)
+void Compiler::add_opcode(uint64_t opcode)
 {
     this->get_current_memory()->code.push_back(opcode);
     this->get_current_memory()->lines.push_back(this->current_line);
@@ -32,14 +32,21 @@ void Compiler::add_constant(Value value)
 
 Program Compiler::compile(const char *source)
 {
-    auto structure = Analyzer()
-        .analyze(source)
-        ->optimize()
-        ->code;
+    auto analyzer = Analyzer();
+    analyzer.analyze(source);
+    analyzer.optimize();
+    auto structure = &analyzer.code;
 
     logger->info("Started compiling...");
 
-    for (auto node : structure) this->compile(node);
+    // Push the main frame.
+    this->add_opcode(OP_FRAME);
+    this->add_constant_only(static_cast<int64_t>(analyzer.main_block.acomulative_variables));
+    // Compile the code.
+    this->blocks.push_back(&analyzer.main_block);
+    for (auto node : *structure) this->compile(node);
+    this->blocks.pop_back();
+    // Add the exit opcode.
     this->add_opcode(OP_EXIT);
 
     #if DEBUG
@@ -83,19 +90,26 @@ void Compiler::compile(Statement *rule)
             auto declaration = static_cast<Declaration *>(rule);
 
             this->add_opcode(OP_DECLARE);
-            this->add_constant_only(declaration->name);
+            this->add_opcode(
+                this->blocks.back()->variables[
+                    declaration->name
+                ].int_representation
+            );
             this->add_constant_only(Type(declaration->type));
             // this->add_constant_only(Value(Type(declaration->type))); // This is the long version
 
             if (declaration->initializer) {
                 this->compile(declaration->initializer);
                 this->add_opcode(OP_STORE);
-                this->add_constant_only(declaration->name);
+                this->add_opcode(
+                    this->blocks.back()->variables[
+                        declaration->name
+                    ].int_representation
+                );
 
                 // Pop the value of the OP_PUSH since it's a statement.
                 this->add_opcode(OP_POP);
             }
-
             break;
         }
         case RULE_RETURN: {
@@ -108,6 +122,9 @@ void Compiler::compile(Statement *rule)
             //! Still needs to finish what happens if the else branch is present!!
             auto rif = static_cast<If *>(rule);
             if (rif->elseBranch.size() == 0) {
+                this->blocks.push_back(&rif->then_block);
+                this->add_opcode(OP_FRAME);
+                this->add_constant_only(static_cast<int64_t>(this->blocks.back()->acomulative_variables));
                 this->compile(rif->condition);
 
                 this->add_opcode(OP_BRANCH_FALSE);
@@ -117,11 +134,16 @@ void Compiler::compile(Statement *rule)
                 for (auto stmt : rif->thenBranch) this->compile(stmt);
 
                 this->modify_constant(constant_index, Value(static_cast<int64_t>(this->current_code_line() - start_index)));
+                this->add_opcode(OP_DROP_FRAME);
+                this->blocks.pop_back();
             }
             break;
         }
         case RULE_WHILE: {
             auto rwhile = static_cast<While *>(rule);
+            this->blocks.push_back(&rwhile->block);
+            this->add_opcode(OP_FRAME);
+            this->add_constant_only(static_cast<int64_t>(this->blocks.back()->acomulative_variables));
             double initial_index = this->current_code_line();
             this->compile(rwhile->condition);
 
@@ -135,7 +157,8 @@ void Compiler::compile(Statement *rule)
             this->add_constant_only(static_cast<int64_t>(-(this->current_code_line() - initial_index)));
 
             this->modify_constant(constant_index, Value(static_cast<int64_t>(this->current_code_line() - start_index + 1)));
-
+            this->add_opcode(OP_DROP_FRAME);
+            this->blocks.pop_back();
             break;
         }
         default: {
@@ -214,14 +237,22 @@ void Compiler::compile(Expression *rule)
         }
         case RULE_VARIABLE: {
             this->add_opcode(OP_LOAD);
-            this->add_constant_only(static_cast<Variable*>(rule)->name);
+            this->add_opcode(
+                this->blocks.back()->variables[
+                    static_cast<Variable *>(rule)->name
+                ].int_representation
+            );
             break;
         }
         case RULE_ASSIGN: {
             auto assign = static_cast<Assign *>(rule);
             this->compile(assign->value);
             this->add_opcode(OP_STORE);
-            this->add_constant_only(assign->name);
+            this->add_opcode(
+                this->blocks.back()->variables[
+                    assign->name
+                ].int_representation
+            );
             break;
         }
         case RULE_ASSIGN_ACCESS: {
@@ -229,7 +260,11 @@ void Compiler::compile(Expression *rule)
             this->compile(assign_access->value);
             this->compile(assign_access->index);
             this->add_opcode(assign_access->integer_index ? OP_STORE_ACCESS_INT : OP_STORE_ACCESS_STRING);
-            this->add_constant_only(assign_access->name);
+            this->add_opcode(
+                this->blocks.back()->variables[
+                    assign_access->name
+                ].int_representation
+            );
             break;
         }
         case RULE_LOGICAL: {
@@ -242,6 +277,7 @@ void Compiler::compile(Expression *rule)
         case RULE_FUNCTION: {
             auto function = static_cast<Function *>(rule);
             auto memory = this->current_memory;
+            this->blocks.push_back(&function->block);
 
             this->current_memory = FUNCTIONS_MEMORY;
 
@@ -268,7 +304,9 @@ void Compiler::compile(Expression *rule)
 
             this->add_opcode(OP_FUNCTION);
             this->add_constant_only(static_cast<int64_t>(index));
-            this->add_constant_only(function->return_type);
+            this->add_constant_only(static_cast<int64_t>(function->block.acomulative_variables));
+
+            this->blocks.pop_back();
 
             break;
         }

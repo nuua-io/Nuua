@@ -11,64 +11,63 @@
 
 Logger *logger = new Logger;
 
-#define DEBUG_CHECK() if (!this->debug) return
-
-void Logger::info(const std::string error, int line)
+void Logger::info(const std::string &msg, int line)
 {
-    DEBUG_CHECK();
-    std::cout
-        << rang::style::bold
-        << rang::fg::cyan
-        << " > "
-        << rang::fg::yellow
-        << error
-        << rang::style::reset
-        << rang::style::bold;
-    if (line >= 0) std::cout << " [Line " << line << "]";
-    std::cout << rang::style::reset << std::endl;
+    #if DEBUG
+        std::cout
+            << rang::style::bold
+            << rang::fg::cyan
+            << " > "
+            << rang::fg::yellow
+            << msg
+            << rang::style::reset
+            << rang::style::bold;
+        if (line >= 0) std::cout << " [Line " << line << "]";
+        std::cout << rang::style::reset << std::endl;
+    #endif
 }
 
-void Logger::success(const std::string error, int line)
+void Logger::success(const std::string &msg, int line)
 {
-    DEBUG_CHECK();
-    std::cout
-        << rang::style::bold
-        << rang::fg::green
-        << " > "
-        << rang::fg::yellow
-        << error
-        << rang::style::reset
-        << rang::style::bold;
-    if (line >= 0) std::cout << " [Line " << line << "]";
-    std::cout << rang::style::reset << std::endl;
+    #if DEBUG
+        std::cout
+            << rang::style::bold
+            << rang::fg::green
+            << " > "
+            << rang::fg::yellow
+            << msg
+            << rang::style::reset
+            << rang::style::bold;
+        if (line >= 0) std::cout << " [Line " << line << "]";
+        std::cout << rang::style::reset << std::endl;
+    #endif
 }
 
-void Logger::warning(const std::string error, int line)
+void Logger::warning(const std::string &msg, int line)
 {
-    DEBUG_CHECK();
-    std::cout
-        << rang::style::bold
-        << " > "
-        << rang::fg::yellow
-        << error
-        << rang::style::reset
-        << rang::style::bold;
-    if (line >= 0) std::cout << " [Line " << line << "]";
-    std::cout << rang::style::reset << std::endl;
+    #if DEBUG
+        std::cout
+            << rang::style::bold
+            << " > "
+            << rang::fg::yellow
+            << msg
+            << rang::style::reset
+            << rang::style::bold;
+        if (line >= 0) std::cout << " [Line " << line << "]";
+        std::cout << rang::style::reset << std::endl;
+    #endif
 }
 
-void Logger::error(const std::string error, int line)
+void Logger::error(const std::string &msg, int line)
 {
     std::cerr
         << rang::style::bold
         << rang::fg::red
         << " > "
         << rang::fg::yellow
-        << error
+        << msg
         << rang::style::reset
         << rang::style::bold;
-    if (line >= 0) std::cout << " [Line " << line << "]";
-    std::cout << rang::style::reset << std::endl;
+    if (line >= 0) std::cerr << " [Line " << line << "]";
+    std::cerr << rang::style::reset << std::endl;
 }
-
-#undef DEBUG_CHECK

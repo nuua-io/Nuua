@@ -14,6 +14,9 @@ class BlockVariableType
         // Represents the variable type
         std::string type;
 
+        // Integer representation inside this block.
+        uint16_t int_representation;
+
         // Represents the variable arguments (FUNCTION ARGUMENTS)
         std::vector<std::string> arguments;
 
@@ -21,8 +24,8 @@ class BlockVariableType
         std::string return_type;
 
         BlockVariableType() {};
-        BlockVariableType(std::string type, std::vector<std::string> arguments, std::string return_type)
-            : type(type), arguments(arguments), return_type(return_type) {}
+        BlockVariableType(std::string type, uint16_t int_representation, std::vector<std::string> arguments, std::string return_type)
+            : type(type), int_representation(int_representation), arguments(arguments), return_type(return_type) {}
 };
 
 // The block class represents a block
@@ -32,10 +35,17 @@ class Block
 {
     public:
         // Stores the variable name and the type of it.
-        // var => {type: ..., arguments: ..., return_type: ...}
+        // var => {type: ..., int_representation: ..., arguments: ..., return_type: ...}
         std::unordered_map<std::string, BlockVariableType> variables;
 
+        uint16_t acomulative_variables;
+
         BlockVariableType *get_variable(std::string &name);
+
+        Block()
+            : variables({}), acomulative_variables(0) {};
+        Block(std::unordered_map<std::string, BlockVariableType> variables, uint16_t acomulative_variables)
+            : variables(variables), acomulative_variables(acomulative_variables) {};
 };
 
 #endif

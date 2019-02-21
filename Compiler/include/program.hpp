@@ -43,7 +43,7 @@ typedef enum : uint8_t {
     OP_FUNCTION, OP_RETURN, OP_CALL,
 
     // Others
-    OP_LEN, OP_PRINT, OP_EXIT
+    OP_FRAME, OP_DROP_FRAME, OP_LEN, OP_PRINT, OP_EXIT
 } OpCode;
 
 // Defines the basic memories that exist in the program.
@@ -77,7 +77,11 @@ class Frame
     public:
 
         // Stores the heap of the frame (where variables are stroed).
-        robin_hood::unordered_map<std::string, Value> heap;
+        // robin_hood::unordered_map<std::string, Value> heap;
+        Value *heap;
+
+        // Stores the heap size.
+        uint16_t heap_size;
 
         // Stores the return address to get back to the original program counter.
         uint64_t *return_address = nullptr;
@@ -85,8 +89,8 @@ class Frame
         // Stores the frame caller (the function)
         Value caller;
 
-        Frame()
-            : heap({{}}) {}
+        Frame() {}
+        Frame(Value *heap, uint16_t heap_size, uint16_t new_heap_size);
 };
 
 // The base program class that represents a nuua program.

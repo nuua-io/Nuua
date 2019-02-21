@@ -52,14 +52,10 @@ void VirtualMachine::run()
 {
     this->program_counter = &this->program.program.code[0];
 
-    #if DEBUG
-        uint64_t times = 0;
-    #endif
-
     for (uint64_t instruction;;) {
         instruction = READ_INSTRUCTION();
         #if DEBUG
-            // printf("=> %s (%llu) [%llu]\n", opcode_to_string(instruction).c_str(), instruction, times++);
+            // printf("=> %s (%llu)\n", opcode_to_string(instruction).c_str(), instruction);
         #endif
         switch (instruction) {
             /*
@@ -96,6 +92,7 @@ void VirtualMachine::run()
             case OP_ADD: {
                 BINARY_POP();
                 this->push(*a + *b);
+                // delete a; delete b;
                 break;
             }
             /*
@@ -205,7 +202,7 @@ void VirtualMachine::run()
             */
             case OP_DECLARE: {
                 // Get the variable name
-                auto name = READ_VARIABLE();
+                auto name = READ_INSTRUCTION();
                 auto default_value = READ_CONSTANT();
                 this->top_frame->heap[name] = default_value;
                 break;
@@ -215,7 +212,7 @@ void VirtualMachine::run()
             */
             case OP_STORE: {
                 // Get the variable name to store to.
-                auto name = READ_VARIABLE();
+                auto name = READ_INSTRUCTION();
                 // Store the variable to the current frame
                 this->top_frame->heap[name] = *this->pop();
                 // Push the value to the stack.
@@ -227,7 +224,7 @@ void VirtualMachine::run()
             */
             case OP_ONLY_STORE: {
                 // Store and push the value to the stack to make it available as an expression.
-                this->top_frame->heap[READ_VARIABLE()] = *this->pop();
+                this->top_frame->heap[READ_INSTRUCTION()] = *this->pop();
                 break;
             }
             /*
@@ -235,27 +232,28 @@ void VirtualMachine::run()
             */
             case OP_STORE_ACCESS_INT: {
                 BINARY_POP();
-                (*this->top_frame->heap[READ_VARIABLE()].value_list)[b->value_int] = a;
+                (*this->top_frame->heap[READ_INSTRUCTION()].value_list)[b->value_int] = a;
                 break;
             }
             case OP_STORE_ACCESS_STRING: {
                 BINARY_POP();
-                this->top_frame->heap[READ_VARIABLE()].value_dict->values[*b->value_string] = a;
+                this->top_frame->heap[READ_INSTRUCTION()].value_dict->values[*b->value_string] = a;
                 break;
             }
             /*
                 Performs  a.
             */
             case OP_LOAD: {
-                this->push(this->top_frame->heap[READ_VARIABLE()]);
+                this->push(this->top_frame->heap[READ_INSTRUCTION()]);
                 break;
             }
             /*
                 Creates a list given X stack values.
             */
             case OP_LIST: {
-                std::vector<Value> v;
-                for (int pops = READ_INT(); pops > 0; pops--) v.push_back(*this->pop());
+                int pops = READ_INT();
+                auto v = std::vector<Value>(pops);
+                for (; pops > 0; pops--) v.push_back(*this->pop());
                 this->push(Value(v));
                 break;
             }
@@ -264,8 +262,9 @@ void VirtualMachine::run()
             */
             case OP_DICTIONARY: {
                 std::unordered_map<std::string, Value> dictionary;
-                std::vector<std::string> key_order;
-                for (int e = READ_INT(); e > 0; e--) {
+                int e = READ_INT();
+                auto key_order = std::vector<std::string>(e);
+                for (; e > 0; e--) {
                     auto val = *this->pop();
                     auto n = *this->pop()->value_string;
                     dictionary[n] = val;
@@ -278,11 +277,11 @@ void VirtualMachine::run()
                 Performs a[b].
             */
             case OP_ACCESS_INT: {
-                this->push((*this->top_frame->heap[READ_VARIABLE()].value_list)[this->pop()->value_int]);
+                this->push((*this->top_frame->heap[READ_INSTRUCTION()].value_list)[this->pop()->value_int]);
                 break;
             }
             case OP_ACCESS_STRING: {
-                this->push(this->top_frame->heap[READ_VARIABLE()].value_dict->values[*this->pop()->value_string]);
+                this->push(this->top_frame->heap[READ_INSTRUCTION()].value_dict->values[*this->pop()->value_string]);
                 break;
             }
             /*
@@ -290,8 +289,8 @@ void VirtualMachine::run()
             */
             case OP_FUNCTION: {
                 auto index = READ_INT();
-                auto return_type = READ_VARIABLE();
-                this->push(Value(index, return_type, new Frame(*this->top_frame)));
+                auto frame_size = READ_INT();
+                this->push(Value(index, new Frame(this->top_frame->heap, this->top_frame->heap_size, frame_size)));
                 break;
             }
             /*
@@ -308,7 +307,7 @@ void VirtualMachine::run()
                 Performs a(X, Y, Z, ...).
             */
             case OP_CALL: {
-                auto name = READ_VARIABLE();
+                auto name = READ_INSTRUCTION();
                 auto arguments = READ_INT();
                 auto value = this->top_frame->heap[name];
                 // Set the new frame to work on.
@@ -321,6 +320,15 @@ void VirtualMachine::run()
                 *(++this->current_memory) = FUNCTIONS_MEMORY;
                 // Set the program counter depending on the function index.
                 this->program_counter = &this->get_current_memory()->code[value.value_fun->index];
+                break;
+            }
+            case OP_FRAME: {
+                *(++this->top_frame) = Frame(this->top_frame->heap, this->top_frame->heap_size, READ_INT());
+                break;
+            }
+            case OP_DROP_FRAME: {
+                memcpy((this->top_frame - 1)->heap, this->top_frame->heap, sizeof(Value) * (this->top_frame - 1)->heap_size);
+                delete (this->top_frame--)->heap;
                 break;
             }
             /*

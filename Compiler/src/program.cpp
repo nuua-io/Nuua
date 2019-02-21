@@ -36,7 +36,7 @@ static auto opcode_names = std::vector<std::string>({
     "OP_FUNCTION", "OP_RETURN", "OP_CALL",
 
     // Others
-    "OP_LEN", "OP_PRINT", "OP_EXIT"
+    "OP_FRAME", "OP_DROP_FRAME", "OP_LEN", "OP_PRINT", "OP_EXIT"
 });
 
 void Memory::dump()
@@ -64,6 +64,7 @@ void Memory::dump()
             || opcode == OP_FUNCTION
             || opcode == OP_CALL
             || opcode == OP_DECLARE
+            || opcode == OP_FRAME
         ) {
             this->constants[this->code[++i]].print();
 
@@ -115,4 +116,11 @@ std::string opcode_to_string(uint64_t opcode)
 void print_opcode(uint64_t opcode)
 {
     printf("%s", opcode_to_string(opcode).c_str());
+}
+
+Frame::Frame(Value *heap, uint16_t heap_size, uint16_t new_heap_size)
+{
+    this->heap = new Value[new_heap_size];//static_cast<Value *>(malloc(sizeof(Value) * new_heap_size));
+    this->heap_size = new_heap_size;
+    memcpy(this->heap, heap, sizeof(Value) * heap_size);
 }
