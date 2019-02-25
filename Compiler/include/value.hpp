@@ -39,6 +39,8 @@ class Value
             ValueDictionary *value_dict;
             // Stores the representation of the VALUE_FUN.
             ValueFunction *value_fun;
+            // Stores the ref representation.
+            Value *value_ref;
         };
         // The following are the basic constructors for the value. Each one respresents
         // a diferent value to be stored. They pretty much speak by themselves.
@@ -66,10 +68,6 @@ class Value
         Value(uint64_t index, Frame *frame);
         // Create default initialized value, given the type.
         Value(Type type);
-        // returns true if the Value is of the given type.
-        bool is(Type *type);
-        // returns true if the Value is of the given ValueType.
-        bool is(ValueType type);
         // Converts the current value to a valid double.
         double to_double();
         // Converts the current value to a valid boolean.
@@ -80,24 +78,29 @@ class Value
         Value cast(Type type);
         // Returns a new value representing the length of the current value.
         Value length();
+        // Returns the current value (Derefers the reference if needed).
+        Value *get_value();
         // Prints the value to the screen.
         void print();
         // Prints the value to the screen with a new line '\n' at the end.
         void println();
+        // Copies the current value to the destnation.
+        void copy_to(Value *dest);
+        // Deallocates the space used by the value (frees the memory of the current value).
+        void deallocate();
         // The following are the operations to perform diferent taks between values.
-        // They simply overload the default C++ operators.
-        Value operator -(); // -Value
-        Value operator !(); // !Value
-        Value operator +(Value &b); // Value + Value
-        Value operator -(Value &b); // Value - Value
-        Value operator *(Value &b); // Value * Value
-        Value operator /(Value &b); // Value / Value
-        Value operator ==(Value &b); // Value == Value
-        Value operator !=(Value &b); // Value != Value
-        Value operator <(Value &b); // Value < Value
-        Value operator <=(Value &b); // Value <= Value
-        Value operator >(Value &b); // Value > Value
-        Value operator >=(Value &b); // Value >= Value
+        static void op_minus(Value *dest, Value *src1);
+        static void op_not(Value *dest, Value *src1);
+        static void op_add(Value *dest, Value *src1, Value *src2);
+        static void op_sub(Value *dest, Value *src1, Value *src2);
+        static void op_mul(Value *dest, Value *src1, Value *src2);
+        static void op_div(Value *dest, Value *src1, Value *src2);
+        static void op_eq(Value *dest, Value *src1, Value *src2);
+        static void op_neq(Value *dest, Value *src1, Value *src2);
+        static void op_lt(Value *dest, Value *src1, Value *src2);
+        static void op_lte(Value *dest, Value *src1, Value *src2);
+        static void op_ht(Value *dest, Value *src1, Value *src2);
+        static void op_hte(Value *dest, Value *src1, Value *src2);
 };
 
 // Defines how a dictionary value is.

@@ -17,16 +17,13 @@ class Parser
 {
     // Stores a pointer to the current token beeing parsed.
     Token *current;
-
     Token consume(TokenType type, const char* message);
     bool match(TokenType token);
     bool match_any(std::vector<TokenType> tokens);
     std::vector<Statement *> get_block_body();
     bool is_function();
-
     // Function to get a type string.
     std::string get_type();
-
     // Parser basic operations.
     Expression *function();
     Expression *list();
@@ -52,11 +49,9 @@ class Parser
     Statement *if_statement();
     Statement *while_statement();
     Statement *statement(bool new_line_ending = true);
-
     static void debug_rule(Rule rule);
     static void debug_rules(std::vector<Rule> rules);
     static void debug_rules(std::vector<Statement *> rules);
-
     public:
         std::vector<Statement *> parse(const char *source);
 };

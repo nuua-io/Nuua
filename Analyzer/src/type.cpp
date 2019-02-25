@@ -10,11 +10,13 @@ const std::unordered_map<std::string, ValueType> Type::value_types = {
     { "list", VALUE_LIST },
     { "dict", VALUE_DICT },
     { "fun", VALUE_FUN },
+    { "ref", VALUE_REF }
 };
 
 const std::vector<std::string> Type::types_string = {
     "VALUE_NONE", "VALUE_INT", "VALUE_FLOAT", "VALUE_BOOL",
-    "VALUE_STRING", "VALUE_LIST", "VALUE_DICT", "VALUE_FUN"
+    "VALUE_STRING", "VALUE_LIST", "VALUE_DICT", "VALUE_FUN",
+    "VALUER_REF"
 };
 
 Type::Type(std::string name)
@@ -217,5 +219,13 @@ Type::Type(Expression *rule, std::vector<Block> *blocks)
             logger->error("Invalid expression.", rule->line);
             exit(EXIT_FAILURE);
         }
+    }
+}
+
+void Type::deallocate()
+{
+    if (this->inner_type) {
+        this->inner_type->deallocate();
+        delete this->inner_type;
     }
 }

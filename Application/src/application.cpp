@@ -50,7 +50,10 @@ Application::Application(int argc, char *argv[])
     switch (argc) {
         case 1: { this->application_type = APPLICATION_PROMPT; break; }
         case 2: { this->application_type = APPLICATION_FILE; this->file_name = new std::string(argv[1]); break; }
-        default: { fprintf(stderr, "Invalid usage. Try: nuua <path_to_file>\n"); exit(64); } // Exit status for incorrect command usage.
+        default: {
+            logger->error("Invalid usage. Try: nuua <path_to_file>\n");
+            exit(64); // Exit status for incorrect command usage.
+        }
     }
 }
 

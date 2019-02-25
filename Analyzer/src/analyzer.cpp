@@ -127,12 +127,16 @@ void Analyzer::analyze(Expression *rule)
         case RULE_VARIABLE: {
             // Check if the variable has been declared.
             auto var = static_cast<Variable *>(rule);
-            this->must_have(var->name, var->line);
+            auto block_var = this->must_have(var->name, var->line);
+            // Declare last use.
+            block_var->last_use = rule;
             break;
         }
         case RULE_ASSIGN: {
             auto assign = static_cast<Assign *>(rule);
             auto var = this->must_have(assign->name, assign->line);
+            // Declare last use.
+            var->last_use = rule;
             this->analyze(assign->value);
             // Make sure the types match.
             auto type = Type(assign->value, &this->blocks);
@@ -146,6 +150,8 @@ void Analyzer::analyze(Expression *rule)
             auto assign_access = static_cast<AssignAccess *>(rule);
             this->analyze(assign_access->value);
             auto var = this->must_have(assign_access->name, assign_access->line);
+            // Declare last use.
+            var->last_use = rule;
             this->analyze(assign_access->index);
             auto var_type = Type(var->type);
             if (var_type.type == VALUE_LIST) {
@@ -196,6 +202,8 @@ void Analyzer::analyze(Expression *rule)
         case RULE_CALL: {
             auto call = static_cast<Call *>(rule);
             auto var = this->must_have(call->callee, call->line);
+            // Declare last use.
+            var->last_use = rule;
 
             // Check if it's callable.
             if (Type(var->type).type != VALUE_FUN) {
@@ -226,6 +234,8 @@ void Analyzer::analyze(Expression *rule)
         case RULE_ACCESS: {
             auto access = static_cast<Access *>(rule);
             auto variable = this->must_have(access->name, access->line);
+            // Declare last use.
+            variable->last_use = rule;
             this->analyze(access->index);
             auto var_type = Type(variable->type);
             if (var_type.type == VALUE_LIST) {
@@ -264,9 +274,7 @@ Block Analyzer::analyze(std::vector<Statement *> &block, std::vector<Statement *
 {
     logger->info("Block analysis...");
     // Push a new block to the analyzed blocks.
-    if (this->blocks.size() > 0) {
-        this->blocks.push_back(Block(this->blocks.back().variables, this->blocks.back().acomulative_variables));
-    } else this->blocks.push_back(Block());
+    this->blocks.push_back(Block());
 
     // Push the arguments if any.
     // The parser makes sure it's a declaration.
@@ -299,7 +307,7 @@ Block Analyzer::analyze(std::vector<Statement *> &block, std::vector<Statement *
     return res;
 }
 
-BlockVariableType *Analyzer::must_have(std::string name, uint32_t line)
+BlockVariableType *Analyzer::must_have(std::string &name, uint32_t line)
 {
     for (int16_t i = this->blocks.size() - 1; i >= 0; i--) {
         auto var = this->blocks[i].get_variable(name);
@@ -316,15 +324,13 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
     auto block = &this->blocks.back();
 
     // Check if the variable exists already.
-    for (int16_t i = this->blocks.size() - 1; i >= 0; i--) {
-        if (this->blocks[i].get_variable(name)) {
-            logger->error("The variable '" + name + "' is already declared in this scope.");
-            exit(EXIT_FAILURE);
-        }
+    if (block->get_variable(name)) {
+        logger->error("The variable '" + name + "' is already declared in this scope.");
+        exit(EXIT_FAILURE);
     }
 
     // Set the return type if it's a function value.
-    std::string return_type = "?";
+    std::string return_type = "";
     std::vector<std::string> arguments;
     if (initializer && initializer->rule == RULE_FUNCTION) {
         auto fun = static_cast<Function *>(initializer);
@@ -333,7 +339,7 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
     }
 
     // Declare the variable with the given type.
-    block->variables[name] = BlockVariableType(type, block->acomulative_variables++, arguments, return_type);
+    block->variables[name] = BlockVariableType(type, arguments, return_type);
     logger->info("Declared!");
 }
 

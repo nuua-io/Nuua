@@ -17,33 +17,11 @@
 
 // Defines the known opcodes for the program.
 typedef enum : uint8_t {
-    OP_PUSH, OP_POP,
-
-    // Unary operations
-    OP_MINUS, OP_NOT,
-
-    // Binary operations
-    OP_ADD, OP_SUB, OP_MUL, OP_DIV,
-    OP_EQ, OP_NEQ, OP_LT, OP_LTE,
-    OP_HT, OP_HTE,
-
-    // The cast operator
-    OP_CAST,
-
-    // Jumps and conditional jumps
-    /*OP_JUMP,*/ OP_RJUMP, OP_BRANCH_TRUE, OP_BRANCH_FALSE,
-
-    // Store and load
-    OP_DECLARE, OP_STORE, OP_ONLY_STORE, OP_LOAD, OP_STORE_ACCESS_INT, OP_STORE_ACCESS_STRING,
-
-    // Lists and dictionaries
-    OP_LIST, OP_DICTIONARY, OP_ACCESS_INT, OP_ACCESS_STRING,
-
-    // Functions
-    OP_FUNCTION, OP_RETURN, OP_CALL,
-
-    // Others
-    OP_FRAME, OP_DROP_FRAME, OP_LEN, OP_PRINT, OP_EXIT
+    OP_LOAD, // LOAD RX CX
+    OP_MOVE, // MOVE RX RY
+    OP_ADD, // ADD RX RY
+    OP_PRINT, // PRINT RX
+    OP_EXIT // EXIT
 } OpCode;
 
 // Defines the basic memories that exist in the program.
@@ -57,16 +35,12 @@ class Memory
     public:
         // This stores the opcodes and consant indexes of the code.
         std::vector<uint64_t> code;
-
         // Stores the value constants.
         std::vector<Value> constants;
-
         // Stores the lines corresponding to the opcodes.
         std::vector<uint32_t> lines;
-
         // Dumps the memory.
         void dump();
-
         // Reset the memory.
         void reset();
 };
@@ -75,44 +49,61 @@ class Memory
 class Frame
 {
     public:
-
-        // Stores the heap of the frame (where variables are stroed).
-        // robin_hood::unordered_map<std::string, Value> heap;
-        Value *heap;
-
-        // Stores the heap size.
-        uint16_t heap_size;
-
+        // Stores the used registers.
+        Value *registers = nullptr;
+        // Stores the registers size.
+        uint32_t registers_size;
         // Stores the return address to get back to the original program counter.
         uint64_t *return_address = nullptr;
-
         // Stores the frame caller (the function)
         Value caller;
-
+        // Allocates the space to store the registers.
+        void allocate_registers(uint32_t registers_size);
+        // Frees the allocated register space.
+        void free_registers();
         Frame() {}
-        Frame(Value *heap, uint16_t heap_size, uint16_t new_heap_size);
+        Frame(uint32_t registers_size);
+        ~Frame();
+};
+
+// This class is used to represent the frame information during compilation
+// (not in runtime).
+class FrameInfo
+{
+    // Stores the registers that are free to use again.
+    std::vector<uint32_t> free_registers;
+    // Stores the registers that are protected to get free unless forçed.
+    std::vector<uint32_t> protected_registers;
+    public:
+        // Stores the next register to give in case no free ones are available.
+        uint32_t current_register = 0;
+        // Method to return an available register.
+        // It will try to get it from the free_registers
+        // otherwise it will return a new register and
+        // increment current_register by 1
+        uint32_t get_register(bool protect = false);
+        // Used to free a register.
+        void free_register(uint32_t reg, bool force = false);
 };
 
 // The base program class that represents a nuua program.
 class Program
 {
     public:
+        // Stores the number of registers used by the main frame.
+        uint32_t main_registers;
         // Stores the program memory (The main code).
         Memory program;
-
         // Stores the code regarding to functions.
         Memory functions;
-
         // Stores the code regarding to classes.
         Memory classes;
-
         // Resets the whole program memory.
         void reset();
 };
 
 // Basic conversation from opcode to string.
 std::string opcode_to_string(uint64_t opcode);
-
 // Prints a given opcode to the screen.
 void print_opcode(uint64_t opcode);
 

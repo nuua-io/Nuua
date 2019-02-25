@@ -10,6 +10,7 @@
 #include "../../Logger/include/logger.hpp"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 Value::Value(std::unordered_map<std::string, Value> &a, std::vector<std::string> &b)
     : type(Type(VALUE_DICT)), value_dict(new ValueDictionary(a, b)) {}
@@ -33,47 +34,40 @@ Value::Value(Type type)
     }
 }
 
-bool Value::is(Type *type)
-{
-    return this->type.same_as(type);
-}
-
-bool Value::is(ValueType type)
-{
-    return this->type.type == type;
-}
-
 double Value::to_double()
 {
-    switch (this->type.type) {
-        case VALUE_INT: { return static_cast<double>(this->value_int); }
-        case VALUE_FLOAT: { return this->value_float; }
-        case VALUE_BOOL: { return static_cast<double>(this->value_bool); }
-        case VALUE_STRING: { return static_cast<double>(this->value_string->length()); }
-        case VALUE_LIST: { return static_cast<double>(this->value_list->size()); }
-        case VALUE_DICT: { return static_cast<double>(this->value_dict->values.size()); }
-        case VALUE_FUN: { return static_cast<double>(reinterpret_cast<std::uintptr_t>(this->value_fun)); } // This looks a bit bad...
+    auto value = this->get_value();
+    switch (value->type.type) {
+        case VALUE_INT: { return static_cast<double>(value->value_int); }
+        case VALUE_FLOAT: { return value->value_float; }
+        case VALUE_BOOL: { return static_cast<double>(value->value_bool); }
+        case VALUE_STRING: { return static_cast<double>(value->value_string->length()); }
+        case VALUE_LIST: { return static_cast<double>(value->value_list->size()); }
+        case VALUE_DICT: { return static_cast<double>(value->value_dict->values.size()); }
+        case VALUE_FUN: { return static_cast<double>(reinterpret_cast<std::uintptr_t>(value->value_fun)); } // This looks a bit bad...
         default: { return 0.0; }
     }
 }
 
 bool Value::to_bool()
 {
-    return this->to_double() != 0;
+    return this->get_value()->to_double() != 0;
 }
 
 std::string Value::to_string()
 {
-    switch (this->type.type) {
-        case VALUE_INT: { return std::to_string(this->value_int); }
-        case VALUE_FLOAT: { return std::to_string(this->value_float); }
-        case VALUE_BOOL: { return this->value_bool ? "true" : "false"; }
-        case VALUE_STRING: { return *this->value_string; }
+    auto value = this->get_value();
+
+    switch (value->type.type) {
+        case VALUE_INT: { return std::to_string(value->value_int); }
+        case VALUE_FLOAT: { return std::to_string(value->value_float); }
+        case VALUE_BOOL: { return value->value_bool ? "true" : "false"; }
+        case VALUE_STRING: { return *value->value_string; }
         case VALUE_LIST: {
             std::string list = "[";
-            if (this->value_list->size() > 0) {
-                for (auto element : *this->value_list) {
-                    list += (element.is(VALUE_STRING) ? '\'' + element.to_string() + '\'' : element.to_string()) + ", ";
+            if (value->value_list->size() > 0) {
+                for (auto &element : *value->value_list) {
+                    list += (element.type.type == VALUE_STRING ? '\'' + element.to_string() + '\'' : element.to_string()) + ", ";
                 }
                 list.pop_back(); list.pop_back(); // Pop the space and the comma
             }
@@ -81,10 +75,10 @@ std::string Value::to_string()
         }
         case VALUE_DICT: {
             std::string dictionary = "{";
-            if (this->value_dict->values.size() > 0) {
-                for (auto element : this->value_dict->key_order) {
-                    auto value = this->value_dict->values.at(element);
-                    dictionary += element + ": " + (value.is(VALUE_STRING) ? '\'' + value.to_string() + '\'' : value.to_string()) + ", ";
+            if (value->value_dict->values.size() > 0) {
+                for (auto element : value->value_dict->key_order) {
+                    auto val = value->value_dict->values[element];
+                    dictionary += element + ": " + (val.type.type == VALUE_STRING ? '\'' + val.to_string() + '\'' : val.to_string()) + ", ";
                 }
                 dictionary.pop_back(); dictionary.pop_back(); // Pop the space and the comma
             }
@@ -92,8 +86,12 @@ std::string Value::to_string()
         }
         case VALUE_FUN: {
             char fn[256];
-            sprintf(fn, "<Function: 0x%llx>", reinterpret_cast<std::uintptr_t>(this->value_fun));
+            sprintf(fn, "<Function: 0x%llx>", reinterpret_cast<std::uintptr_t>(value->value_fun));
             return fn;
+        }
+        case VALUE_REF: {
+            logger->error("Reference to_string() caught.");
+            exit(EXIT_FAILURE);
         }
         default: { return "none"; }
     }
@@ -101,6 +99,7 @@ std::string Value::to_string()
 
 Value Value::cast(Type type)
 {
+    // Check if they are the same type.
     if (this->type.same_as(&type)) return *this;
 
     switch (this->type.type) {
@@ -122,7 +121,7 @@ Value Value::cast(Type type)
         }
         case VALUE_FLOAT: {
             switch (type.type) {
-                case VALUE_INT: { double ipart; modf(this->value_float, &ipart); return Value(static_cast<int64_t>(ipart)); } // Will be converted to int in double constructor
+                case VALUE_INT: { double ipart; modf(this->to_double(), &ipart); return Value(static_cast<int64_t>(ipart)); } // Will be converted to int in double constructor
                 case VALUE_BOOL: { return Value(this->to_bool()); }
                 case VALUE_STRING: { return Value(this->to_string()); }
                 default: { break; }
@@ -131,7 +130,7 @@ Value Value::cast(Type type)
         }
         case VALUE_BOOL: {
             switch (type.type) {
-                case VALUE_INT: { return Value(static_cast<int64_t>(this->value_bool)); } // Will be converted to int in double constructor
+                case VALUE_INT: { return Value(static_cast<int64_t>(this->to_bool())); }
                 case VALUE_FLOAT: { return Value(this->to_bool()); }
                 case VALUE_STRING: { return Value(this->to_string()); }
                 default: { break; }
@@ -174,10 +173,18 @@ Value Value::cast(Type type)
             }
             break;
         }
+        default: {
+            logger->error("Invalid type conversion.");
+            exit(EXIT_FAILURE);
+        }
     }
+}
 
-    logger->error("Invalid type conversion.");
-    exit(EXIT_FAILURE);
+Value *Value::get_value()
+{
+    auto value = this;
+    while (value->type.type == VALUE_REF) value = value->value_ref;
+    return value;
 }
 
 Value Value::length()
@@ -196,82 +203,192 @@ void Value::println()
     printf("\n");
 }
 
-Value Value::operator -()
+void Value::copy_to(Value *dest)
 {
-    if (this->is(VALUE_STRING)) {
-        std::reverse(this->value_string->begin(), this->value_string->end());
-        return Value(*this->value_string);
-    } else if (this->is(VALUE_INT)) return Value(-this->value_int);
-
-    return Value(-this->to_double());
+    // Deallocate the destination.
+    dest->deallocate();
+    // Copy the type.
+    this->type.copy_to(&dest->type);
+    // Copy the value.
+    switch (this->type.type) {
+        case VALUE_INT: { dest->value_int = this->value_int; break; }
+        case VALUE_FLOAT: { dest->value_float = this->value_float; break; }
+        case VALUE_BOOL: { dest->value_bool = this->value_bool; break; }
+        case VALUE_STRING: { dest->value_string = this->value_string; break; }
+        case VALUE_LIST: { dest->value_list = new std::vector<Value>(*this->value_list); break; }
+        case VALUE_DICT: { dest->value_dict = new ValueDictionary(*this->value_dict); break; }
+        case VALUE_FUN: { dest->value_fun = new ValueFunction(*this->value_fun); break; }
+        case VALUE_REF: { dest->value_ref = this->value_ref; break; }
+        default: { break; }
+    }
 }
 
-Value Value::operator !()
+void Value::deallocate()
 {
-    return Value(!this->to_bool());
+    // Deallocate the type.
+    this->type.deallocate();
+    // Deallocate the data
+    switch (this->type.type) {
+        case VALUE_STRING: { delete this->value_string; break; }
+        case VALUE_LIST: { delete this->value_list; break; }
+        case VALUE_DICT: { delete this->value_dict; break; }
+        case VALUE_FUN: { delete this->value_fun; break; }
+        default: { /* Ignore, no deallocation needed. */ }
+    }
 }
 
-Value Value::operator +(Value &b)
+void Value::op_minus(Value *dest, Value *src1)
 {
+    src1 = src1->get_value();
+    dest->deallocate();
+    if (src1->type.type == VALUE_STRING) {
+        auto buffer = new std::string(*src1->value_string);
+        std::reverse(buffer->begin(), buffer->end());
+        dest->type.type = VALUE_STRING;
+        dest->value_string = buffer;
+        return;
+    } else if (src1->type.type == VALUE_INT) {
+        dest->type.type = VALUE_INT;
+        dest->value_int = -src1->value_int;
+        return;
+    }
+
+    dest->type.type = VALUE_FLOAT;
+    dest->value_float = -src1->to_double();
+}
+
+void Value::op_not(Value *dest, Value *src1)
+{
+    dest->deallocate();
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = !src1->to_bool();
+}
+
+void Value::op_add(Value *dest, Value *src1, Value *src2)
+{
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
     //printf("Addition on:"); this->type.print();
-    if (this->is(VALUE_STRING) || b.is(VALUE_STRING)) return Value(this->to_string() + b.to_string());
-    else if (this->is(VALUE_INT) && b.is(VALUE_INT)) return Value(this->value_int + b.value_int);
+    if (src1->type.type == VALUE_STRING || src1->type.type == VALUE_STRING) {
+        dest->type.type = VALUE_STRING;
+        dest->value_string = new std::string(src1->to_string() + src2->to_string());
+        return;
+    }
+    else if (src1->type.type == VALUE_INT && src2->type.type == VALUE_INT) {
+        dest->type.type = VALUE_INT;
+        dest->value_int = src1->value_int + src2->value_int;
+        return;
+    }
 
-    return Value(this->to_double() + b.to_double());
+    dest->type.type = VALUE_FLOAT;
+    dest->value_float = src1->to_double() + src2->to_double();
 }
 
-Value Value::operator -(Value &b)
+void Value::op_sub(Value *dest, Value *src1, Value *src2)
 {
-    if (this->is(VALUE_INT) && b.is(VALUE_INT)) return Value(this->value_int - b.value_int);
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
 
-    return Value(this->to_double() - b.to_double());
+    if (src1->type.type == VALUE_INT && src2->type.type == VALUE_INT) {
+        dest->type.type = VALUE_INT;
+        dest->value_int = src1->value_int - src2->value_int;
+        return;
+    }
+
+    dest->type.type = VALUE_FLOAT;
+    dest->value_float = src1->to_double() - src2->to_double();
 }
 
-Value Value::operator *(Value &b)
+void Value::op_mul(Value *dest, Value *src1, Value *src2)
 {
-    if (this->is(VALUE_INT) && b.is(VALUE_INT)) return Value(this->value_int * b.value_int);
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
 
-    return Value(this->to_double() * b.to_double());
+    if (src1->type.type == VALUE_INT && src2->type.type == VALUE_INT) {
+        dest->type.type = VALUE_INT;
+        dest->value_int = src1->value_int * src2->value_int;
+        return;
+    }
+
+    dest->type.type = VALUE_FLOAT;
+    dest->value_float = src1->to_double() * src2->to_double();
 }
 
-Value Value::operator /(Value &b)
+void Value::op_div(Value *dest, Value *src1, Value *src2)
 {
-    auto bn = b.to_double();
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
+
+    auto bn = src2->to_double();
     if (bn == 0) { logger->error("Division by zero."); exit(EXIT_FAILURE); }
 
-    return Value(this->to_double() / bn);
+    dest->type.type = VALUE_FLOAT;
+    dest->value_float = src1->to_double() / bn;
 }
 
-Value Value::operator ==(Value &b)
+void Value::op_eq(Value *dest, Value *src1, Value *src2)
 {
-    if (this->is(VALUE_STRING) && b.is(VALUE_STRING)) return Value(this->to_string() == b.to_string());
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
 
-    return Value(this->to_double() == b.to_double());
+    if (src1->type.type == VALUE_STRING && src2->type.type == VALUE_STRING) {
+        dest->type.type = VALUE_BOOL;
+        dest->value_bool = src1->to_string() == src2->to_string();
+        return;
+    }
+
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = src1->to_double() == src2->to_double();
 }
 
-Value Value::operator !=(Value &b)
+void Value::op_neq(Value *dest, Value *src1, Value *src2)
 {
-    if (this->is(VALUE_STRING) && b.is(VALUE_STRING)) return Value(this->to_string() != b.to_string());
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
 
-    return Value(this->to_double() != b.to_double());
+    if (src1->type.type == VALUE_STRING && src2->type.type == VALUE_STRING) {
+        dest->type.type = VALUE_BOOL;
+        dest->value_bool = src1->to_string() != src2->to_string();
+        return;
+    }
+
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = src1->to_double() != src2->to_double();
 }
 
-Value Value::operator <(Value &b)
+void Value::op_lt(Value *dest, Value *src1, Value *src2)
 {
-    return Value(this->to_double() < b.to_double());
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
+
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = src1->to_double() < src2->to_double();
+    printf("Res (%f < %f): %i\n", src1->to_double(), src2->to_double(), dest->value_bool);
 }
 
-Value Value::operator <=(Value &b)
+void Value::op_lte(Value *dest, Value *src1, Value *src2)
 {
-    return Value(this->to_double() <= b.to_double());
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
+
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = src1->to_double() <= src2->to_double();
 }
 
-Value Value::operator >(Value &b)
+void Value::op_ht(Value *dest, Value *src1, Value *src2)
 {
-    return Value(this->to_double() > b.to_double());
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
+
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = src1->to_double() > src2->to_double();
 }
 
-Value Value::operator >=(Value &b)
+void Value::op_hte(Value *dest, Value *src1, Value *src2)
 {
-    return Value(this->to_double() >= b.to_double());
+    dest->deallocate();
+    src1 = src1->get_value(), src2 = src2->get_value();
+
+    dest->type.type = VALUE_BOOL;
+    dest->value_bool = src1->to_double() >= src2->to_double();
 }

@@ -16,35 +16,15 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 
 - ~~From dynamic to static~~ :white_check_mark:
 - ~~Implement functions~~ :white_check_mark:
-- Polish internals :construction:
-    - Add a proper tree walker and use it for the compiler & AST optimizator
-    - Optimize dead code elimination using OP_ONLY_STORE opcode
+- Stack machine to Register Machine :construction:
+- Re-write functions and classes syntax :construction:
 - Implement classes
-- Implement function overloading
+- Implement function overloading (?)
 - Implement modules (imports)
-- NSL (Nuua Standard Library)
-- NPM (Nuua Package Manager)
+- NUSL (Nuua Standard Library)
+- NUPAC (Nuua Package Manager)
 - Optimizations + Better error reporting
 - **Initial Release**
-
-The following are wishes, not yet decided how or when.
-
-- Cross device and cross platform compilation (yep, that's it)
-    -   Android (Dart)
-    -   iOS (Dart)
-    -   Windows (C++)
-    -   Linux (C++)
-    -   MacOS (C++)
-    -   Web (Javascript)
-- **Second Release**
-- Nuua UI (Cross device & cross platform User Interface)
-    -   Android (Dart Widgets)
-    -   iOS (Dart Widgets)
-    -   Windows (libui)
-    -   Linux (libui)
-    -   MacOS (libui)
-    -   Web (Vue / React)
-- **Third Release**
 
 ## How is nuua structured?
 
