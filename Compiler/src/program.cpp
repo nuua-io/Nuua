@@ -39,7 +39,10 @@ void Memory::dump()
         for (uint8_t k = 0; k < MAX_OPERANDS && opcode_operands[el][k] != OPERAND_NONE; k++) {
             switch (opcode_operands[el][k]) {
                 case OPERAND_REGISTER: { printf(" R%llu", this->code[++i]); break; }
-                case OPERAND_CONSTANT: { printf(" C%llu", this->code[++i]); break; }
+                case OPERAND_CONSTANT: {
+                    printf(" <%s>", this->constants[this->code[++i]].to_string().c_str());
+                    break;
+                }
                 default: { /* Ignore */ }
             }
         }
@@ -74,22 +77,22 @@ void print_opcode(uint64_t opcode)
 void Frame::allocate_registers(uint32_t registers_size)
 {
     this->registers_size = registers_size;
-    this->registers = new Value[registers_size];
+    if (this->registers_size > 0 && this->registers == nullptr) {
+        this->registers = new Value[registers_size];
+    }
 }
 
 void Frame::free_registers()
 {
-    delete[] this->registers;
+    if (this->registers != nullptr) {
+        delete[] this->registers;
+        this->registers = nullptr;
+    }
 }
 
 Frame::Frame(uint32_t registers_size)
 {
     this->allocate_registers(registers_size);
-}
-
-Frame::~Frame()
-{
-    delete[] this->registers;
 }
 
 uint32_t FrameInfo::get_register(bool protect)

@@ -68,6 +68,7 @@ class Value
         Value(uint64_t index, Frame *frame);
         // Create default initialized value, given the type.
         Value(Type type);
+        ~Value();
         // Converts the current value to a valid double.
         double to_double();
         // Converts the current value to a valid boolean.

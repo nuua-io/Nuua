@@ -48,6 +48,8 @@ class Memory
 // A frame is the one responsible for storing variables in a program.
 class Frame
 {
+    uint32_t in;
+
     public:
         // Stores the used registers.
         Value *registers = nullptr;
@@ -56,14 +58,12 @@ class Frame
         // Stores the return address to get back to the original program counter.
         uint64_t *return_address = nullptr;
         // Stores the frame caller (the function)
-        Value caller;
+        Value *caller;
         // Allocates the space to store the registers.
         void allocate_registers(uint32_t registers_size);
         // Frees the allocated register space.
         void free_registers();
-        Frame() {}
-        Frame(uint32_t registers_size);
-        ~Frame();
+        Frame(uint32_t registers_size = 0);
 };
 
 // This class is used to represent the frame information during compilation

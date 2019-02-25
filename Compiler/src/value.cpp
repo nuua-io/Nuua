@@ -392,3 +392,8 @@ void Value::op_hte(Value *dest, Value *src1, Value *src2)
     dest->type.type = VALUE_BOOL;
     dest->value_bool = src1->to_double() >= src2->to_double();
 }
+
+Value::~Value()
+{
+    this->deallocate();
+}

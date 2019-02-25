@@ -29,7 +29,7 @@ class VirtualMachine
     // Stores the current frame stack.
     Frame frames[MAX_FRAMES];
     // Indicates the top level frame.
-    Frame *top_frame = this->frames;
+    Frame *top_frame;
     // Runs the virtual machine.
     void run();
     public:

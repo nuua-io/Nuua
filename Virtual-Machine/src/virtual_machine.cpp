@@ -52,8 +52,9 @@ void VirtualMachine::interpret(const char *source)
     this->program = compiler->compile(source);
     delete compiler;
     // Allocate the main frame registers.
+    this->top_frame = &this->frames[0];
     // this->frames[0].allocate_registers(this->program.main_registers);
-    this->frames->allocate_registers(this->program.main_registers);
+    this->top_frame->allocate_registers(this->program.main_registers);
     // Set the first opcode
     this->program_counter = &this->program.program.code[0];
     // Run the compiled code.
@@ -61,7 +62,7 @@ void VirtualMachine::interpret(const char *source)
     this->run();
     logger->success("Finished interpreting!");
     // Clear the main frame registers
-    this->frames->free_registers();
+    this->top_frame->free_registers();
 }
 
 void VirtualMachine::reset()
