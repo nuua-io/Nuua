@@ -1,1 +1,2 @@
-print 1 + 2
+a: int = 10 + 20
+print a

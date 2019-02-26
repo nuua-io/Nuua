@@ -10,19 +10,8 @@
 #define PROGRAM_HPP
 
 #include "value.hpp"
+#include "opcodes.hpp"
 #include <vector>
-// #include <unordered_map>
-#include "../../Utilities/include/robin_hood.hpp"
-#include <stdint.h>
-
-// Defines the known opcodes for the program.
-typedef enum : uint8_t {
-    OP_LOAD, // LOAD RX CX
-    OP_MOVE, // MOVE RX RY
-    OP_ADD, // ADD RX RY
-    OP_PRINT, // PRINT RX
-    OP_EXIT // EXIT
-} OpCode;
 
 // Defines the basic memories that exist in the program.
 typedef enum : uint8_t {

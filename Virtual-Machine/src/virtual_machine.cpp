@@ -10,25 +10,50 @@ void VirtualMachine::run()
 {
     for (;;) {
         switch (READ_INSTRUCTION()) {
-            case OP_LOAD: {
-                auto dest = READ_REGISTER();
-                READ_CONSTANT()->copy_to(dest);
-                break;
-            }
-            case OP_MOVE: {
+            case OP_MOVE_RR: {
                 auto dest = READ_REGISTER();
                 READ_REGISTER()->copy_to(dest);
                 break;
             }
-            case OP_ADD: {
+            case OP_MOVE_RC: {
+                auto dest = READ_REGISTER();
+                READ_CONSTANT()->copy_to(dest);
+                break;
+            }
+            case OP_ADD_RR: {
                 auto dest = READ_REGISTER();
                 auto op1 = READ_REGISTER();
                 auto op2 = READ_REGISTER();
                 Value::op_add(dest, op1, op2);
                 break;
             }
-            case OP_PRINT: {
+            case OP_ADD_RC: {
+                auto dest = READ_REGISTER();
+                auto op1 = READ_REGISTER();
+                auto op2 = READ_CONSTANT();
+                Value::op_add(dest, op1, op2);
+                break;
+            }
+            case OP_ADD_CR: {
+                auto dest = READ_REGISTER();
+                auto op1 = READ_CONSTANT();
+                auto op2 = READ_REGISTER();
+                Value::op_add(dest, op1, op2);
+                break;
+            }
+            case OP_ADD_CC: {
+                auto dest = READ_REGISTER();
+                auto op1 = READ_CONSTANT();
+                auto op2 = READ_CONSTANT();
+                Value::op_add(dest, op1, op2);
+                break;
+            }
+            case OP_PRINT_R: {
                 READ_REGISTER()->println();
+                break;
+            }
+            case OP_PRINT_C: {
+                READ_CONSTANT()->println();
                 break;
             }
             case OP_EXIT: { return; }
@@ -52,7 +77,6 @@ void VirtualMachine::interpret(const char *source)
     this->program = compiler->compile(source);
     delete compiler;
     // Allocate the main frame registers.
-    this->top_frame = &this->frames[0];
     // this->frames[0].allocate_registers(this->program.main_registers);
     this->top_frame->allocate_registers(this->program.main_registers);
     // Set the first opcode

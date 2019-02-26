@@ -71,9 +71,15 @@ void Compiler::compile(Statement *rule)
         }
         case RULE_PRINT: {
             auto print = static_cast<Print *>(rule);
-            auto reg = this->compile(print->expression);
-            this->add_opcode(OP_PRINT);
-            this->add_opcode(reg);
+            if (this->is_constant(print->expression)) {
+                this->add_opcode(OP_PRINT_C);
+                this->compile(print->expression, false);
+            } else {
+                auto reg = this->compile(print->expression);
+                this->add_opcode(OP_PRINT_R);
+                this->add_opcode(reg);
+                this->frame_info.back().free_register(reg);
+            }
             break;
         }
         case RULE_EXPRESSION_STATEMENT: {
@@ -89,13 +95,19 @@ void Compiler::compile(Statement *rule)
             auto reg = this->frame_info.back().get_register(true);
             this->blocks.back()->variables[declaration->name].reg = reg;
             if (declaration->initializer) {
-                auto res = this->compile(declaration->initializer);
-                this->add_opcode(OP_MOVE);
-                this->add_opcode(reg);
-                this->add_opcode(res);
-                this->frame_info.back().free_register(res);
+                if (this->is_constant(declaration->initializer)) {
+                    this->add_opcode(OP_MOVE_RC);
+                    this->add_opcode(reg);
+                    this->compile(declaration->initializer, false);
+                } else {
+                    auto res = this->compile(declaration->initializer);
+                    this->add_opcode(OP_MOVE_RR);
+                    this->add_opcode(reg);
+                    this->add_opcode(res);
+                    this->frame_info.back().free_register(res);
+                }
             } else {
-                this->add_opcode(OP_LOAD);
+                this->add_opcode(OP_MOVE_RC);
                 this->add_opcode(reg);
                 this->add_constant_only(Type(declaration->type));
             }
@@ -122,7 +134,7 @@ void Compiler::compile(Statement *rule)
     delete rule;
 }
 
-uint32_t Compiler::compile(Expression *rule)
+uint32_t Compiler::compile(Expression *rule, bool const_opcode)
 {
     this->current_line = rule->line;
     uint32_t result = 0;
@@ -130,33 +142,37 @@ uint32_t Compiler::compile(Expression *rule)
     switch (rule->rule) {
         case RULE_INTEGER: {
             auto integer = static_cast<Integer *>(rule);
-            result = this->frame_info.back().get_register();
-            this->add_opcode(OP_LOAD);
-            this->add_opcode(result);
+            if (const_opcode) {
+                this->add_opcode(OP_MOVE_RC);
+                this->add_opcode(result = this->frame_info.back().get_register());
+            }
             this->add_constant_only(integer->value);
             break;
         }
         case RULE_FLOAT: {
             auto floating = static_cast<Float *>(rule);
-            result = this->frame_info.back().get_register();
-            this->add_opcode(OP_LOAD);
-            this->add_opcode(result);
+            if (const_opcode) {
+                this->add_opcode(OP_MOVE_RC);
+                this->add_opcode(result = this->frame_info.back().get_register());
+            }
             this->add_constant_only(floating->value);
             break;
         }
         case RULE_STRING: {
             auto string = static_cast<String *>(rule);
-            result = this->frame_info.back().get_register();
-            this->add_opcode(OP_LOAD);
-            this->add_opcode(result);
+            if (const_opcode) {
+                this->add_opcode(OP_MOVE_RC);
+                this->add_opcode(result = this->frame_info.back().get_register());
+            }
             this->add_constant_only(string->value);
             break;
         }
         case RULE_BOOLEAN: {
             auto boolean = static_cast<Boolean *>(rule);
-            result = this->frame_info.back().get_register();
-            this->add_opcode(OP_LOAD);
-            this->add_opcode(result);
+            if (const_opcode) {
+                this->add_opcode(OP_MOVE_RC);
+                this->add_opcode(result = this->frame_info.back().get_register());
+            }
             this->add_constant_only(boolean->value);
             break;
         }
@@ -169,8 +185,10 @@ uint32_t Compiler::compile(Expression *rule)
             break;
         }
         case RULE_NONE: {
-            this->add_opcode(OP_LOAD);
-            this->add_opcode(result = this->frame_info.back().get_register());
+            if (const_opcode) {
+                this->add_opcode(OP_MOVE_RC);
+                this->add_opcode(result = this->frame_info.back().get_register());
+            }
             this->add_constant_only(Value());
             break;
         }
@@ -189,18 +207,36 @@ uint32_t Compiler::compile(Expression *rule)
         }
         case RULE_BINARY: {
             auto binary = static_cast<Binary *>(rule);
-            auto r1 = this->compile(binary->left);
-            auto r2 = this->compile(binary->right);
             result = this->frame_info.back().get_register();
             switch (binary->op.type) {
                 case TOKEN_PLUS: {
-                    this->add_opcode(OP_ADD);
-                    this->add_opcode(result);
-                    this->add_opcode(r1);
-                    this->add_opcode(r2);
-                    // Release registers.
-                    this->frame_info.back().free_register(r1);
-                    this->frame_info.back().free_register(r2);
+                    if (this->is_constant(binary->left) && this->is_constant(binary->right)) {
+                        this->add_opcode(OP_ADD_CC);
+                        this->add_opcode(result);
+                        this->compile(binary->left, false);
+                        this->compile(binary->right, false);
+                    } else if (this->is_constant(binary->left)) {
+                        auto r1 = this->compile(binary->right);
+                        this->add_opcode(OP_ADD_CR);
+                        this->add_opcode(result);
+                        this->compile(binary->left, false);
+                        this->add_opcode(r1);
+                    } else if (this->is_constant(binary->right)) {
+                        auto r1 = this->compile(binary->left);
+                        this->add_opcode(OP_ADD_RC);
+                        this->add_opcode(result);
+                        this->add_opcode(r1);
+                        this->compile(binary->right, false);
+                    } else {
+                        auto r1 = this->compile(binary->left);
+                        auto r2 = this->compile(binary->right);
+                        this->add_opcode(OP_ADD_RR);
+                        this->add_opcode(result);
+                        this->add_opcode(r1);
+                        this->add_opcode(r2);
+                        this->frame_info.back().free_register(r1);
+                        this->frame_info.back().free_register(r2);
+                    }
                     break;
                 }
                 default: { }
@@ -269,4 +305,17 @@ void Compiler::modify_constant(uint64_t index, Value value)
 uint32_t Compiler::current_code_line()
 {
     return this->get_current_memory()->code.size();
+}
+
+bool Compiler::is_constant(Expression *expression)
+{
+    printf("Rule: %i\n", expression->rule);
+    switch (expression->rule) {
+        case RULE_INTEGER:
+        case RULE_FLOAT:
+        case RULE_BOOLEAN:
+        case RULE_STRING:
+        case RULE_NONE: { return true; }
+        default: { return false; }
+    }
 }

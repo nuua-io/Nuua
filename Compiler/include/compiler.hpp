@@ -28,7 +28,9 @@ class Compiler
     // Defines a basic compilation for a Statement.
     void compile(Statement *rule);
     // Defines a basic compilation for an Expression. (Returns the register with the result).
-    uint32_t compile(Expression *rule);
+    // If const_opcode is true and the expression is a constant expression, it will move it
+    // to a new register. Otherwise, it will just add the constant and the constant index.
+    uint32_t compile(Expression *rule, bool const_opcode = true);
     // Adds an opcode the the currently used memory.
     void add_opcode(uint64_t opcode);
     // Adds a constant to the code.
@@ -39,6 +41,8 @@ class Compiler
     Memory *get_current_memory();
     // Returns the current line of the code.
     uint32_t current_code_line();
+    // Determines if the following expression is a safe constant.
+    bool is_constant(Expression *expression);
     public:
         // Compile an input source and returns the result program.
         Program compile(const char *source);
