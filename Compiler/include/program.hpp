@@ -60,19 +60,19 @@ class Frame
 class FrameInfo
 {
     // Stores the registers that are free to use again.
-    std::vector<uint32_t> free_registers;
+    std::vector<uint64_t> free_registers;
     // Stores the registers that are protected to get free unless forçed.
-    std::vector<uint32_t> protected_registers;
+    std::vector<uint64_t> protected_registers;
     public:
         // Stores the next register to give in case no free ones are available.
-        uint32_t current_register = 0;
+        uint64_t current_register = 0;
         // Method to return an available register.
         // It will try to get it from the free_registers
         // otherwise it will return a new register and
         // increment current_register by 1
-        uint32_t get_register(bool protect = false);
+        uint64_t get_register(bool protect = false);
         // Used to free a register.
-        void free_register(uint32_t reg, bool force = false);
+        void free_register(uint64_t reg, bool force = false);
 };
 
 // The base program class that represents a nuua program.

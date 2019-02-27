@@ -9,11 +9,12 @@
 // Defines the known opcodes for the program.
 typedef enum : uint8_t {
     // Others
-    OP_EXIT, // EXIT
+    OP_EMPTY, // Empty space (nothing)
+    OP_EXIT, // EXIT - - -
 
     // Register manipulation
-    OP_MOVE_RR, // MOVE RX RY
-    OP_MOVE_RC, // LOAD RX C1
+    OP_MOVE_RR, // MOVE RX RY -
+    OP_MOVE_RC, // LOAD RX C1 -
 
     // Addition
     OP_ADD_RR, // ADD RX RY RZ
@@ -76,20 +77,20 @@ typedef enum : uint8_t {
     OP_LTE_CC, // LTE RX C1 C2
 
     // Control flow (All relative jumps)
-    OP_FJUMP, // FJUMP A
-    OP_BJUMP, // BJUMP A
-    OP_FJUMP_R, // FJUMP A RX
-    OP_BJUMP_R, // BJUMP A RX
-    OP_FJUMP_C, // FJUMP A C1
-    OP_BJUMP_C, // BJUMP A C1
-    OP_FNJUMP_R, // FNJUMP A RX
-    OP_BNJUMP_R, // BNJUMP A RX
-    OP_FNJUMP_C, // FNJUMP A C1
-    OP_BNJUMP_C, // BNJUMP A C1
+    OP_FJUMP, // FJUMP A - -
+    OP_BJUMP, // BJUMP A - -
+    OP_FJUMP_R, // FJUMP A RX -
+    OP_BJUMP_R, // BJUMP A RX -
+    OP_FJUMP_C, // FJUMP A C1 -
+    OP_BJUMP_C, // BJUMP A C1 -
+    OP_FNJUMP_R, // FNJUMP A RX -
+    OP_BNJUMP_R, // BNJUMP A RX -
+    OP_FNJUMP_C, // FNJUMP A C1 -
+    OP_BNJUMP_C, // BNJUMP A C1 -
 
     // Utilities
-    OP_PRINT_R, // PRINT RX
-    OP_PRINT_C, // PRINT C1
+    OP_PRINT_R, // PRINT RX - -
+    OP_PRINT_C, // PRINT C1 - -
 } OpCode;
 
 #endif

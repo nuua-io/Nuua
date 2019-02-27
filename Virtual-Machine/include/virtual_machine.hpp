@@ -14,6 +14,13 @@
 #define MAX_FRAMES 1024
 #define MEMORY_SIZE 1024
 
+typedef struct {
+    uint64_t instruction; // Instruction to execute
+    uint64_t op1; // First operant
+    uint64_t op2; // Second operant
+    uint64_t op3; // Third operant
+} Instruction;
+
 class VirtualMachine
 {
     // Stores the program to be executed.

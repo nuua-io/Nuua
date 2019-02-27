@@ -30,17 +30,20 @@ class Compiler
     // Defines a basic compilation for an Expression. (Returns the register with the result).
     // If const_opcode is true and the expression is a constant expression, it will move it
     // to a new register. Otherwise, it will just add the constant and the constant index.
-    uint32_t compile(Expression *rule, bool const_opcode = true);
+    // suggested_register will use that register as the result.
+    uint64_t compile(Expression *rule, bool const_opcode = true, uint64_t *suggested_register = nullptr);
     // Adds an opcode the the currently used memory.
     void add_opcode(uint64_t opcode);
     // Adds a constant to the code.
     uint64_t add_constant_only(Value value);
-    // Modifies a constant given it's index in the current memory to the given value.
-    void modify_constant(uint64_t index, Value value);
+    // Modifies a literal in the code given it's index.
+    void modify_literal(size_t index, uint64_t value);
     // Returns the currently used memory.
     Memory *get_current_memory();
     // Returns the current line of the code.
-    uint32_t current_code_line();
+    uint64_t current_code_line();
+    // Returns The first found variable in the block stack.
+    BlockVariableType *get_variable(std::string &name);
     // Determines if the following expression is a safe constant.
     bool is_constant(Expression *expression);
     public:

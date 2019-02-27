@@ -205,6 +205,9 @@ void Value::println()
 
 void Value::copy_to(Value *dest)
 {
+    // This could perhaps be skipped.
+    // Simple check to see if there's no need to copy it.
+    if (this == dest) return;
     // Deallocate the destination.
     dest->deallocate();
     // Copy the type.
@@ -240,21 +243,25 @@ void Value::deallocate()
 void Value::op_minus(Value *dest, Value *src1)
 {
     src1 = src1->get_value();
-    dest->deallocate();
     if (src1->type.type == VALUE_STRING) {
         auto buffer = new std::string(*src1->value_string);
         std::reverse(buffer->begin(), buffer->end());
+        dest->deallocate();
         dest->type.type = VALUE_STRING;
         dest->value_string = buffer;
         return;
     } else if (src1->type.type == VALUE_INT) {
+        auto val = -src1->value_int;
+        dest->deallocate();
         dest->type.type = VALUE_INT;
-        dest->value_int = -src1->value_int;
+        dest->value_int = val;
         return;
     }
 
+    auto val = -src1->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_FLOAT;
-    dest->value_float = -src1->to_double();
+    dest->value_float = val;
 }
 
 void Value::op_not(Value *dest, Value *src1)
@@ -266,131 +273,152 @@ void Value::op_not(Value *dest, Value *src1)
 
 void Value::op_add(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
-    //printf("Addition on:"); this->type.print();
+
     if (src1->type.type == VALUE_STRING || src1->type.type == VALUE_STRING) {
+        auto val = new std::string(src1->to_string() + src2->to_string());
+        dest->deallocate();
         dest->type.type = VALUE_STRING;
-        dest->value_string = new std::string(src1->to_string() + src2->to_string());
+        dest->value_string = val;
         return;
     }
     else if (src1->type.type == VALUE_INT && src2->type.type == VALUE_INT) {
+        auto val = src1->value_int + src2->value_int;
+        dest->deallocate();
         dest->type.type = VALUE_INT;
-        dest->value_int = src1->value_int + src2->value_int;
+        dest->value_int = val;
         return;
     }
 
+    auto val = src1->to_double() + src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_FLOAT;
-    dest->value_float = src1->to_double() + src2->to_double();
+    dest->value_float = val;
 }
 
 void Value::op_sub(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
     if (src1->type.type == VALUE_INT && src2->type.type == VALUE_INT) {
+        auto val = src1->value_int - src2->value_int;
+        dest->deallocate();
         dest->type.type = VALUE_INT;
-        dest->value_int = src1->value_int - src2->value_int;
+        dest->value_int = val;
         return;
     }
 
+    auto val = src1->to_double() - src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_FLOAT;
-    dest->value_float = src1->to_double() - src2->to_double();
+    dest->value_float = val;
 }
 
 void Value::op_mul(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
     if (src1->type.type == VALUE_INT && src2->type.type == VALUE_INT) {
+        auto val = src1->value_int * src2->value_int;
+        dest->deallocate();
         dest->type.type = VALUE_INT;
-        dest->value_int = src1->value_int * src2->value_int;
+        dest->value_int = val;
         return;
     }
 
+    auto val = src1->to_double() * src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_FLOAT;
-    dest->value_float = src1->to_double() * src2->to_double();
+    dest->value_float = val;
 }
 
 void Value::op_div(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
     auto bn = src2->to_double();
     if (bn == 0) { logger->error("Division by zero."); exit(EXIT_FAILURE); }
 
+    auto val = src1->to_double() / bn;
+    dest->deallocate();
     dest->type.type = VALUE_FLOAT;
-    dest->value_float = src1->to_double() / bn;
+    dest->value_float = val;
 }
 
 void Value::op_eq(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
     if (src1->type.type == VALUE_STRING && src2->type.type == VALUE_STRING) {
+        auto val = src1->to_string() == src2->to_string();
+        dest->deallocate();
         dest->type.type = VALUE_BOOL;
-        dest->value_bool = src1->to_string() == src2->to_string();
+        dest->value_bool = val;
         return;
     }
 
+    auto val = src1->to_double() == src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_BOOL;
-    dest->value_bool = src1->to_double() == src2->to_double();
+    dest->value_bool = val;
 }
 
 void Value::op_neq(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
     if (src1->type.type == VALUE_STRING && src2->type.type == VALUE_STRING) {
+        auto val = src1->to_string() != src2->to_string();
+        dest->deallocate();
         dest->type.type = VALUE_BOOL;
-        dest->value_bool = src1->to_string() != src2->to_string();
+        dest->value_bool = val;
         return;
     }
 
+    auto val = src1->to_double() != src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_BOOL;
-    dest->value_bool = src1->to_double() != src2->to_double();
+    dest->value_bool = val;
 }
 
 void Value::op_lt(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
+    auto val = src1->to_double() < src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_BOOL;
-    dest->value_bool = src1->to_double() < src2->to_double();
-    printf("Res (%f < %f): %i\n", src1->to_double(), src2->to_double(), dest->value_bool);
+    dest->value_bool = val;
 }
 
 void Value::op_lte(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
+    auto val = src1->to_double() <= src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_BOOL;
-    dest->value_bool = src1->to_double() <= src2->to_double();
+    dest->value_bool = val;
 }
 
 void Value::op_ht(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
+    auto val = src1->to_double() > src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_BOOL;
-    dest->value_bool = src1->to_double() > src2->to_double();
+    dest->value_bool = val;
 }
 
 void Value::op_hte(Value *dest, Value *src1, Value *src2)
 {
-    dest->deallocate();
     src1 = src1->get_value(), src2 = src2->get_value();
 
+    auto val = src1->to_double() >= src2->to_double();
+    dest->deallocate();
     dest->type.type = VALUE_BOOL;
-    dest->value_bool = src1->to_double() >= src2->to_double();
+    dest->value_bool = val;
 }
 
 Value::~Value()
