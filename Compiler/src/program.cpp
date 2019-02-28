@@ -191,7 +191,7 @@ void Memory::dump()
     for (size_t i = 0; i < this->code.size(); i++) {
         auto el = this->code[i];
         printf(opcode_names[el].c_str());
-        for (uint8_t k = 0; k < MAX_OPERANDS && opcode_operands[el][k] != OPERAND_EMPTY; k++) {
+        for (uint8_t k = 0; k < MAX_OPERANDS; k++) {
             switch (opcode_operands[el][k]) {
                 case OPERAND_REGISTER: { printf(" R%llu", this->code[++i]); break; }
                 case OPERAND_CONSTANT: { printf(" <%s>", this->constants[this->code[++i]].to_string().c_str()); break; }

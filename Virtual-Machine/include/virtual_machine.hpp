@@ -26,7 +26,7 @@ class VirtualMachine
     // Stores the program to be executed.
     Program program;
     // Virtual machine program counter.
-    uint64_t *program_counter;
+    Instruction *program_counter;
     // Stores the stack of the memories used.
     MemoryType memories[MEMORY_SIZE] = { PROGRAM_MEMORY };
     // The current memory where the program counter is pointing.

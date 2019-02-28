@@ -34,6 +34,8 @@ class Compiler
     uint64_t compile(Expression *rule, bool const_opcode = true, uint64_t *suggested_register = nullptr);
     // Adds an opcode the the currently used memory.
     void add_opcode(uint64_t opcode);
+    // Adds an opcode X times.
+    void add_opcodes(uint64_t opcode, uint8_t times);
     // Adds a constant to the code.
     uint64_t add_constant_only(Value value);
     // Modifies a literal in the code given it's index.

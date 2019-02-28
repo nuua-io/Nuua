@@ -178,6 +178,7 @@ Value Value::cast(Type type)
             exit(EXIT_FAILURE);
         }
     }
+    return Value();
 }
 
 Value *Value::get_value()

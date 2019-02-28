@@ -24,6 +24,11 @@ void Compiler::add_opcode(uint64_t opcode)
     this->get_current_memory()->lines.push_back(this->current_line);
 }
 
+void Compiler::add_opcodes(uint64_t opcode, uint8_t times)
+{
+    while (times-- > 0) this->add_opcode(opcode);
+}
+
 Program Compiler::compile(const char *source)
 {
     auto analyzer = Analyzer();
@@ -40,6 +45,7 @@ Program Compiler::compile(const char *source)
 
     // Add the exit opcode.
     this->add_opcode(OP_EXIT);
+    this->add_opcodes(OP_EMPTY, 3);
 
     #if DEBUG
         logger->info("Program memory:");
@@ -74,10 +80,12 @@ void Compiler::compile(Statement *rule)
             if (this->is_constant(print->expression)) {
                 this->add_opcode(OP_PRINT_C);
                 this->compile(print->expression, false);
+                this->add_opcodes(OP_EMPTY, 2);
             } else {
                 auto reg = this->compile(print->expression);
                 this->add_opcode(OP_PRINT_R);
                 this->add_opcode(reg);
+                this->add_opcodes(OP_EMPTY, 2);
                 this->frame_info.back().free_register(reg);
             }
             break;
@@ -99,6 +107,7 @@ void Compiler::compile(Statement *rule)
                     this->add_opcode(OP_MOVE_RC);
                     this->add_opcode(reg);
                     this->compile(declaration->initializer, false);
+                    this->add_opcodes(OP_EMPTY, 1);
                 } else {
                     this->compile(declaration->initializer, true, &reg);
                     // auto res = this->compile(declaration->initializer);
@@ -111,6 +120,7 @@ void Compiler::compile(Statement *rule)
                 this->add_opcode(OP_MOVE_RC);
                 this->add_opcode(reg);
                 this->add_constant_only(Type(declaration->type));
+                this->add_opcodes(OP_EMPTY, 1);
             }
             break;
         }
@@ -133,21 +143,24 @@ void Compiler::compile(Statement *rule)
                 this->add_opcode(0); // This will determine the jump offset.
                 literal_position = this->current_code_line() - 1;
                 this->compile(rwhile->condition, false);
+                this->add_opcodes(OP_EMPTY, 1);
             } else {
                 auto r1 = this->compile(rwhile->condition);
                 this->add_opcode(OP_FNJUMP_R);
                 this->add_opcode(0); // This will determine the jump offset.
                 literal_position = this->current_code_line() - 1;
                 this->add_opcode(r1);
+                this->add_opcodes(OP_EMPTY, 1);
             }
             auto start_index = this->current_code_line();
             // Compile the while body.
             for (auto stmt : rwhile->body) this->compile(stmt);
             // Jump back to the condition.
             this->add_opcode(OP_BJUMP);
-            this->add_opcode(static_cast<uint64_t>(this->current_code_line() - initial_index));
+            this->add_opcode(((this->current_code_line() - 2 - initial_index - 1) / MAX_OPERANDS) + 1);
+            this->add_opcodes(OP_EMPTY, 2);
             // Modify the jump offset of the literal in the condition.
-            this->modify_literal(literal_position, this->current_code_line() - start_index + 1);
+            this->modify_literal(literal_position, ((this->current_code_line() - start_index + 3) / MAX_OPERANDS) - 1);
             this->blocks.pop_back();
             break;
         }
