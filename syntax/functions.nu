@@ -1,4 +1,4 @@
-fun add(a: int, b: int): int -> a + b
+export fun add(a: int, b: int): int -> a + b
 
 fun add2(a: int, b: int): int => return a + b
 

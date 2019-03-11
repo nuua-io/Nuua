@@ -39,6 +39,7 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_OR",
     "TOKEN_AND",
     "TOKEN_CLASS",
+    "TOKEN_FUN",
     "TOKEN_ELSE",
     "TOKEN_TRUE",
     "TOKEN_FALSE",
@@ -69,11 +70,6 @@ const std::unordered_map<char, char> Token::escaped_chars = {
     { 'v', '\v'},
     { '0', '\0'}
 };
-
-bool Token::is(TokenType type)
-{
-    return this->type == type;
-}
 
 std::string Token::to_string()
 {

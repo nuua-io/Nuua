@@ -45,6 +45,7 @@ typedef enum : uint8_t {
     TOKEN_OR, // or
     TOKEN_AND, // and
     TOKEN_CLASS, // class
+    TOKEN_FUN, // fun
     TOKEN_ELSE, // else
     TOKEN_TRUE, // true
     TOKEN_FALSE, // false
@@ -84,7 +85,6 @@ class Token
 
         void debug_token();
 
-        bool is(TokenType type);
         std::string to_string();
 
         static void debug_token(TokenType token);

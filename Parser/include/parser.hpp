@@ -12,47 +12,38 @@
 #include "../../Lexer/include/tokens.hpp"
 #include "rules.hpp"
 
-// Base parser class for nuua.
 class Parser
 {
     // Stores a pointer to the current token beeing parsed.
     Token *current;
-    Token consume(TokenType type, const char* message);
+    // Consumes a token and returns it for futher use.
+    Token *consume(TokenType type, const char *message);
+    // Returns true if the token type matches the current token.
     bool match(TokenType token);
+    // Returns true if any of the given token types matches the current token.
     bool match_any(std::vector<TokenType> tokens);
-    std::vector<Statement *> get_block_body();
-    bool is_function();
-    // Function to get a type string.
+    // Gets a written type.
     std::string get_type();
-    // Parser basic operations.
-    Expression *function();
-    Expression *list();
-    Expression *dictionary();
-    Expression *primary();
-    Expression *finish_call(Expression *callee);
-    Expression *finish_access(Expression *item);
-    Expression *finish_cast(Expression *expression);
-    Expression *call();
-    Expression *unary();
-    Expression *mul_div_mod();
+
+    // Expressions
+    Expression *unary_postfix();
+    Expression *unary_prefix();
+    Expression *multiplication();
     Expression *addition();
     Expression *comparison();
     Expression *equality();
-    Expression *and_operator();
-    Expression *or_operator();
+    Expression *logical_and();
+    Expression *logical_or();
     Expression *assignment();
     Expression *expression();
-    Expression *cast();
+
+    // Statements
+    Statement *variable_declaration();
     Statement *expression_statement();
-    Statement *declaration_statement();
-    Statement *return_statement();
-    Statement *if_statement();
-    Statement *while_statement();
-    Statement *statement(bool new_line_ending = true);
-    static void debug_rule(Rule rule);
-    static void debug_rules(std::vector<Rule> rules);
-    static void debug_rules(std::vector<Statement *> rules);
+    Statement *statement();
+
     public:
+        // Parses a given source code and returns the AST.
         std::vector<Statement *> parse(const char *source);
 };
 

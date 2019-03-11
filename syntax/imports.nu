@@ -1,3 +1,3 @@
-import add from 'functions'
+import add from './functions'
 
 print add(25, 25)

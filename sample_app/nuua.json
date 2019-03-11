@@ -1,0 +1,6 @@
+{
+    "name": "my_app",
+    "version": "1.0.0",
+    "entry": "project.nu",
+    "dependencies": []
+}

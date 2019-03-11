@@ -9,9 +9,9 @@ endif ()
 
 # Set the C++ general flags and flags for debug and release.
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set (CMAKE_CXX_FLAGS "-Wall -Wextra")
+    set (CMAKE_CXX_FLAGS "-Wall -Wextra -pipe")
     set (CMAKE_CXX_FLAGS_DEBUG "-g -D DEBUG=true")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -D DEBUG=false")
+    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto -frename-registers -fopenmp -D_GLIBCXX_PARALLEL -DDEBUG=false")
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 # Set the C++ standard to use.
