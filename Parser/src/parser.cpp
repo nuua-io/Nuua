@@ -38,7 +38,7 @@ bool Parser::match(TokenType token)
     return false;
 }
 
-bool Parser::match_any(std::vector<TokenType> tokens)
+bool Parser::match_any(std::vector<TokenType> &tokens)
 {
     for (TokenType &token : tokens) {
         if (CHECK(token)) {
@@ -50,37 +50,101 @@ bool Parser::match_any(std::vector<TokenType> tokens)
     return false;
 }
 
-std::string Parser::get_type()
-{
-    if (this->match(TOKEN_LEFT_SQUARE)) {
-        // List type.
-        return ("[" + this->get_type()) + this->consume(TOKEN_RIGHT_SQUARE, "A list type needs to end with ']'")->to_string();
-    } else if (this->match(TOKEN_LEFT_BRACE)) {
-        // Dict type.
-        return ("{" + this->get_type()) + this->consume(TOKEN_RIGHT_BRACE, "A list type needs to end with '}'")->to_string();
-    } else if (this->match(TOKEN_LEFT_PAREN)) {
-        // Fun type.
-    } else if (CHECK(TOKEN_IDENTIFIER)) {
-        // Other types (native + custom).
-        return this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
-    } else if (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL)) return "";
+/* GRAMMAR RULES */
 
-    logger->error("Unknown type token expected.", LINE());
+Expression *Parser::primary()
+{
+    if (this->match(TOKEN_FALSE)) return new Boolean(false);
+    if (this->match(TOKEN_TRUE)) return new Boolean(true);
+    if (this->match(TOKEN_NONE)) return new None();
+    if (this->match(TOKEN_INTEGER)) return new Integer(std::stoi(PREVIOUS().to_string()));
+    if (this->match(TOKEN_FLOAT)) return new Float(std::stof(PREVIOUS().to_string()));
+    if (this->match(TOKEN_STRING)) return new String(PREVIOUS().to_string());
+    if (this->match(TOKEN_IDENTIFIER)) return new Variable(PREVIOUS().to_string());
+    if (this->match(TOKEN_LEFT_SQUARE)) {
+        std::vector<Expression *> values;
+        if (this->match(TOKEN_RIGHT_SQUARE)) return new List(values);
+        for (;;) {
+            if (IS_AT_END()) {
+                logger->error("Unfinished list, Expecting ']' after the last list element.", this->current->line);
+                exit(EXIT_FAILURE);
+            }
+            values.push_back(expression());
+            if (this->match(TOKEN_RIGHT_SQUARE)) break;
+            this->consume(TOKEN_COMMA, "Expected ',' after a list element");
+        }
+        return new List(values);
+    }
+    if (this->match(TOKEN_LEFT_BRACE)) {
+        std::unordered_map<std::string, Expression *> values;
+        std::vector<std::string> keys;
+        if (this->match(TOKEN_RIGHT_BRACE)) return new Dictionary(values, keys);
+        for (;;) {
+            if (IS_AT_END()) {
+                logger->error("Unfinished dictionary, Expecting '}' after the last dictionary element.", this->current->line);
+                exit(EXIT_FAILURE);
+            }
+            Expression *key = this->expression();
+            if (key->rule != RULE_VARIABLE) {
+                logger->error("Expected an identifier as a key", this->current->line);
+                exit(EXIT_FAILURE);
+            }
+            this->consume(TOKEN_COLON, "Expected ':' after dictionary key");
+            std::string name = static_cast<Variable *>(key)->name;
+            values[name] = this->expression();
+            keys.push_back(name);
+            if (this->match(TOKEN_RIGHT_BRACE)) break;
+            this->consume(TOKEN_COMMA, "Expected ',' after dictionary element");
+        }
+        return new Dictionary(values, keys);
+    }
+    if (this->match(TOKEN_LEFT_PAREN)) {
+        Expression *value = this->expression();
+        this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after a group expression");
+        return new Group(value);
+    }
+    logger->error("Expected an expression", LINE());
     exit(EXIT_FAILURE);
 }
 
-/* GRAMMAR RULES */
+/*
+unary_postfix -> primary ("[" primary "]" | "(" arguments? ")")*;
+arguments -> expression ("," expression)*;
+*/
+Expression *Parser::unary_postfix()
+{
+    Expression *result = this->primary();
+    while (this->match_any({{ TOKEN_LEFT_SQUARE, TOKEN_LEFT_PAREN }})) {
+        Token op = PREVIOUS();
+        switch (op.type) {
+            case TOKEN_LEFT_SQUARE: {
+                Expression *expr = this->primary();
+                this->consume(TOKEN_RIGHT_SQUARE, "Expected ']' after the access index");
+                result = new Access(result, expr);
+                break;
+            }
+            case TOKEN_LEFT_PAREN: {
+                std::vector<Expression *> arguments = this->arguments();
+                this->consume(TOKEN_RIGHT_SQUARE, "Expected ')' after the access index");
+                result = new Call(result, arguments);
+                break;
+            }
+            default: { logger->error("Invalid unary postfix operator", LINE()); exit(EXIT_FAILURE); };
+        }
+    }
+    return result;
+}
 
 /*
 unary_prefix -> ("!" | "-") unary_prefix
-    | call;
+    | unary_postfix;
 */
 Expression *Parser::unary_prefix()
 {
     if (this->match_any({{ TOKEN_BANG, TOKEN_MINUS }})) {
         return new Unary(PREVIOUS(), this->unary_prefix());
     }
-    return this->call();
+    return this->unary_postfix();
 }
 
 /*
@@ -156,21 +220,14 @@ Expression *Parser::logical_or()
 }
 
 /*
-assignment -> IDENTIFIER "=" expression
+assignment -> IDENTIFIER "=" assignment
     | logical_or;
 */
 Expression *Parser::assignment()
 {
     Expression *result = this->logical_or();
     if (this->match(TOKEN_EQUAL)) {
-        switch (result->rule) {
-            case RULE_VARIABLE: { return new Assign(static_cast<Variable *>(result)->name, this->expression()); }
-            case RULE_ACCESS: {
-                Access *res = static_cast<Access *>(result);
-                return new AssignAccess(res->name, res->index, this->expression());
-            }
-            default: { logger->error("Invalid assignment target", this->current->line); exit(EXIT_FAILURE); };
-        }
+        return new Assign(result, this->assignment());
     }
     return result;
 }
@@ -191,7 +248,7 @@ Statement *Parser::variable_declaration()
     std::string variable = this->consume(TOKEN_IDENTIFIER, "Expected an identifier in a declaration statement")->to_string();
     this->consume(TOKEN_COLON, "Expected ':' after identifier in a declaration statement");
     // We need to get the variable type. It may be empty if's an inferred type.
-    std::string type = this->get_type();
+    std::string type = this->type();
     // Function initializer
     Expression *initializer = nullptr;
     if (this->match(TOKEN_EQUAL)) {
@@ -237,6 +294,35 @@ Statement *Parser::statement()
     else if (this->match(TOKEN_PRINT));
 
     return this->expression_statement();
+}
+
+std::vector<Statement *> Parser::parameters()
+{
+
+}
+
+std::vector<Expression *> Parser::arguments()
+{
+
+}
+
+std::string Parser::type()
+{
+    if (this->match(TOKEN_LEFT_SQUARE)) {
+        // List type.
+        return ("[" + this->type()) + this->consume(TOKEN_RIGHT_SQUARE, "A list type needs to end with ']'")->to_string();
+    } else if (this->match(TOKEN_LEFT_BRACE)) {
+        // Dict type.
+        return ("{" + this->type()) + this->consume(TOKEN_RIGHT_BRACE, "A list type needs to end with '}'")->to_string();
+    } else if (this->match(TOKEN_LEFT_PAREN)) {
+        // Fun type.
+    } else if (CHECK(TOKEN_IDENTIFIER)) {
+        // Other types (native + custom).
+        return this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
+    } else if (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL)) return "";
+
+    logger->error("Unknown type token expected.", LINE());
+    exit(EXIT_FAILURE);
 }
 
 std::vector<Statement *> Parser::parse(const char *source)

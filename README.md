@@ -5,8 +5,7 @@ This is the official nuua programming language repository
 Nuua is a new high level programming language. It acts as a generic language and it's built using pure C++, no dependencies required.
 Nuua is ~~dynamic~~ static typed and interpreted language similar to other high level languages like JavaScript or Python.
 
-The syntax is familiar with no strange structures. However, emphasis on arrows and anonymous functions (also called arrow functions)
-is there to stay.
+The syntax is familiar with no strange structures. However, some syntax sugar is added to perform common tasks quicker.
 
 ## Nuua website
 
@@ -15,9 +14,9 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 ## Nuua Roadmap
 
 - ~~From dynamic to static~~ :white_check_mark:
-- ~~Implement functions~~ :white_check_mark:
-- Stack machine to Register Machine :construction:
-- Re-write functions and classes syntax :construction:
+- ~~Stack machine to Register Machine~~ :white_check_mark:
+- Re-write the syntax :construction:
+- Implement functions :construction:
 - Implement classes
 - Implement function overloading (?)
 - Implement modules (imports)
@@ -30,23 +29,19 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 
 Nuua is structured as a layered system. It have diferent tiers (ordered):
 
-- [Application](https://github.com/nuua-io/Application)
-- [Virtual Machine](https://github.com/nuua-io/Virtual-Machine)
-- [Compiler](https://github.com/nuua-io/Compiler)
-- [Parser](https://github.com/nuua-io/Parser)
-- [Lexer](https://github.com/nuua-io/Lexer)
+- Application
+- Virtual Machine
+- Compiler
+- Analyzer
+- Parser
+- Lexer
 
 Nuua also have independent modules to help with it's development on every layer.
 In the case of the current state, nuua have the following modules:
 
-- [Logger](https://github.com/nuua-io/Logger)
+- Logger
 
 ![Layered System](https://i.imgur.com/vNaPz7x.png)
-
-### How are these repositories linked with this one?
-
-They are linked using git subtrees. I mainly develop nuua in this repository and then further push all contents to each one,
-ensuring a distributed system.
 
 ## Building Nuua
 
@@ -55,9 +50,9 @@ However, you're free to build the source yourself. The required software is:
 
 - MinGW + Visual Studio (in windows)
 - A C++ compiler (I use g++: *gcc version 8.2.0 (Rev3, Built by MSYS2 project)*)
-- GNU makefile (You can also use it on windows by using mingw32-make)
+- CMake
 
-To build the language you just need to invoke the `make` command.
-The executable file will be inside the bin folder and will be named `nuua` (.exe in windows)
-
-You may use `make clean` to remove the `*.o` files in the build directory.
+To build the language you just need to use Cmake in the root directory.
+For example, create a directory called `my_build` in the root directory
+and then inside of it invoke Cmake `cmake ..`. Then you may build it using the
+selected target (Makefile, Vistual Studio, etc).

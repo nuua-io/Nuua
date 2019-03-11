@@ -131,7 +131,7 @@ class Group : public Expression
 class Unary : public Expression
 {
     public:
-        Token op; //! This should be changed to a TOKEN rule
+        Token op;
         Expression *right;
         Unary(Token op, Expression *right)
             : Expression(RULE_UNARY), op(op), right(right) {};
@@ -158,21 +158,10 @@ class Variable : public Expression
 class Assign : public Expression
 {
     public:
-        std::string name;
+        Expression *target;
         Expression *value;
-        Assign(std::string name, Expression *value)
-            : Expression(RULE_ASSIGN), name(name), value(value) {};
-};
-
-class AssignAccess : public Expression
-{
-    public:
-        std::string name;
-        Expression *index;
-        Expression *value;
-        bool integer_index; // Determines if it needs an integer or string to access.
-        AssignAccess(std::string name, Expression *index, Expression *value)
-            : Expression(RULE_ASSIGN_ACCESS), name(name), index(index), value(value) {};
+        Assign(Expression *target, Expression *value)
+            : Expression(RULE_ASSIGN), target(target), value(value) {};
 };
 
 class Logical : public Expression
@@ -199,20 +188,20 @@ class Function : public Expression
 class Call : public Expression
 {
     public:
-        std::string callee;
+        Expression *target;
         std::vector<Expression *> arguments;
-        Call(std::string callee, std::vector<Expression *> arguments)
-            : Expression(RULE_CALL), callee(callee), arguments(arguments) {};
+        Call(Expression *target, std::vector<Expression *> arguments)
+            : Expression(RULE_CALL), target(target), arguments(arguments) {};
 };
 
 class Access : public Expression
 {
     public:
-        std::string name;
+        Expression *target;
         Expression *index;
         bool integer_index; // Determines if it needs an integer or string to access.
-        Access(std::string name, Expression *index)
-            : Expression(RULE_ACCESS), name(name), index(index) {};
+        Access(Expression *target, Expression *index)
+            : Expression(RULE_ACCESS), target(target), index(index) {};
 };
 
 class Cast : public Expression

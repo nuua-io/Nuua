@@ -21,11 +21,10 @@ class Parser
     // Returns true if the token type matches the current token.
     bool match(TokenType token);
     // Returns true if any of the given token types matches the current token.
-    bool match_any(std::vector<TokenType> tokens);
-    // Gets a written type.
-    std::string get_type();
+    bool match_any(std::vector<TokenType> &tokens);
 
     // Expressions
+    Expression *primary();
     Expression *unary_postfix();
     Expression *unary_prefix();
     Expression *multiplication();
@@ -41,6 +40,11 @@ class Parser
     Statement *variable_declaration();
     Statement *expression_statement();
     Statement *statement();
+
+    // Helpers
+    std::vector<Statement *> parameters();
+    std::vector<Expression *> arguments();
+    std::string type();
 
     public:
         // Parses a given source code and returns the AST.
