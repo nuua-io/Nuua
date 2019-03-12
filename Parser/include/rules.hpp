@@ -33,7 +33,6 @@ typedef enum : uint8_t {
     RULE_DECLARATION,
     RULE_VARIABLE,
     RULE_ASSIGN,
-    RULE_ASSIGN_ACCESS,
     RULE_LOGICAL,
     RULE_FUNCTION,
     RULE_CALL,

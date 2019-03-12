@@ -61,6 +61,7 @@ void Analyzer::analyze(Statement *rule)
 
 void Analyzer::analyze(Expression *rule)
 {
+    /*
     switch (rule->rule) {
         case RULE_INTEGER:
         case RULE_FLOAT:
@@ -268,6 +269,7 @@ void Analyzer::analyze(Expression *rule)
             exit(EXIT_FAILURE);
         }
     }
+    */
 }
 
 Block Analyzer::analyze(std::vector<Statement *> &block, std::vector<Statement *> arguments, std::string return_type)

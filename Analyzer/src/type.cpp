@@ -102,6 +102,7 @@ void Type::println()
 
 Type::Type(Expression *rule, std::vector<Block> *blocks)
 {
+    /*
     switch (rule->rule) {
         case RULE_INTEGER: { this->type = VALUE_INT; return; }
         case RULE_FLOAT: { this->type = VALUE_FLOAT; return; }
@@ -220,6 +221,7 @@ Type::Type(Expression *rule, std::vector<Block> *blocks)
             exit(EXIT_FAILURE);
         }
     }
+    */
 }
 
 void Type::deallocate()

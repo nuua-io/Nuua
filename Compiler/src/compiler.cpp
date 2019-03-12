@@ -301,7 +301,8 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
             break;
         }
         case RULE_ASSIGN: {
-            auto assign = static_cast<Assign *>(rule);
+            /*
+            Assign *assign = static_cast<Assign *>(rule);
             result = this->get_variable(assign->name)->reg;
             if (this->is_constant(assign->value)) {
                 this->add_opcode(OP_MOVE_RC);
@@ -316,11 +317,14 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
                 // this->frame_info.back().free_register(res);
             }
             break;
+            */
         }
+        /*
         case RULE_ASSIGN_ACCESS: {
             auto assign_access = static_cast<AssignAccess *>(rule);
             break;
         }
+        */
         case RULE_LOGICAL: {
             auto logical = static_cast<Logical *>(rule);
             break;

@@ -38,7 +38,7 @@ bool Parser::match(TokenType token)
     return false;
 }
 
-bool Parser::match_any(std::vector<TokenType> &tokens)
+bool Parser::match_any(std::vector<TokenType>  tokens)
 {
     for (TokenType &token : tokens) {
         if (CHECK(token)) {
@@ -264,7 +264,9 @@ expression_statement -> expression '\n';
 */
 Statement *Parser::expression_statement()
 {
-    return new ExpressionStatement(this->expression());
+    Statement *result = new ExpressionStatement(this->expression());
+    this->consume(TOKEN_NEW_LINE, "Expected a new line after an expression statement.");
+    return result;
 }
 
 /*
@@ -336,7 +338,8 @@ std::vector<Statement *> Parser::parse(const char *source)
     while (!IS_AT_END()) code.push_back(this->statement());
 
     #if DEBUG
-        Parser::debug_rules(code);
+        Parser::debug_ast(code);
+        printf("\n");
     #endif
 
     logger->success("Parsing completed");
