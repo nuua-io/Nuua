@@ -44,10 +44,8 @@ class Value
         };
         // The following are the basic constructors for the value. Each one respresents
         // a diferent value to be stored. They pretty much speak by themselves.
-        // None value.
-        Value()
-            : type(Type(VALUE_NONE)) {}
         // Integer (int) value.
+        Value() : type(VALUE_INT), value_int(0) {}
         Value(int64_t a)
             : type(Type(VALUE_INT)), value_int(a) {}
         // Float value (double in C/C++).

@@ -46,7 +46,6 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_WHILE",
     "TOKEN_FOR",
     "TOKEN_IF",
-    "TOKEN_NONE",
     "TOKEN_SELF",
     "TOKEN_EOF",
     "TOKEN_PERCENT",
@@ -55,7 +54,9 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_BIG_RIGHT_ARROW",
     "TOKEN_COLON",
     "TOKEN_RETURN",
-    "TOKEN_PRINT"
+    "TOKEN_PRINT",
+    "TOKEN_IMPORT",
+    "TOKEN_FROM"
 };
 
 const std::unordered_map<char, char> Token::escaped_chars = {

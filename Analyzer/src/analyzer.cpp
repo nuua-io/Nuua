@@ -42,8 +42,8 @@ void Analyzer::analyze(Statement *rule)
         case RULE_IF: {
             auto rif = static_cast<If *>(rule);
             this->analyze(rif->condition);
-            rif->then_block = this->analyze(rif->thenBranch);
-            rif->else_block = this->analyze(rif->elseBranch);
+            rif->then_block = this->analyze(rif->then_branch);
+            rif->else_block = this->analyze(rif->else_branch);
             break;
         }
         case RULE_WHILE: {
@@ -335,9 +335,9 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
     std::string return_type = "";
     std::vector<std::string> arguments;
     if (initializer && initializer->rule == RULE_FUNCTION) {
-        auto fun = static_cast<Function *>(initializer);
-        return_type = fun->return_type;
-        for (auto argument : fun->arguments) arguments.push_back(static_cast<Declaration *>(argument)->type);
+        // auto fun = static_cast<Function *>(initializer);
+        // return_type = fun->return_type;
+        // for (auto argument : fun->arguments) arguments.push_back(static_cast<Declaration *>(argument)->type);
     }
 
     // Declare the variable with the given type.

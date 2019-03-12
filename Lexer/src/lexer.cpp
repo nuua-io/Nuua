@@ -31,12 +31,13 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "else", TOKEN_ELSE },
     { "for", TOKEN_FOR },
     { "while", TOKEN_WHILE },
-    { "none", TOKEN_NONE },
     { "return", TOKEN_RETURN },
     { "print", TOKEN_PRINT },
     { "class", TOKEN_CLASS },
     { "fun", TOKEN_FUN },
     { "self", TOKEN_SELF },
+    { "import", TOKEN_IMPORT },
+    { "from", TOKEN_FROM }
 };
 
 const std::string Lexer::token_error()

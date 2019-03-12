@@ -53,7 +53,6 @@ typedef enum : uint8_t {
     TOKEN_WHILE, // while
     TOKEN_FOR, // for
     TOKEN_IF, // if
-    TOKEN_NONE, // none
     // TOKEN_RETURN,
     // TOKEN_SUPER,
     TOKEN_SELF, // self
@@ -64,7 +63,9 @@ typedef enum : uint8_t {
     TOKEN_BIG_RIGHT_ARROW, // =>
     TOKEN_COLON, // :
     TOKEN_RETURN, // return
-    TOKEN_PRINT // print
+    TOKEN_PRINT, // print
+    TOKEN_IMPORT, // import
+    TOKEN_FROM, // from
 } TokenType;
 
 class Token

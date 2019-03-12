@@ -10,7 +10,7 @@
 
 // Determines the available native types in nuua.
 typedef enum : uint8_t {
-    VALUE_NONE, VALUE_INT, VALUE_FLOAT, VALUE_BOOL,
+    VALUE_INT, VALUE_FLOAT, VALUE_BOOL,
     VALUE_STRING, VALUE_LIST, VALUE_DICT, VALUE_FUN,
     VALUE_REF
 } ValueType;
@@ -24,10 +24,8 @@ class Type
         ValueType type;
         // Stores the inner type if needed.
         Type *inner_type = nullptr;
-        // Create a none type.
-        Type()
-            : type(VALUE_NONE) {}
         // Create a value type given the type.
+        Type() : type(VALUE_INT) {}
         Type(ValueType type)
             : type(type) {}
         // Create a type given a value type and the inner type.

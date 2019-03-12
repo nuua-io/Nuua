@@ -26,7 +26,6 @@ typedef enum : uint8_t {
     RULE_BOOLEAN,
     RULE_LIST,
     RULE_DICTIONARY,
-    RULE_NONE,
     RULE_GROUP,
     RULE_UNARY,
     RULE_BINARY,
@@ -41,6 +40,7 @@ typedef enum : uint8_t {
     RULE_IF,
     RULE_WHILE,
     RULE_CAST,
+    RULE_IMPORT,
 } Rule;
 
 class Expression
@@ -112,13 +112,6 @@ class Dictionary : public Expression
             : Expression(RULE_DICTIONARY), value(value), key_order(key_order) {};
 };
 
-class None : public Expression
-{
-    public:
-        None()
-            : Expression(RULE_NONE) {};
-};
-
 class Group : public Expression
 {
     public:
@@ -171,17 +164,6 @@ class Logical : public Expression
         Expression *right;
         Logical(Expression *left, Token op, Expression *right)
             : Expression(RULE_LOGICAL), left(left),  op(op), right(right) {};
-};
-
-class Function : public Expression
-{
-    public:
-        std::vector<Statement *> arguments;
-        std::string return_type;
-        std::vector<Statement *> body;
-        Block block;
-        Function(std::vector<Statement *> arguments, std::string return_type, std::vector<Statement *> body)
-            : Expression(RULE_FUNCTION), arguments(arguments), return_type(return_type), body(body) {}
 };
 
 class Call : public Expression
@@ -251,11 +233,11 @@ class If : public Statement
 {
     public:
         Expression *condition;
-        std::vector<Statement *> thenBranch;
-        std::vector<Statement *> elseBranch;
+        std::vector<Statement *> then_branch;
+        std::vector<Statement *> else_branch;
         Block then_block, else_block;
-        If(Expression *condition, std::vector<Statement *> thenBranch, std::vector<Statement *> elseBranch)
-            : Statement(RULE_IF), condition(condition), thenBranch(thenBranch), elseBranch(elseBranch) {};
+        If(Expression *condition, std::vector<Statement *> then_branch, std::vector<Statement *> else_branch)
+            : Statement(RULE_IF), condition(condition), then_branch(then_branch), else_branch(else_branch) {};
 };
 
 class While : public Statement
@@ -266,6 +248,27 @@ class While : public Statement
         Block block;
         While(Expression *condition, std::vector<Statement *> body)
             : Statement(RULE_WHILE), condition(condition), body(body) {};
+};
+
+class Function : public Statement
+{
+    public:
+        std::string name;
+        std::vector<Statement *> parameters;
+        std::string return_type;
+        std::vector<Statement *> body;
+        Block block;
+        Function(std::string name, std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
+            : Statement(RULE_FUNCTION), name(name), parameters(parameters), return_type(return_type), body(body) {}
+};
+
+class Import : public Statement
+{
+    public:
+        std::string target;
+        std::string module;
+        Import(std::string target, std::string module)
+            : Statement(RULE_IMPORT), target(target), module(module) {};
 };
 
 #endif

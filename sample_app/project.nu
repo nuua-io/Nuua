@@ -1,4 +1,4 @@
-import addition from './operations'
+import addition from operations
 
 fun main() {
     a: int = 10

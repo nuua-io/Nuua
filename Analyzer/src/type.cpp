@@ -2,7 +2,6 @@
 #include "../../Logger/include/logger.hpp"
 
 const std::unordered_map<std::string, ValueType> Type::value_types = {
-    { "none", VALUE_NONE },
     { "int", VALUE_INT },
     { "float", VALUE_FLOAT },
     { "bool", VALUE_BOOL },
@@ -14,7 +13,7 @@ const std::unordered_map<std::string, ValueType> Type::value_types = {
 };
 
 const std::vector<std::string> Type::types_string = {
-    "VALUE_NONE", "VALUE_INT", "VALUE_FLOAT", "VALUE_BOOL",
+    "VALUE_INT", "VALUE_FLOAT", "VALUE_BOOL",
     "VALUE_STRING", "VALUE_LIST", "VALUE_DICT", "VALUE_FUN",
     "VALUER_REF"
 };

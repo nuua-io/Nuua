@@ -37,6 +37,8 @@ class Parser
     Expression *expression();
 
     // Statements
+    Statement *fun_declaration();
+    Statement *import_declaration();
     Statement *variable_declaration();
     Statement *expression_statement();
     Statement *statement();
@@ -44,7 +46,8 @@ class Parser
     // Helpers
     std::vector<Statement *> parameters();
     std::vector<Expression *> arguments();
-    std::string type();
+    std::vector<Statement *> body();
+    std::string type(bool optional = true);
 
     public:
         // Debugging functions
@@ -52,9 +55,9 @@ class Parser
         static void debug_rule(Statement *statement);
         static void debug_rules(std::vector<Rule> &rules);
         static void debug_rules(std::vector<Statement *> &rules);
-        static void debug_ast(Expression *expression);
-        static void debug_ast(Statement *statement);
-        static void debug_ast(std::vector<Statement *> &statements);
+        static void debug_ast(Expression *expression, uint16_t spacer = 0);
+        static void debug_ast(Statement *statement, uint16_t spacer = 0);
+        static void debug_ast(std::vector<Statement *> &statements, uint16_t spacer = 0);
         // Parses a given source code and returns the AST.
         std::vector<Statement *> parse(const char *source);
 };

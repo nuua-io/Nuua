@@ -222,6 +222,7 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
             auto dictionary = static_cast<Dictionary *>(rule);
             break;
         }
+        /*
         case RULE_NONE: {
             if (const_opcode) {
                 this->add_opcode(OP_MOVE_RC);
@@ -230,6 +231,7 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
             this->add_constant_only(Value());
             break;
         }
+        */
         case RULE_GROUP: {
             auto group = static_cast<Group *>(rule);
             result = this->compile(group->expression);
@@ -329,6 +331,7 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
             auto logical = static_cast<Logical *>(rule);
             break;
         }
+        /*
         case RULE_FUNCTION: {
             auto function = static_cast<Function *>(rule);
             auto memory = this->current_memory;
@@ -339,6 +342,7 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
             this->blocks.pop_back();
             break;
         }
+        */
         case RULE_CALL: {
             auto call = static_cast<Call *>(rule);
             break;
@@ -382,8 +386,7 @@ bool Compiler::is_constant(Expression *expression)
         case RULE_INTEGER:
         case RULE_FLOAT:
         case RULE_BOOLEAN:
-        case RULE_STRING:
-        case RULE_NONE: { return true; }
+        case RULE_STRING: { return true; }
         default: { return false; }
     }
 }

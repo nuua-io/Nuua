@@ -56,7 +56,6 @@ Expression *Parser::primary()
 {
     if (this->match(TOKEN_FALSE)) return new Boolean(false);
     if (this->match(TOKEN_TRUE)) return new Boolean(true);
-    if (this->match(TOKEN_NONE)) return new None();
     if (this->match(TOKEN_INTEGER)) return new Integer(std::stoi(PREVIOUS().to_string()));
     if (this->match(TOKEN_FLOAT)) return new Float(std::stof(PREVIOUS().to_string()));
     if (this->match(TOKEN_STRING)) return new String(PREVIOUS().to_string());
@@ -247,14 +246,9 @@ Statement *Parser::variable_declaration()
 {
     std::string variable = this->consume(TOKEN_IDENTIFIER, "Expected an identifier in a declaration statement")->to_string();
     this->consume(TOKEN_COLON, "Expected ':' after identifier in a declaration statement");
-    // We need to get the variable type. It may be empty if's an inferred type.
     std::string type = this->type();
-    // Function initializer
     Expression *initializer = nullptr;
-    if (this->match(TOKEN_EQUAL)) {
-        // Initializer detected.
-        initializer = this->expression();
-    }
+    if (this->match(TOKEN_EQUAL)) initializer = this->expression();
     EXPECT_NEW_LINE();
     return new Declaration(variable, type, initializer);
 }
@@ -265,12 +259,52 @@ expression_statement -> expression '\n';
 Statement *Parser::expression_statement()
 {
     Statement *result = new ExpressionStatement(this->expression());
-    this->consume(TOKEN_NEW_LINE, "Expected a new line after an expression statement.");
+    EXPECT_NEW_LINE();
     return result;
 }
 
 /*
-statement -> class_declaration
+import_declaration -> "import" IDENTIFIER "from" IDENTIFIER
+*/
+Statement *Parser::import_declaration()
+{
+    std::string target = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'import'")->to_string();
+    this->consume(TOKEN_FROM, "Expected 'from' after the import target");
+    std::string module = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'from'")->to_string();
+    EXPECT_NEW_LINE();
+    return new Import(target, module);
+}
+
+/*
+fun_declaration -> "fun" IDENTIFIER "(" parameters? ")" (":" IDENTIFIER)? ("->" expression | "=>" statement | "{" "\n" statement* "}") "\n";
+parameters -> variable_declaration ("," variable_declaration)*;
+*/
+Statement *Parser::fun_declaration()
+{
+    std::string name = this->consume(TOKEN_IDENTIFIER, "Expected an identifier (function name) after 'fun'.")->to_string();
+    this->consume(TOKEN_LEFT_PAREN, "Expected '(' after the function name.");
+    std::vector<Statement *> parameters = this->parameters();
+    this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after the function parameters");
+    std::string return_type;
+    if (this->match(TOKEN_COLON)) return_type = this->type(false);
+    std::vector<Statement *> body;
+    if (this->match(TOKEN_RIGHT_ARROW)) body.push_back(new Return(this->expression));
+    else if (this->match(TOKEN_BIG_RIGHT_ARROW)) body.push_back(this->statement);
+    else if (this->match(TOKEN_LEFT_BRACE)) {
+        EXPECT_NEW_LINE();
+        body = this->body();
+        this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after function body.");
+    } else {
+        logger->error("Unknown token found after function. Expected '->', '=>' or '{'.");
+        exit(EXIT_FAILURE);
+    }
+    EXPECT_NEW_LINE();
+    return new Function(name, parameters, return_type, body);
+}
+
+/*
+statement -> import_declaration
+    | class_declaration
     | fun_declaration
     | variable_declaration
     | if_statement
@@ -286,8 +320,9 @@ Statement *Parser::statement()
     while (this->match(TOKEN_NEW_LINE));
 
     // Check what type of statement we're parsing.
-    if (this->match(TOKEN_CLASS));
-    else if (this->match(TOKEN_FUN));
+    if (this->match(TOKEN_IMPORT)) return this->import_declaration();
+    else if (this->match(TOKEN_CLASS));
+    else if (this->match(TOKEN_FUN)) return this->fun_declaration();
     else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) return this->variable_declaration();
     else if (this->match(TOKEN_IF));
     else if (this->match(TOKEN_WHILE));
@@ -308,7 +343,14 @@ std::vector<Expression *> Parser::arguments()
 
 }
 
-std::string Parser::type()
+std::vector<Statement *> Parser::body()
+{
+    std::vector<Statement *> body;
+    while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) body.push_back(this->statement());
+    return body;
+}
+
+std::string Parser::type(bool optional)
 {
     if (this->match(TOKEN_LEFT_SQUARE)) {
         // List type.
@@ -321,7 +363,7 @@ std::string Parser::type()
     } else if (CHECK(TOKEN_IDENTIFIER)) {
         // Other types (native + custom).
         return this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
-    } else if (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL)) return "";
+    } else if (optional && (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL))) return "";
 
     logger->error("Unknown type token expected.", LINE());
     exit(EXIT_FAILURE);

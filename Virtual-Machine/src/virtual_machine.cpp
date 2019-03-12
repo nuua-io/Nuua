@@ -120,7 +120,7 @@ void VirtualMachine::interpret(const char *source)
     this->program_counter = (Instruction *) &this->program.program.code[0];
     // Run the compiled code.
     logger->info("Started interpreting...");
-    this->run();
+    // this->run();
     logger->success("Finished interpreting!");
     // Clear the main frame registers
     this->top_frame->free_registers();

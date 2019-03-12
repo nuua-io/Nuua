@@ -22,7 +22,6 @@ Value::Value(Type type)
 {
     this->type = type;
     switch (type.type) {
-        case VALUE_NONE: { break; }
         case VALUE_INT: { this->value_int = 0; break; }
         case VALUE_FLOAT: { this->value_float = 0.0; break; }
         case VALUE_BOOL: { this->value_bool = false; break; }
@@ -103,13 +102,6 @@ Value Value::cast(Type type)
     if (this->type.same_as(&type)) return *this;
 
     switch (this->type.type) {
-        case VALUE_NONE: {
-            switch (type.type) {
-                case VALUE_STRING: { return Value(this->to_string()); }
-                default: { break; }
-            }
-            break;
-        }
         case VALUE_INT: {
             switch (type.type) {
                 case VALUE_FLOAT: { return Value(this->to_double()); }
