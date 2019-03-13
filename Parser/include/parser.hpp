@@ -40,8 +40,10 @@ class Parser
     Statement *fun_declaration();
     Statement *import_declaration();
     Statement *variable_declaration();
+    Statement *print_statement();
+    Statement *return_statement();
     Statement *expression_statement();
-    Statement *statement();
+    Statement *statement(bool new_line = true);
 
     // Helpers
     std::vector<Statement *> parameters();

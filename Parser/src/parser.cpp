@@ -17,7 +17,7 @@
 #define IS_AT_END() (CHECK(TOKEN_EOF))
 #define LOOKAHEAD(n) (*(this->current + n))
 #define LINE() (this->current->line)
-#define EXPECT_NEW_LINE() if (this->match_any({{TOKEN_NEW_LINE, TOKEN_EOF}})) { \
+#define EXPECT_NEW_LINE() if (!this->match_any({{TOKEN_NEW_LINE, TOKEN_EOF}})) { \
     logger->error("Expected a new line or EOF.", LINE()); exit(EXIT_FAILURE); }
 
 Token *Parser::consume(TokenType type, const char *message)
@@ -124,7 +124,7 @@ Expression *Parser::unary_postfix()
             }
             case TOKEN_LEFT_PAREN: {
                 std::vector<Expression *> arguments = this->arguments();
-                this->consume(TOKEN_RIGHT_SQUARE, "Expected ')' after the access index");
+                this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after function arguments");
                 result = new Call(result, arguments);
                 break;
             }
@@ -240,7 +240,7 @@ Expression *Parser::expression()
 }
 
 /*
-variable_declaration -> IDENTIFIER ":" ("=" expression)? '\n';
+variable_declaration -> IDENTIFIER ":" ("=" expression)?;
 */
 Statement *Parser::variable_declaration()
 {
@@ -249,34 +249,30 @@ Statement *Parser::variable_declaration()
     std::string type = this->type();
     Expression *initializer = nullptr;
     if (this->match(TOKEN_EQUAL)) initializer = this->expression();
-    EXPECT_NEW_LINE();
     return new Declaration(variable, type, initializer);
 }
 
 /*
-expression_statement -> expression '\n';
+expression_statement -> expression;
 */
 Statement *Parser::expression_statement()
 {
-    Statement *result = new ExpressionStatement(this->expression());
-    EXPECT_NEW_LINE();
-    return result;
+    return new ExpressionStatement(this->expression());
 }
 
 /*
-import_declaration -> "import" IDENTIFIER "from" IDENTIFIER
+import_declaration -> "import" IDENTIFIER "from" IDENTIFIER;
 */
 Statement *Parser::import_declaration()
 {
     std::string target = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'import'")->to_string();
     this->consume(TOKEN_FROM, "Expected 'from' after the import target");
     std::string module = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'from'")->to_string();
-    EXPECT_NEW_LINE();
     return new Import(target, module);
 }
 
 /*
-fun_declaration -> "fun" IDENTIFIER "(" parameters? ")" (":" IDENTIFIER)? ("->" expression | "=>" statement | "{" "\n" statement* "}") "\n";
+fun_declaration -> "fun" IDENTIFIER "(" parameters? ")" (":" IDENTIFIER)? ("->" expression "\n" | "=>" statement | "{" "\n" statement* "}" "\n");
 parameters -> variable_declaration ("," variable_declaration)*;
 */
 Statement *Parser::fun_declaration()
@@ -288,9 +284,11 @@ Statement *Parser::fun_declaration()
     std::string return_type;
     if (this->match(TOKEN_COLON)) return_type = this->type(false);
     std::vector<Statement *> body;
-    if (this->match(TOKEN_RIGHT_ARROW)) body.push_back(new Return(this->expression));
-    else if (this->match(TOKEN_BIG_RIGHT_ARROW)) body.push_back(this->statement);
-    else if (this->match(TOKEN_LEFT_BRACE)) {
+    if (this->match(TOKEN_RIGHT_ARROW)) {
+        body.push_back(new Return(this->expression()));
+    } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
+        body.push_back(this->statement(false));
+    } else if (this->match(TOKEN_LEFT_BRACE)) {
         EXPECT_NEW_LINE();
         body = this->body();
         this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after function body.");
@@ -298,55 +296,92 @@ Statement *Parser::fun_declaration()
         logger->error("Unknown token found after function. Expected '->', '=>' or '{'.");
         exit(EXIT_FAILURE);
     }
-    EXPECT_NEW_LINE();
     return new Function(name, parameters, return_type, body);
 }
 
 /*
-statement -> import_declaration
-    | class_declaration
-    | fun_declaration
-    | variable_declaration
-    | if_statement
-    | while_statement
-    | for_statement
-    | return_statement
-    | print_statement
-    | expression_statement;
+print_statement -> "print" expression;
 */
-Statement *Parser::statement()
+Statement *Parser::print_statement()
 {
+    return new Print(this->expression());
+}
+
+/*
+return_statement -> "return" expression;
+*/
+Statement *Parser::return_statement()
+{
+    return new Return(this->expression());
+}
+
+/*
+statement -> import_declaration "\n"
+    | class_declaration "\n"
+    | fun_declaration "\n"
+    | variable_declaration "\n"?
+    | if_statement "\n"
+    | while_statement "\n"
+    | for_statement "\n"
+    | return_statement "\n"
+    | print_statement "\n"
+    | expression_statement "\n"?;
+*/
+Statement *Parser::statement(bool new_line)
+{
+    Statement *result;
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
 
     // Check what type of statement we're parsing.
-    if (this->match(TOKEN_IMPORT)) return this->import_declaration();
+    if (this->match(TOKEN_IMPORT)) result = this->import_declaration();
     else if (this->match(TOKEN_CLASS));
-    else if (this->match(TOKEN_FUN)) return this->fun_declaration();
-    else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) return this->variable_declaration();
+    else if (this->match(TOKEN_FUN)) result = this->fun_declaration();
+    else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) result = this->variable_declaration();
     else if (this->match(TOKEN_IF));
     else if (this->match(TOKEN_WHILE));
     else if (this->match(TOKEN_FOR));
-    else if (this->match(TOKEN_RETURN));
-    else if (this->match(TOKEN_PRINT));
+    else if (this->match(TOKEN_RETURN)) result = this->return_statement();
+    else if (this->match(TOKEN_PRINT)) result = this->print_statement();
+    else result = this->expression_statement();
 
-    return this->expression_statement();
+    if (new_line) EXPECT_NEW_LINE();
+
+    return result;
 }
 
 std::vector<Statement *> Parser::parameters()
 {
-
+    std::vector<Statement *> parameters;
+    if (!CHECK(TOKEN_RIGHT_PAREN)) {
+        do {
+            Statement *parameter = this->statement(false);
+            if (parameter->rule != RULE_DECLARATION) {
+                logger->error("Invalid argument when defining the function. Expected a declaration.", parameter->line);
+                exit(EXIT_FAILURE);
+            }
+            parameters.push_back(parameter);
+        } while (this->match(TOKEN_COMMA));
+    }
+    return parameters;
 }
 
 std::vector<Expression *> Parser::arguments()
 {
-
+    std::vector<Expression *> arguments;
+    if (!CHECK(TOKEN_RIGHT_PAREN)) {
+        do arguments.push_back(this->expression());
+        while (this->match(TOKEN_COMMA));
+    }
+    return arguments;
 }
 
 std::vector<Statement *> Parser::body()
 {
     std::vector<Statement *> body;
-    while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) body.push_back(this->statement());
+    while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) {
+        body.push_back(this->statement());
+    }
     return body;
 }
 

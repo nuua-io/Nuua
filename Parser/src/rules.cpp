@@ -65,18 +65,17 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer)
 {
     print_spaces(spacer);
     switch (expression->rule) {
-        case RULE_INTEGER: { printf("Integer"); break; }
-        case RULE_FLOAT: { printf("Float"); break; }
-        case RULE_BOOLEAN: { printf("Boolean"); break; }
-        case RULE_STRING: { printf("String"); break; }
-        case RULE_VARIABLE: { printf("Variable"); break; }
-        case RULE_LIST: { printf("List"); break; }
-        case RULE_DICTIONARY: { printf("Dictionary"); break; }
+        case RULE_INTEGER: { printf("Integer\n"); break; }
+        case RULE_FLOAT: { printf("Float\n"); break; }
+        case RULE_BOOLEAN: { printf("Boolean\n"); break; }
+        case RULE_STRING: { printf("String\n"); break; }
+        case RULE_VARIABLE: { printf("Variable\n"); break; }
+        case RULE_LIST: { printf("List\n"); break; }
+        case RULE_DICTIONARY: { printf("Dictionary\n"); break; }
         case RULE_BINARY: {
             Binary *binary = static_cast<Binary *>(expression);
             printf("Binary[%s]\n", binary->op.to_string().c_str());
             Parser::debug_ast(binary->left, spacer + 1);
-            printf("\n");
             Parser::debug_ast(binary->right, spacer + 1);
             break;
         }
@@ -95,7 +94,6 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer)
             Assign *assign= static_cast<Assign *>(expression);
             printf("Assign\n");
             Parser::debug_ast(assign->target, spacer + 1);
-            printf("\n");
             Parser::debug_ast(assign->value, spacer + 1);
             break;
         }
@@ -103,7 +101,6 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer)
             Logical *logical= static_cast<Logical *>(expression);
             printf("Logical[%s]\n", logical->op.to_string().c_str());
             Parser::debug_ast(logical->left, spacer + 1);
-            printf("\n");
             Parser::debug_ast(logical->right, spacer + 1);
             break;
         }
@@ -117,7 +114,6 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer)
             Access *access= static_cast<Access *>(expression);
             printf("Access\n");
             Parser::debug_ast(access->target, spacer + 1);
-            printf("\n");
             Parser::debug_ast(access->index, spacer + 1);
             break;
         }
@@ -140,14 +136,17 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             break;
         }
         case RULE_PRINT: {
-            printf("Print(\n");
+            printf("Print\n");
             Parser::debug_ast(static_cast<Print *>(statement)->expression, spacer + 1);
             break;
         }
         case RULE_DECLARATION: {
             Declaration *dec = static_cast<Declaration *>(statement);
-            printf("Declaration[%s: %s]\n", dec->name.c_str(), dec->type.c_str());
-            if (dec->initializer) Parser::debug_ast(dec->initializer, spacer + 1);
+            printf("Declaration[%s: %s]", dec->name.c_str(), dec->type.c_str());
+            if (dec->initializer) {
+                printf("\n");
+                Parser::debug_ast(dec->initializer, spacer + 1);
+            }
             break;
         }
         case RULE_FUNCTION: {
@@ -170,7 +169,6 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             printf("-----\n");
             Parser::debug_ast(ifs->then_branch, spacer + 1);
             if (ifs->else_branch.size() > 0) {
-                printf("\n");
                 print_spaces(spacer + 1);
                 printf("-----\n");
                 Parser::debug_ast(ifs->else_branch, spacer + 1);
@@ -181,7 +179,6 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             While *whiles = static_cast<While *>(statement);
             printf("While\n");
             Parser::debug_ast(whiles->condition, spacer + 1);
-            printf("\n");
             print_spaces(spacer + 1);
             printf("-----\n");
             Parser::debug_ast(whiles->body, spacer + 1);
@@ -189,7 +186,7 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
         }
         case RULE_IMPORT: {
             Import *import = static_cast<Import *>(statement);
-            printf("Import[%s from %s]", import->target.c_str(), import->module.c_str());
+            printf("Import[%s from %s]\n", import->target.c_str(), import->module.c_str());
             break;
         }
         default: { break; }
