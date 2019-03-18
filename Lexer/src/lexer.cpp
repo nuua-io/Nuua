@@ -37,7 +37,8 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "fun", TOKEN_FUN },
     { "self", TOKEN_SELF },
     { "import", TOKEN_IMPORT },
-    { "from", TOKEN_FROM }
+    { "from", TOKEN_FROM },
+    { "elif", TOKEN_ELIF }
 };
 
 const std::string Lexer::token_error()
@@ -148,6 +149,7 @@ std::vector<Token> Lexer::scan(const char *source)
             case ',': { ADD_TOKEN(TOKEN_COMMA); break; }
             case '.': { ADD_TOKEN(TOKEN_DOT); break; }
             case ':': { ADD_TOKEN(TOKEN_COLON); break; }
+            case '|': { ADD_TOKEN(TOKEN_STICK); break; }
             case '-': {
                 if (this->match('>')) { ADD_TOKEN(TOKEN_RIGHT_ARROW); break; }
                 ADD_TOKEN(TOKEN_MINUS); break;
@@ -162,10 +164,7 @@ std::vector<Token> Lexer::scan(const char *source)
             }
             case '"': { ADD_TOKEN(this->is_string(false)); break; }
             case '\'': { ADD_TOKEN(this->is_string(true)); break; }
-            case '<': {
-                if (this->match('-')) { ADD_TOKEN(TOKEN_LEFT_ARROW); break; }
-                ADD_TOKEN(this->match('=') ? TOKEN_LOWER_EQUAL : TOKEN_LOWER); break;
-            }
+            case '<': { ADD_TOKEN(this->match('=') ? TOKEN_LOWER_EQUAL : TOKEN_LOWER); break; }
             case '>': { ADD_TOKEN(this->match('=') ? TOKEN_HIGHER_EQUAL : TOKEN_HIGHER); break; }
             default: {
                 if (IS_DIGIT(c)) { ADD_TOKEN(this->is_number()); break; }

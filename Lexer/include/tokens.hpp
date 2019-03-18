@@ -28,7 +28,6 @@ typedef enum : uint8_t {
     TOKEN_SLASH, // /
     TOKEN_STAR, // *
     TOKEN_RIGHT_ARROW, // ->
-    TOKEN_LEFT_ARROW, // <-
     TOKEN_BANG, // !
     TOKEN_BANG_EQUAL, // !=
     TOKEN_EQUAL, // =
@@ -53,7 +52,6 @@ typedef enum : uint8_t {
     TOKEN_WHILE, // while
     TOKEN_FOR, // for
     TOKEN_IF, // if
-    // TOKEN_RETURN,
     // TOKEN_SUPER,
     TOKEN_SELF, // self
     TOKEN_EOF, // \0
@@ -65,7 +63,9 @@ typedef enum : uint8_t {
     TOKEN_RETURN, // return
     TOKEN_PRINT, // print
     TOKEN_IMPORT, // import
-    TOKEN_FROM, // from
+    TOKEN_FROM, // from,
+    TOKEN_STICK, // |
+    TOKEN_ELIF, // ELIF
 } TokenType;
 
 class Token

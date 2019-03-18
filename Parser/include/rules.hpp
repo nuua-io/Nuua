@@ -21,6 +21,7 @@ typedef enum : uint8_t {
     RULE_PRINT,
     RULE_EXPRESSION_STATEMENT,
     RULE_INTEGER,
+    RULE_UNSIGNED,
     RULE_FLOAT,
     RULE_STRING,
     RULE_BOOLEAN,
@@ -41,6 +42,7 @@ typedef enum : uint8_t {
     RULE_WHILE,
     RULE_CAST,
     RULE_IMPORT,
+    RULE_CLOSURE,
 } Rule;
 
 class Expression
@@ -68,6 +70,14 @@ class Integer : public Expression
         int64_t value;
         Integer(int64_t value)
             : Expression(RULE_INTEGER), value(value) {};
+};
+
+class Unsigned : public Expression
+{
+    public:
+        uint64_t value;
+        Unsigned(uint64_t value)
+            : Expression(RULE_UNSIGNED), value(value) {};
 };
 
 class Float : public Expression
@@ -192,6 +202,17 @@ class Cast : public Expression
         std::string type;
         Cast(Expression *expression, std::string type)
             : Expression(RULE_CAST), expression(expression), type(type) {}
+};
+
+class Closure : public Expression
+{
+    public:
+        std::vector<Statement *> parameters;
+        std::string return_type;
+        std::vector<Statement *> body;
+        Block block;
+        Closure(std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
+            : Expression(RULE_CLOSURE), parameters(parameters), return_type(return_type), body(body) {}
 };
 
 /* Statements */

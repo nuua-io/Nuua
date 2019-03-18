@@ -14,6 +14,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_PRINT",
     "RULE_EXPRESSION_STATEMENT",
     "RULE_INTEGER",
+    "RULE_UNSIGNED",
     "RULE_FLOAT",
     "RULE_STRING",
     "RULE_BOOLEAN",
@@ -33,7 +34,8 @@ static std::vector<std::string> RuleNames = {
     "RULE_IF",
     "RULE_WHILE",
     "RULE_CAST",
-    "RULE_IMPORT"
+    "RULE_IMPORT",
+    "RULE_CLOSURE"
 };
 
 void Parser::debug_rule(Rule rule)
@@ -66,12 +68,19 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer)
     print_spaces(spacer);
     switch (expression->rule) {
         case RULE_INTEGER: { printf("Integer\n"); break; }
+        case RULE_UNSIGNED: { printf("Unsigned\n"); break; }
         case RULE_FLOAT: { printf("Float\n"); break; }
         case RULE_BOOLEAN: { printf("Boolean\n"); break; }
         case RULE_STRING: { printf("String\n"); break; }
         case RULE_VARIABLE: { printf("Variable\n"); break; }
         case RULE_LIST: { printf("List\n"); break; }
         case RULE_DICTIONARY: { printf("Dictionary\n"); break; }
+        case RULE_CLOSURE: {
+            Closure *closure = static_cast<Closure *>(expression);
+            printf("Closure[%s]\n", closure->return_type.c_str());
+            Parser::debug_ast(closure->body, spacer + 1);
+            break;
+        }
         case RULE_BINARY: {
             Binary *binary = static_cast<Binary *>(expression);
             printf("Binary[%s]\n", binary->op.to_string().c_str());
@@ -151,7 +160,7 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
         }
         case RULE_FUNCTION: {
             Function *function= static_cast<Function *>(statement);
-            printf("Function[%s: ]\n", function->name.c_str(), function->return_type.c_str());
+            printf("Function[%s: %s]\n", function->name.c_str(), function->return_type.c_str());
             Parser::debug_ast(function->body, spacer + 1);
             break;
         }
@@ -163,25 +172,28 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
         case RULE_IF: {
             If *ifs = static_cast<If *>(statement);
             printf("If\n");
-            Parser::debug_ast(ifs->condition, spacer + 1);
-            printf("\n");
             print_spaces(spacer + 1);
-            printf("-----\n");
-            Parser::debug_ast(ifs->then_branch, spacer + 1);
+            printf("[Condition]\n");
+            Parser::debug_ast(ifs->condition, spacer + 2);
+            print_spaces(spacer + 1);
+            printf("[Then branch]\n");
+            Parser::debug_ast(ifs->then_branch, spacer + 2);
             if (ifs->else_branch.size() > 0) {
                 print_spaces(spacer + 1);
-                printf("-----\n");
-                Parser::debug_ast(ifs->else_branch, spacer + 1);
+                printf("[Else branch]\n");
+                Parser::debug_ast(ifs->else_branch, spacer + 2);
             }
             break;
         }
         case RULE_WHILE: {
             While *whiles = static_cast<While *>(statement);
             printf("While\n");
-            Parser::debug_ast(whiles->condition, spacer + 1);
             print_spaces(spacer + 1);
-            printf("-----\n");
-            Parser::debug_ast(whiles->body, spacer + 1);
+            printf("[Condition]\n");
+            Parser::debug_ast(whiles->condition, spacer + 2);
+            print_spaces(spacer + 1);
+            printf("[Body]\n");
+            Parser::debug_ast(whiles->body, spacer + 2);
             break;
         }
         case RULE_IMPORT: {

@@ -22,7 +22,6 @@ class Parser
     bool match(TokenType token);
     // Returns true if any of the given token types matches the current token.
     bool match_any(std::vector<TokenType> tokens);
-
     // Expressions
     Expression *primary();
     Expression *unary_postfix();
@@ -35,22 +34,20 @@ class Parser
     Expression *logical_or();
     Expression *assignment();
     Expression *expression();
-
     // Statements
     Statement *fun_declaration();
     Statement *import_declaration();
     Statement *variable_declaration();
     Statement *print_statement();
     Statement *return_statement();
+    Statement *if_statement();
     Statement *expression_statement();
     Statement *statement(bool new_line = true);
-
     // Helpers
     std::vector<Statement *> parameters();
     std::vector<Expression *> arguments();
     std::vector<Statement *> body();
     std::string type(bool optional = true);
-
     public:
         // Debugging functions
         static void debug_rule(Rule rule);

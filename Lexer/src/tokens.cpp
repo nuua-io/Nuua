@@ -22,7 +22,6 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_SLASH",
     "TOKEN_STAR",
     "TOKEN_RIGHT_ARROW",
-    "TOKEN_LEFT_ARROW",
     "TOKEN_BANG",
     "TOKEN_BANG_EQUAL",
     "TOKEN_EQUAL",
@@ -56,7 +55,9 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_RETURN",
     "TOKEN_PRINT",
     "TOKEN_IMPORT",
-    "TOKEN_FROM"
+    "TOKEN_FROM",
+    "TOKEN_STICK",
+    "TOKEN_ELIF"
 };
 
 const std::unordered_map<char, char> Token::escaped_chars = {

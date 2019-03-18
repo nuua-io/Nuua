@@ -23,7 +23,6 @@
 Token *Parser::consume(TokenType type, const char *message)
 {
     if (this->current->type == type) return NEXT();
-
     logger->error(std::string(message), LINE());
     exit(EXIT_FAILURE);
 }
@@ -34,7 +33,6 @@ bool Parser::match(TokenType token)
         if (token != TOKEN_EOF) NEXT();
         return true;
     }
-
     return false;
 }
 
@@ -46,12 +44,22 @@ bool Parser::match_any(std::vector<TokenType>  tokens)
             return true;
         }
     }
-
     return false;
 }
 
 /* GRAMMAR RULES */
 
+/*
+primary -> "false"
+    | "true"
+    | INTEGER
+    | FLOAT
+    | STRING
+    | IDENTIFIER
+    | LIST
+    | DICTIONARY
+    | "(" expression ")"
+*/
 Expression *Parser::primary()
 {
     if (this->match(TOKEN_FALSE)) return new Boolean(false);
@@ -101,6 +109,29 @@ Expression *Parser::primary()
         Expression *value = this->expression();
         this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after a group expression");
         return new Group(value);
+    }
+    if (this->match(TOKEN_STICK)) {
+        std::vector<Statement *> parameters = this->parameters();
+        if (!this->match(TOKEN_STICK)) {
+            parameters = this->parameters();
+            this->consume(TOKEN_STICK, "Expected '|' after the closure parameters");
+        }
+        std::string return_type;
+        if (this->match(TOKEN_COLON)) return_type = this->type(false);
+        std::vector<Statement *> body;
+        if (this->match(TOKEN_RIGHT_ARROW)) {
+            body.push_back(new Return(this->expression()));
+        } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
+            body.push_back(this->statement(false));
+        } else if (this->match(TOKEN_LEFT_BRACE)) {
+            EXPECT_NEW_LINE();
+            body = this->body();
+            this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after closure body.");
+        } else {
+            logger->error("Unknown token found after closure. Expected '->', '=>' or '{'.", LINE());
+            exit(EXIT_FAILURE);
+        }
+        return new Closure(parameters, return_type, body);
     }
     logger->error("Expected an expression", LINE());
     exit(EXIT_FAILURE);
@@ -279,8 +310,11 @@ Statement *Parser::fun_declaration()
 {
     std::string name = this->consume(TOKEN_IDENTIFIER, "Expected an identifier (function name) after 'fun'.")->to_string();
     this->consume(TOKEN_LEFT_PAREN, "Expected '(' after the function name.");
-    std::vector<Statement *> parameters = this->parameters();
-    this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after the function parameters");
+    std::vector<Statement *> parameters;
+    if (!this->match(TOKEN_RIGHT_PAREN)) {
+        parameters = this->parameters();
+        this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after the function parameters");
+    }
     std::string return_type;
     if (this->match(TOKEN_COLON)) return_type = this->type(false);
     std::vector<Statement *> body;
@@ -293,7 +327,7 @@ Statement *Parser::fun_declaration()
         body = this->body();
         this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after function body.");
     } else {
-        logger->error("Unknown token found after function. Expected '->', '=>' or '{'.");
+        logger->error("Unknown token found after function. Expected '->', '=>' or '{'.", LINE());
         exit(EXIT_FAILURE);
     }
     return new Function(name, parameters, return_type, body);
@@ -307,11 +341,51 @@ Statement *Parser::print_statement()
     return new Print(this->expression());
 }
 
+Statement *Parser::if_statement()
+{
+    Expression *condition = this->expression();
+    std::vector<Statement *> then_branch, else_branch;
+
+    // Then branch
+    if (this->match(TOKEN_LEFT_BRACE)) {
+        EXPECT_NEW_LINE();
+        then_branch = this->body();
+        this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'if' body.");
+    } else if (this->match(TOKEN_RIGHT_ARROW)) {
+        then_branch.push_back(this->statement(false));
+    } else {
+        logger->error("Expected '{' or '=>' after 'if' condition.");
+        exit(EXIT_FAILURE);
+    }
+
+    // Else branch
+    if (this->match(TOKEN_ELIF)) {
+        else_branch.push_back(this->if_statement());
+    } else if (this->match(TOKEN_ELSE)) {
+        if (this->match(TOKEN_LEFT_BRACE)) {
+            EXPECT_NEW_LINE();
+            else_branch = this->body();
+            this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'else' body.");
+        } else if (this->match(TOKEN_RIGHT_ARROW)) {
+            else_branch.push_back(this->statement(false));
+        } else {
+            logger->error("Expected '{' or '=>' after 'else'.");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    return new If(condition, then_branch, else_branch);;
+}
+
 /*
-return_statement -> "return" expression;
+return_statement -> "return" expression?;
 */
 Statement *Parser::return_statement()
 {
+    if (this->match_any({{ TOKEN_NEW_LINE, TOKEN_EOF }})) {
+        return new Return(nullptr);
+    }
+
     return new Return(this->expression());
 }
 
@@ -338,7 +412,7 @@ Statement *Parser::statement(bool new_line)
     else if (this->match(TOKEN_CLASS));
     else if (this->match(TOKEN_FUN)) result = this->fun_declaration();
     else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) result = this->variable_declaration();
-    else if (this->match(TOKEN_IF));
+    else if (this->match(TOKEN_IF)) result = this->if_statement();
     else if (this->match(TOKEN_WHILE));
     else if (this->match(TOKEN_FOR));
     else if (this->match(TOKEN_RETURN)) result = this->return_statement();
@@ -393,8 +467,13 @@ std::string Parser::type(bool optional)
     } else if (this->match(TOKEN_LEFT_BRACE)) {
         // Dict type.
         return ("{" + this->type()) + this->consume(TOKEN_RIGHT_BRACE, "A list type needs to end with '}'")->to_string();
-    } else if (this->match(TOKEN_LEFT_PAREN)) {
-        // Fun type.
+    } else if (this->match(TOKEN_STICK)) {
+        // Closure type.
+        std::string type = "|";
+        type += this->type();
+        while (this->match(TOKEN_COMMA)) type += ", " + this->type();
+        if (this->match(TOKEN_COLON)) type += ": " + this->type();
+        return type + this->consume(TOKEN_STICK, "A closure type needs to end with '|'")->to_string();
     } else if (CHECK(TOKEN_IDENTIFIER)) {
         // Other types (native + custom).
         return this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
