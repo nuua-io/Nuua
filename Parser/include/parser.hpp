@@ -41,6 +41,7 @@ class Parser
     Statement *print_statement();
     Statement *return_statement();
     Statement *if_statement();
+    Statement *while_statement();
     Statement *expression_statement();
     Statement *statement(bool new_line = true);
     // Helpers

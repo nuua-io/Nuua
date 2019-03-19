@@ -351,7 +351,7 @@ Statement *Parser::if_statement()
         EXPECT_NEW_LINE();
         then_branch = this->body();
         this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'if' body.");
-    } else if (this->match(TOKEN_RIGHT_ARROW)) {
+    } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
         then_branch.push_back(this->statement(false));
     } else {
         logger->error("Expected '{' or '=>' after 'if' condition.");
@@ -366,7 +366,7 @@ Statement *Parser::if_statement()
             EXPECT_NEW_LINE();
             else_branch = this->body();
             this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'else' body.");
-        } else if (this->match(TOKEN_RIGHT_ARROW)) {
+        } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
             else_branch.push_back(this->statement(false));
         } else {
             logger->error("Expected '{' or '=>' after 'else'.");
@@ -375,6 +375,23 @@ Statement *Parser::if_statement()
     }
 
     return new If(condition, then_branch, else_branch);;
+}
+
+Statement *Parser::while_statement()
+{
+    Expression *condition = this->expression();
+    std::vector<Statement *> body;
+    if (this->match(TOKEN_LEFT_BRACE)) {
+        EXPECT_NEW_LINE();
+        body = this->body();
+        this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'while' body.");
+    } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
+        body.push_back(this->statement(false));
+    } else {
+        logger->error("Expected '{' or '=>' after 'while' condition.");
+        exit(EXIT_FAILURE);
+    }
+    return new While(condition, body);
 }
 
 /*
@@ -413,7 +430,7 @@ Statement *Parser::statement(bool new_line)
     else if (this->match(TOKEN_FUN)) result = this->fun_declaration();
     else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) result = this->variable_declaration();
     else if (this->match(TOKEN_IF)) result = this->if_statement();
-    else if (this->match(TOKEN_WHILE));
+    else if (this->match(TOKEN_WHILE)) result = this->while_statement();
     else if (this->match(TOKEN_FOR));
     else if (this->match(TOKEN_RETURN)) result = this->return_statement();
     else if (this->match(TOKEN_PRINT)) result = this->print_statement();
