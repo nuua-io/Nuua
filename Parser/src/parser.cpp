@@ -178,13 +178,25 @@ Expression *Parser::unary_prefix()
 }
 
 /*
-multiplication -> unary_prefix (("/" | "*") unary_prefix)*;
+cast -> unary_prefix ("as" type)*;
+*/
+Expression *Parser::cast()
+{
+    Expression *result = this->unary_prefix();
+    while (this->match(TOKEN_AS)) {
+        result = new Cast(result, this->type());
+    }
+    return result;
+}
+
+/*
+multiplication -> cast (("/" | "*") cast)*;
 */
 Expression *Parser::multiplication()
 {
-    Expression *result = this->unary_prefix();
+    Expression *result = this->cast();
     while (this->match_any({{ TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT }})) {
-        result = new Binary(result, PREVIOUS(), this->unary_prefix());
+        result = new Binary(result, PREVIOUS(), this->cast());
     }
     return result;
 }
@@ -250,14 +262,13 @@ Expression *Parser::logical_or()
 }
 
 /*
-assignment -> IDENTIFIER "=" assignment
-    | logical_or;
+assignment -> logical_or ("=" logical_or)*;
 */
 Expression *Parser::assignment()
 {
     Expression *result = this->logical_or();
-    if (this->match(TOKEN_EQUAL)) {
-        return new Assign(result, this->assignment());
+    while (this->match(TOKEN_EQUAL)) {
+        result = new Assign(result, this->expression());
     }
     return result;
 }
@@ -476,6 +487,12 @@ std::vector<Statement *> Parser::body()
     return body;
 }
 
+/*
+type -> "[" type "]"
+    | "{" type "}"
+    | "|" type ("," type)* (":" type)? "|"
+    | IDENTIFIER;
+*/
 std::string Parser::type(bool optional)
 {
     if (this->match(TOKEN_LEFT_SQUARE)) {

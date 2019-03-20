@@ -26,6 +26,7 @@ class Parser
     Expression *primary();
     Expression *unary_postfix();
     Expression *unary_prefix();
+    Expression *cast();
     Expression *multiplication();
     Expression *addition();
     Expression *comparison();
@@ -55,7 +56,7 @@ class Parser
         static void debug_rule(Statement *statement);
         static void debug_rules(std::vector<Rule> &rules);
         static void debug_rules(std::vector<Statement *> &rules);
-        static void debug_ast(Expression *expression, uint16_t spacer = 0);
+        static void debug_ast(Expression *expression, uint16_t spacer = 0, bool print_spacer = true);
         static void debug_ast(Statement *statement, uint16_t spacer = 0);
         static void debug_ast(std::vector<Statement *> &statements, uint16_t spacer = 0);
         // Parses a given source code and returns the AST.

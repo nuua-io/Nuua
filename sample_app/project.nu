@@ -6,6 +6,8 @@ fun test(adder: int): |int: int| {
 
 fun main() {
     a: int = 10
+    a = a = 20
+    print a as float as int
     if a == 10 => print "hello"
     adder: |int: int| = test(10)
     print adder(10)
