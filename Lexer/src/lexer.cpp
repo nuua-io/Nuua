@@ -38,7 +38,8 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "self", TOKEN_SELF },
     { "import", TOKEN_IMPORT },
     { "from", TOKEN_FROM },
-    { "elif", TOKEN_ELIF }
+    { "elif", TOKEN_ELIF },
+    { "in", TOKEN_IN}
 };
 
 const std::string Lexer::token_error()
@@ -155,7 +156,10 @@ std::vector<Token> Lexer::scan(const char *source)
                 ADD_TOKEN(TOKEN_MINUS); break;
             }
             case '+': { ADD_TOKEN(TOKEN_PLUS); break; }
-            case '/': { ADD_TOKEN(TOKEN_SLASH); break; }
+            case '/': {
+                if (this->match('/')) { while (PEEK() != '\n' && !IS_AT_END()) { NEXT(); this->start = this->current; } break; }
+                ADD_TOKEN(TOKEN_SLASH); break;
+            }
             case '*': { ADD_TOKEN(TOKEN_STAR); break; }
             case '=': {
                 if (this->match('=')) { ADD_TOKEN(TOKEN_EQUAL_EQUAL); break; }

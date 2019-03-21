@@ -33,6 +33,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_RETURN",
     "RULE_IF",
     "RULE_WHILE",
+    "RULE_FOR",
     "RULE_CAST",
     "RULE_IMPORT",
     "RULE_CLOSURE"
@@ -193,6 +194,17 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             print_spaces(spacer + 1);
             printf("[Body]\n");
             Parser::debug_ast(whiles->body, spacer + 2);
+            break;
+        }
+        case RULE_FOR: {
+            For *fors = static_cast<For *>(statement);
+            printf("For[%s, %s]\n", fors->variable.c_str(), fors->index.c_str());
+            print_spaces(spacer + 1);
+            printf("[Iterator]\n");
+            Parser::debug_ast(fors->iterator, spacer + 2);
+            print_spaces(spacer + 1);
+            printf("[Body]\n");
+            Parser::debug_ast(fors->body, spacer + 2);
             break;
         }
         case RULE_IMPORT: {

@@ -40,6 +40,7 @@ typedef enum : uint8_t {
     RULE_RETURN,
     RULE_IF,
     RULE_WHILE,
+    RULE_FOR,
     RULE_CAST,
     RULE_IMPORT,
     RULE_CLOSURE,
@@ -269,6 +270,17 @@ class While : public Statement
         Block block;
         While(Expression *condition, std::vector<Statement *> body)
             : Statement(RULE_WHILE), condition(condition), body(body) {};
+};
+
+class For : public Statement
+{
+    public:
+        std::string variable;
+        std::string index;
+        Expression *iterator;
+        std::vector<Statement *> body;
+        For(std::string variable, std::string index, Expression *iterator, std::vector<Statement *> body)
+            : Statement(RULE_FOR), variable(variable), index(index), iterator(iterator), body(body) {}
 };
 
 class Function : public Statement

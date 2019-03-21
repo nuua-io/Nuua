@@ -314,7 +314,7 @@ Statement *Parser::import_declaration()
 }
 
 /*
-fun_declaration -> "fun" IDENTIFIER "(" parameters? ")" (":" IDENTIFIER)? ("->" expression "\n" | "=>" statement | "{" "\n" statement* "}" "\n");
+fun_declaration -> "fun" IDENTIFIER "(" parameters? ")" (":" type)? ("->" expression "\n" | "=>" statement | "{" "\n" statement* "}" "\n");
 parameters -> variable_declaration ("," variable_declaration)*;
 */
 Statement *Parser::fun_declaration()
@@ -352,11 +352,13 @@ Statement *Parser::print_statement()
     return new Print(this->expression());
 }
 
+/*
+if_statement -> "if" expression ("=>" statement | "{" "\n" statement* "}");
+*/
 Statement *Parser::if_statement()
 {
     Expression *condition = this->expression();
     std::vector<Statement *> then_branch, else_branch;
-
     // Then branch
     if (this->match(TOKEN_LEFT_BRACE)) {
         EXPECT_NEW_LINE();
@@ -368,7 +370,6 @@ Statement *Parser::if_statement()
         logger->error("Expected '{' or '=>' after 'if' condition.");
         exit(EXIT_FAILURE);
     }
-
     // Else branch
     if (this->match(TOKEN_ELIF)) {
         else_branch.push_back(this->if_statement());
@@ -384,8 +385,7 @@ Statement *Parser::if_statement()
             exit(EXIT_FAILURE);
         }
     }
-
-    return new If(condition, then_branch, else_branch);;
+    return new If(condition, then_branch, else_branch);
 }
 
 Statement *Parser::while_statement()
@@ -406,6 +406,31 @@ Statement *Parser::while_statement()
 }
 
 /*
+for_statement -> "for" IDENTIFIER ("," IDENTIFIER)? "in" expression ("=>" statement | "{" "\n" statement* "}" "\n");
+*/
+Statement *Parser::for_statement()
+{
+    std::string index, variable = this->consume(TOKEN_IDENTIFIER, "Expected identifier after 'for'")->to_string();
+    if (this->match(TOKEN_COMMA)) {
+        index = this->consume(TOKEN_IDENTIFIER, "Expected identifier as the optional second identifier in 'for'")->to_string();
+    }
+    this->consume(TOKEN_IN, "Expected 'in' after 'for' identifier/s.");
+    Expression *iterator = this->expression();
+    std::vector<Statement *> body;
+    if (this->match(TOKEN_LEFT_BRACE)) {
+        EXPECT_NEW_LINE();
+        body = this->body();
+        this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'for' body.");
+    } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
+        body.push_back(this->statement(false));
+    } else {
+        logger->error("Expected '{' or '=>' after 'for' iterator.");
+        exit(EXIT_FAILURE);
+    }
+    return new For(variable, index, iterator, body);
+}
+
+/*
 return_statement -> "return" expression?;
 */
 Statement *Parser::return_statement()
@@ -413,7 +438,6 @@ Statement *Parser::return_statement()
     if (this->match_any({{ TOKEN_NEW_LINE, TOKEN_EOF }})) {
         return new Return(nullptr);
     }
-
     return new Return(this->expression());
 }
 
@@ -442,7 +466,7 @@ Statement *Parser::statement(bool new_line)
     else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) result = this->variable_declaration();
     else if (this->match(TOKEN_IF)) result = this->if_statement();
     else if (this->match(TOKEN_WHILE)) result = this->while_statement();
-    else if (this->match(TOKEN_FOR));
+    else if (this->match(TOKEN_FOR)) result = this->for_statement();
     else if (this->match(TOKEN_RETURN)) result = this->return_statement();
     else if (this->match(TOKEN_PRINT)) result = this->print_statement();
     else result = this->expression_statement();
