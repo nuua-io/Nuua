@@ -303,14 +303,16 @@ Statement *Parser::expression_statement()
 }
 
 /*
-import_declaration -> "import" IDENTIFIER "from" IDENTIFIER;
+import_declaration -> "import" IDENTIFIER ("," IDENTIFIER)* "from" IDENTIFIER;
 */
-Statement *Parser::import_declaration()
+Statement *Parser::use_declaration()
 {
-    std::string target = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'import'")->to_string();
+    std::vector<std::string> targets;
+    targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'use'")->to_string());
+    while (this->match(TOKEN_COMMA)) targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after ','")->to_string());
     this->consume(TOKEN_FROM, "Expected 'from' after the import target");
     std::string module = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'from'")->to_string();
-    return new Import(target, module);
+    return new Use(targets, module);
 }
 
 /*
@@ -460,7 +462,7 @@ Statement *Parser::statement(bool new_line)
     while (this->match(TOKEN_NEW_LINE));
 
     // Check what type of statement we're parsing.
-    if (this->match(TOKEN_IMPORT)) result = this->import_declaration();
+    if (this->match(TOKEN_USE)) result = this->use_declaration();
     else if (this->match(TOKEN_CLASS));
     else if (this->match(TOKEN_FUN)) result = this->fun_declaration();
     else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) result = this->variable_declaration();
@@ -541,6 +543,9 @@ std::string Parser::type(bool optional)
     exit(EXIT_FAILURE);
 }
 
+/*
+program ->
+*/
 std::vector<Statement *> Parser::parse(const char *source)
 {
     std::vector<Token> tokens = Lexer().scan(source);

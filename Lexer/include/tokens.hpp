@@ -62,7 +62,7 @@ typedef enum : uint8_t {
     TOKEN_COLON, // :
     TOKEN_RETURN, // return
     TOKEN_PRINT, // print
-    TOKEN_IMPORT, // import
+    TOKEN_USE, // use
     TOKEN_FROM, // from,
     TOKEN_STICK, // |
     TOKEN_ELIF, // ELIF

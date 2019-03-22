@@ -207,9 +207,13 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             Parser::debug_ast(fors->body, spacer + 2);
             break;
         }
-        case RULE_IMPORT: {
-            Import *import = static_cast<Import *>(statement);
-            printf("Import[%s from %s]\n", import->target.c_str(), import->module.c_str());
+        case RULE_USE: {
+            Use *use = static_cast<Use *>(statement);
+            printf("Use[%s]\n", use->module.c_str());
+            for (std::string &identifier : use->targets) {
+                print_spaces(spacer + 1);
+                printf("%s\n", identifier.c_str());
+            }
             break;
         }
         default: { break; }

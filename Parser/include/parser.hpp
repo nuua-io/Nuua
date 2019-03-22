@@ -37,7 +37,7 @@ class Parser
     Expression *expression();
     // Statements
     Statement *fun_declaration();
-    Statement *import_declaration();
+    Statement *use_declaration();
     Statement *variable_declaration();
     Statement *print_statement();
     Statement *return_statement();

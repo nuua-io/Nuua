@@ -36,10 +36,10 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "class", TOKEN_CLASS },
     { "fun", TOKEN_FUN },
     { "self", TOKEN_SELF },
-    { "import", TOKEN_IMPORT },
+    { "use", TOKEN_USE },
     { "from", TOKEN_FROM },
     { "elif", TOKEN_ELIF },
-    { "in", TOKEN_IN}
+    { "in", TOKEN_IN }
 };
 
 const std::string Lexer::token_error()

@@ -54,7 +54,7 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_COLON",
     "TOKEN_RETURN",
     "TOKEN_PRINT",
-    "TOKEN_IMPORT",
+    "TOKEN_USE",
     "TOKEN_FROM",
     "TOKEN_STICK",
     "TOKEN_ELIF",

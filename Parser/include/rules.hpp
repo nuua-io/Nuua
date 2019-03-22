@@ -42,7 +42,7 @@ typedef enum : uint8_t {
     RULE_WHILE,
     RULE_FOR,
     RULE_CAST,
-    RULE_IMPORT,
+    RULE_USE,
     RULE_CLOSURE,
 } Rule;
 
@@ -295,13 +295,13 @@ class Function : public Statement
             : Statement(RULE_FUNCTION), name(name), parameters(parameters), return_type(return_type), body(body) {}
 };
 
-class Import : public Statement
+class Use : public Statement
 {
     public:
-        std::string target;
+        std::vector<std::string> targets;
         std::string module;
-        Import(std::string target, std::string module)
-            : Statement(RULE_IMPORT), target(target), module(module) {};
+        Use(std::vector<std::string> targets, std::string module)
+            : Statement(RULE_USE), targets(targets), module(module) {};
 };
 
 #endif
