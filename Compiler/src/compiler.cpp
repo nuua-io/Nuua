@@ -29,19 +29,21 @@ void Compiler::add_opcodes(uint64_t opcode, uint8_t times)
     while (times-- > 0) this->add_opcode(opcode);
 }
 
-Program Compiler::compile(const char *source)
+Program Compiler::compile(const char *file)
 {
-    auto analyzer = Analyzer();
-    analyzer.analyze(source);
-    analyzer.optimize();
-    auto structure = &analyzer.code;
+    Analyzer *analyzer = new Analyzer();
+    analyzer->analyze(file);
+    analyzer->optimize();
+    std::vector<Statement *> *structure = analyzer->code;
 
     logger->info("Started compiling...");
 
     // Compile the code.
-    this->blocks.push_back(&analyzer.main_block);
-    for (auto node : *structure) this->compile(node);
+    this->blocks.push_back(&analyzer->main_block);
+    for (Statement *node : *structure) this->compile(node);
     this->blocks.pop_back();
+
+    delete analyzer;
 
     // Add the exit opcode.
     this->add_opcode(OP_EXIT);

@@ -10,8 +10,9 @@
 #include "../include/lexer.hpp"
 #include "../../Logger/include/logger.hpp"
 #include <string.h>
+#include <fstream>
 
-#define ADD_TOKEN(token) (tokens.push_back(this->make_token(token)))
+#define ADD_TOKEN(token) (tokens->push_back(this->make_token(token)))
 #define TOK_LENGTH() ((int) (this->current - this->start))
 #define IS_AT_END() (*this->current == '\0')
 #define NEXT() (*(this->current++))
@@ -125,15 +126,27 @@ TokenType Lexer::is_identifier()
     return (Lexer::reserved_words.find(key) != Lexer::reserved_words.end()) ? Lexer::reserved_words.at(key) : TOKEN_IDENTIFIER;
 }
 
-std::vector<Token> Lexer::scan(const char *source)
+void Lexer::read_from_file(std::string *dest, const std::string *file)
+{
+    std::ifstream file_stream = std::ifstream(file->c_str());
+    if (!file_stream.is_open()) {
+        logger->error("Unable to open file '" + *file + "'");
+        exit(EXIT_FAILURE);
+    }
+
+    *dest = std::string((std::istreambuf_iterator<char>(file_stream)), (std::istreambuf_iterator<char>()));
+}
+
+void Lexer::scan(std::vector<Token> *tokens)
 {
     logger->info("Started scanning...");
 
-    this->start = source;
-    this->current = source;
-    this->line = 1;
+    this->source = new std::string;
+    this->read_from_file(this->source, this->file);
 
-    std::vector<Token> tokens;
+    this->start = this->source->c_str();
+    this->current = this->start;
+    this->line = 1;
 
     while (!IS_AT_END()) {
         switch (char c = NEXT()) {
@@ -179,15 +192,23 @@ std::vector<Token> Lexer::scan(const char *source)
         }
     }
 
-    tokens.push_back(this->make_token(TOKEN_EOF));
+    tokens->push_back(this->make_token(TOKEN_EOF));
 
     #if DEBUG
-        Token::debug_tokens(tokens);
+        Token::debug_tokens(*tokens);
     #endif
 
     logger->success("Scanning complete");
+}
 
-    return tokens;
+Lexer::Lexer(const std::string *file)
+{
+    this->file = file;
+}
+
+Lexer::~Lexer()
+{
+    if (this->source) delete this->source;
 }
 
 #undef ADD_TOKEN

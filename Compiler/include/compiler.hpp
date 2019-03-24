@@ -50,7 +50,7 @@ class Compiler
     bool is_constant(Expression *expression);
     public:
         // Compile an input source and returns the result program.
-        Program compile(const char *source);
+        Program compile(const char *file);
 };
 
 #endif

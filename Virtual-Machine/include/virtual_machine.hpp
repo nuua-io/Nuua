@@ -41,7 +41,7 @@ class VirtualMachine
     void run();
     public:
         // It runs the virtual machine given a source input.
-        void interpret(const char *source);
+        void interpret(const char *file);
         // Resets the virtual machine program memories.
         void reset();
 };

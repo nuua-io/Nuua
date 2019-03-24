@@ -49,19 +49,21 @@ typedef enum : uint8_t {
 class Expression
 {
     public:
-        uint32_t line;
-        Rule rule;
-        Expression(Rule rule = RULE_EXPRESSION)
-            : rule(rule) {};
+        const Rule rule;
+        const std::string *file;
+        const uint32_t line;
+        Expression(const Rule rule, const std::string *file, const uint32_t line)
+            : rule(rule), file(file), line(line) {};
 };
 
 class Statement
 {
     public:
-        uint32_t line;
-        Rule rule;
-        Statement(Rule rule = RULE_STATEMENT)
-            : rule(rule) {};
+        const Rule rule;
+        const std::string *file;
+        const uint32_t line;
+        Statement(const Rule rule, const std::string *file, const uint32_t line)
+            : rule(rule), file(file), line(line) {};
 };
 
 /* Expressions */
@@ -69,24 +71,24 @@ class Integer : public Expression
 {
     public:
         int64_t value;
-        Integer(int64_t value)
-            : Expression(RULE_INTEGER), value(value) {};
+        Integer(const std::string *file, const uint32_t line, int64_t value)
+            : Expression(RULE_INTEGER, file, line), value(value) {};
 };
 
 class Unsigned : public Expression
 {
     public:
         uint64_t value;
-        Unsigned(uint64_t value)
-            : Expression(RULE_UNSIGNED), value(value) {};
+        Unsigned(const std::string *file, const uint32_t line, uint64_t value)
+            : Expression(RULE_UNSIGNED, file, line), value(value) {};
 };
 
 class Float : public Expression
 {
     public:
         double value;
-        Float(double value)
-            : Expression(RULE_FLOAT), value(value) {};
+        Float(const std::string *file, const uint32_t line, double value)
+            : Expression(RULE_FLOAT, file, line), value(value) {};
 };
 
 class String : public Expression
@@ -94,24 +96,24 @@ class String : public Expression
     public:
         std::string value;
 
-        String(std::string value)
-            : Expression(RULE_STRING), value(value) {};
+        String(const std::string *file, const uint32_t line, std::string value)
+            : Expression(RULE_STRING, file, line), value(value) {};
 };
 
 class Boolean : public Expression
 {
     public:
         bool value;
-        Boolean(bool value)
-            : Expression(RULE_BOOLEAN), value(value) {};
+        Boolean(const std::string *file, const uint32_t line, bool value)
+            : Expression(RULE_BOOLEAN, file, line), value(value) {};
 };
 
 class List : public Expression
 {
     public:
         std::vector<Expression *> value;
-        List(std::vector<Expression *> value)
-            : Expression(RULE_LIST), value(value) {};
+        List(const std::string *file, const uint32_t line, std::vector<Expression *> value)
+            : Expression(RULE_LIST, file, line), value(value) {};
 };
 
 class Dictionary : public Expression
@@ -119,16 +121,16 @@ class Dictionary : public Expression
     public:
         std::unordered_map<std::string, Expression *> value;
         std::vector<std::string> key_order;
-        Dictionary(std::unordered_map<std::string, Expression *> value, std::vector<std::string> key_order)
-            : Expression(RULE_DICTIONARY), value(value), key_order(key_order) {};
+        Dictionary(const std::string *file, const uint32_t line, std::unordered_map<std::string, Expression *> value, std::vector<std::string> key_order)
+            : Expression(RULE_DICTIONARY, file, line), value(value), key_order(key_order) {};
 };
 
 class Group : public Expression
 {
     public:
         Expression *expression;
-        Group(Expression *value)
-            : Expression(RULE_GROUP), expression(value) {};
+        Group(const std::string *file, const uint32_t line, Expression *value)
+            : Expression(RULE_GROUP, file, line), expression(value) {};
 };
 
 class Unary : public Expression
@@ -136,8 +138,8 @@ class Unary : public Expression
     public:
         Token op;
         Expression *right;
-        Unary(Token op, Expression *right)
-            : Expression(RULE_UNARY), op(op), right(right) {};
+        Unary(const std::string *file, const uint32_t line, Token op, Expression *right)
+            : Expression(RULE_UNARY, file, line), op(op), right(right) {};
 };
 
 class Binary : public Expression
@@ -146,16 +148,16 @@ class Binary : public Expression
         Expression* left;
         Token op;
         Expression* right;
-        Binary(Expression *left, Token op, Expression *right)
-            : Expression(RULE_BINARY), left(left), op(op), right(right) {};
+        Binary(const std::string *file, const uint32_t line, Expression *left, Token op, Expression *right)
+            : Expression(RULE_BINARY, file, line), left(left), op(op), right(right) {};
 };
 
 class Variable : public Expression
 {
     public:
         std::string name;
-        Variable(std::string name)
-            : Expression(RULE_VARIABLE), name(name) {};
+        Variable(const std::string *file, const uint32_t line, std::string name)
+            : Expression(RULE_VARIABLE, file, line), name(name) {};
 };
 
 class Assign : public Expression
@@ -163,8 +165,8 @@ class Assign : public Expression
     public:
         Expression *target;
         Expression *value;
-        Assign(Expression *target, Expression *value)
-            : Expression(RULE_ASSIGN), target(target), value(value) {};
+        Assign(const std::string *file, const uint32_t line, Expression *target, Expression *value)
+            : Expression(RULE_ASSIGN, file, line), target(target), value(value) {};
 };
 
 class Logical : public Expression
@@ -173,8 +175,8 @@ class Logical : public Expression
         Expression *left;
         Token op;
         Expression *right;
-        Logical(Expression *left, Token op, Expression *right)
-            : Expression(RULE_LOGICAL), left(left),  op(op), right(right) {};
+        Logical(const std::string *file, const uint32_t line, Expression *left, Token op, Expression *right)
+            : Expression(RULE_LOGICAL, file, line), left(left),  op(op), right(right) {};
 };
 
 class Call : public Expression
@@ -182,8 +184,8 @@ class Call : public Expression
     public:
         Expression *target;
         std::vector<Expression *> arguments;
-        Call(Expression *target, std::vector<Expression *> arguments)
-            : Expression(RULE_CALL), target(target), arguments(arguments) {};
+        Call(const std::string *file, const uint32_t line, Expression *target, std::vector<Expression *> arguments)
+            : Expression(RULE_CALL, file, line), target(target), arguments(arguments) {};
 };
 
 class Access : public Expression
@@ -192,8 +194,8 @@ class Access : public Expression
         Expression *target;
         Expression *index;
         bool integer_index; // Determines if it needs an integer or string to access.
-        Access(Expression *target, Expression *index)
-            : Expression(RULE_ACCESS), target(target), index(index) {};
+        Access(const std::string *file, const uint32_t line, Expression *target, Expression *index)
+            : Expression(RULE_ACCESS, file, line), target(target), index(index) {};
 };
 
 class Cast : public Expression
@@ -201,8 +203,8 @@ class Cast : public Expression
     public:
         Expression *expression;
         std::string type;
-        Cast(Expression *expression, std::string type)
-            : Expression(RULE_CAST), expression(expression), type(type) {}
+        Cast(const std::string *file, const uint32_t line, Expression *expression, std::string type)
+            : Expression(RULE_CAST, file, line), expression(expression), type(type) {}
 };
 
 class Closure : public Expression
@@ -212,8 +214,8 @@ class Closure : public Expression
         std::string return_type;
         std::vector<Statement *> body;
         Block block;
-        Closure(std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
-            : Expression(RULE_CLOSURE), parameters(parameters), return_type(return_type), body(body) {}
+        Closure(const std::string *file, const uint32_t line, std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
+            : Expression(RULE_CLOSURE, file, line), parameters(parameters), return_type(return_type), body(body) {}
 };
 
 /* Statements */
@@ -221,16 +223,16 @@ class Print : public Statement
 {
     public:
         Expression *expression;
-        Print(Expression *expression)
-            : Statement(RULE_PRINT), expression(expression) {}
+        Print(const std::string *file, const uint32_t line, Expression *expression)
+            : Statement(RULE_PRINT, file, line), expression(expression) {}
 };
 
 class ExpressionStatement : public Statement
 {
     public:
         Expression *expression;
-        ExpressionStatement(Expression *expression)
-            : Statement(RULE_EXPRESSION_STATEMENT), expression(expression) {}
+        ExpressionStatement(const std::string *file, const uint32_t line, Expression *expression)
+            : Statement(RULE_EXPRESSION_STATEMENT, file, line), expression(expression) {}
 };
 
 class Declaration : public Statement
@@ -239,16 +241,16 @@ class Declaration : public Statement
         std::string name;
         std::string type;
         Expression *initializer;
-        Declaration(std::string name, std::string type, Expression *initializer)
-            : Statement(RULE_DECLARATION), name(name), type(type), initializer(initializer) {};
+        Declaration(const std::string *file, const uint32_t line, std::string name, std::string type, Expression *initializer)
+            : Statement(RULE_DECLARATION, file, line), name(name), type(type), initializer(initializer) {};
 };
 
 class Return : public Statement
 {
     public:
         Expression *value;
-        Return(Expression *value)
-            : Statement(RULE_RETURN), value(value) {}
+        Return(const std::string *file, const uint32_t line, Expression *value)
+            : Statement(RULE_RETURN, file, line), value(value) {}
 };
 
 class If : public Statement
@@ -258,8 +260,8 @@ class If : public Statement
         std::vector<Statement *> then_branch;
         std::vector<Statement *> else_branch;
         Block then_block, else_block;
-        If(Expression *condition, std::vector<Statement *> then_branch, std::vector<Statement *> else_branch)
-            : Statement(RULE_IF), condition(condition), then_branch(then_branch), else_branch(else_branch) {};
+        If(const std::string *file, const uint32_t line, Expression *condition, std::vector<Statement *> then_branch, std::vector<Statement *> else_branch)
+            : Statement(RULE_IF, file, line), condition(condition), then_branch(then_branch), else_branch(else_branch) {};
 };
 
 class While : public Statement
@@ -268,8 +270,8 @@ class While : public Statement
         Expression *condition;
         std::vector<Statement *> body;
         Block block;
-        While(Expression *condition, std::vector<Statement *> body)
-            : Statement(RULE_WHILE), condition(condition), body(body) {};
+        While(const std::string *file, const uint32_t line, Expression *condition, std::vector<Statement *> body)
+            : Statement(RULE_WHILE, file, line), condition(condition), body(body) {};
 };
 
 class For : public Statement
@@ -279,8 +281,8 @@ class For : public Statement
         std::string index;
         Expression *iterator;
         std::vector<Statement *> body;
-        For(std::string variable, std::string index, Expression *iterator, std::vector<Statement *> body)
-            : Statement(RULE_FOR), variable(variable), index(index), iterator(iterator), body(body) {}
+        For(const std::string *file, const uint32_t line, std::string variable, std::string index, Expression *iterator, std::vector<Statement *> body)
+            : Statement(RULE_FOR, file, line), variable(variable), index(index), iterator(iterator), body(body) {}
 };
 
 class Function : public Statement
@@ -291,8 +293,8 @@ class Function : public Statement
         std::string return_type;
         std::vector<Statement *> body;
         Block block;
-        Function(std::string name, std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
-            : Statement(RULE_FUNCTION), name(name), parameters(parameters), return_type(return_type), body(body) {}
+        Function(const std::string *file, const uint32_t line, std::string name, std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
+            : Statement(RULE_FUNCTION, file, line), name(name), parameters(parameters), return_type(return_type), body(body) {}
 };
 
 class Use : public Statement
@@ -300,8 +302,8 @@ class Use : public Statement
     public:
         std::vector<std::string> targets;
         std::string module;
-        Use(std::vector<std::string> targets, std::string module)
-            : Statement(RULE_USE), targets(targets), module(module) {};
+        Use(const std::string *file, const uint32_t line, std::vector<std::string> targets, std::string module)
+            : Statement(RULE_USE, file, line), targets(targets), module(module) {};
 };
 
 #endif

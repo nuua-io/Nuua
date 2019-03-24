@@ -34,11 +34,11 @@ class Analyzer
     void declare(std::string name, std::string type, Expression *initializer);
     public:
         // Stores the block of code to use.
-        std::vector<Statement *> code;
+        std::vector<Statement *> *code;
         // Stores the main block.
         Block main_block;
         // Analizes the input string and finds any errors.
-        void analyze(const char *source);
+        void analyze(const char *file);
         // Optimizes the input AST.
         void optimize();
 };

@@ -345,13 +345,14 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
     logger->info("Declared!");
 }
 
-void Analyzer::analyze(const char *source)
+void Analyzer::analyze(const char *file)
 {
-    this->code = Parser().parse(source);
+    this->code = new std::vector<Statement *>();
+    Parser(file).parse(this->code);
 
     logger->info("Started analyzing...");
 
-    this->main_block = this->analyze(this->code);
+    this->main_block = this->analyze(*this->code);
 
     logger->success("Analyzis complete...");
 }

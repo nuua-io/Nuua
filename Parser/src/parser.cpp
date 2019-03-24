@@ -19,6 +19,7 @@
 #define LINE() (this->current->line)
 #define EXPECT_NEW_LINE() if (!this->match_any({{TOKEN_NEW_LINE, TOKEN_EOF}})) { \
     logger->error("Expected a new line or EOF.", LINE()); exit(EXIT_FAILURE); }
+#define NEW_NODE(type, ...) (new type(this->file, LINE(), __VA_ARGS__))
 
 Token *Parser::consume(TokenType type, const char *message)
 {
@@ -62,15 +63,15 @@ primary -> "false"
 */
 Expression *Parser::primary()
 {
-    if (this->match(TOKEN_FALSE)) return new Boolean(false);
-    if (this->match(TOKEN_TRUE)) return new Boolean(true);
-    if (this->match(TOKEN_INTEGER)) return new Integer(std::stoi(PREVIOUS().to_string()));
-    if (this->match(TOKEN_FLOAT)) return new Float(std::stof(PREVIOUS().to_string()));
-    if (this->match(TOKEN_STRING)) return new String(PREVIOUS().to_string());
-    if (this->match(TOKEN_IDENTIFIER)) return new Variable(PREVIOUS().to_string());
+    if (this->match(TOKEN_FALSE)) return NEW_NODE(Boolean, false);
+    if (this->match(TOKEN_TRUE)) return NEW_NODE(Boolean, true);
+    if (this->match(TOKEN_INTEGER)) return NEW_NODE(Integer, std::stoi(PREVIOUS().to_string()));
+    if (this->match(TOKEN_FLOAT)) return NEW_NODE(Float, std::stof(PREVIOUS().to_string()));
+    if (this->match(TOKEN_STRING)) return NEW_NODE(String, PREVIOUS().to_string());
+    if (this->match(TOKEN_IDENTIFIER)) return NEW_NODE(Variable, PREVIOUS().to_string());
     if (this->match(TOKEN_LEFT_SQUARE)) {
         std::vector<Expression *> values;
-        if (this->match(TOKEN_RIGHT_SQUARE)) return new List(values);
+        if (this->match(TOKEN_RIGHT_SQUARE)) return NEW_NODE(List, values);
         for (;;) {
             if (IS_AT_END()) {
                 logger->error("Unfinished list, Expecting ']' after the last list element.", this->current->line);
@@ -80,12 +81,12 @@ Expression *Parser::primary()
             if (this->match(TOKEN_RIGHT_SQUARE)) break;
             this->consume(TOKEN_COMMA, "Expected ',' after a list element");
         }
-        return new List(values);
+        return NEW_NODE(List, values);
     }
     if (this->match(TOKEN_LEFT_BRACE)) {
         std::unordered_map<std::string, Expression *> values;
         std::vector<std::string> keys;
-        if (this->match(TOKEN_RIGHT_BRACE)) return new Dictionary(values, keys);
+        if (this->match(TOKEN_RIGHT_BRACE)) return NEW_NODE(Dictionary, values, keys);
         for (;;) {
             if (IS_AT_END()) {
                 logger->error("Unfinished dictionary, Expecting '}' after the last dictionary element.", this->current->line);
@@ -103,12 +104,12 @@ Expression *Parser::primary()
             if (this->match(TOKEN_RIGHT_BRACE)) break;
             this->consume(TOKEN_COMMA, "Expected ',' after dictionary element");
         }
-        return new Dictionary(values, keys);
+        return NEW_NODE(Dictionary, values, keys);
     }
     if (this->match(TOKEN_LEFT_PAREN)) {
         Expression *value = this->expression();
         this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after a group expression");
-        return new Group(value);
+        return NEW_NODE(Group, value);
     }
     if (this->match(TOKEN_STICK)) {
         std::vector<Statement *> parameters = this->parameters();
@@ -120,7 +121,7 @@ Expression *Parser::primary()
         if (this->match(TOKEN_COLON)) return_type = this->type(false);
         std::vector<Statement *> body;
         if (this->match(TOKEN_RIGHT_ARROW)) {
-            body.push_back(new Return(this->expression()));
+            body.push_back(NEW_NODE(Return, this->expression()));
         } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
             body.push_back(this->statement(false));
         } else if (this->match(TOKEN_LEFT_BRACE)) {
@@ -131,7 +132,7 @@ Expression *Parser::primary()
             logger->error("Unknown token found after closure. Expected '->', '=>' or '{'.", LINE());
             exit(EXIT_FAILURE);
         }
-        return new Closure(parameters, return_type, body);
+        return NEW_NODE(Closure, parameters, return_type, body);
     }
     logger->error("Expected an expression", LINE());
     exit(EXIT_FAILURE);
@@ -150,13 +151,13 @@ Expression *Parser::unary_postfix()
             case TOKEN_LEFT_SQUARE: {
                 Expression *expr = this->primary();
                 this->consume(TOKEN_RIGHT_SQUARE, "Expected ']' after the access index");
-                result = new Access(result, expr);
+                result = NEW_NODE(Access, result, expr);
                 break;
             }
             case TOKEN_LEFT_PAREN: {
                 std::vector<Expression *> arguments = this->arguments();
                 this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after function arguments");
-                result = new Call(result, arguments);
+                result = NEW_NODE(Call, result, arguments);
                 break;
             }
             default: { logger->error("Invalid unary postfix operator", LINE()); exit(EXIT_FAILURE); };
@@ -172,7 +173,7 @@ unary_prefix -> ("!" | "-") unary_prefix
 Expression *Parser::unary_prefix()
 {
     if (this->match_any({{ TOKEN_BANG, TOKEN_MINUS }})) {
-        return new Unary(PREVIOUS(), this->unary_prefix());
+        return NEW_NODE(Unary, PREVIOUS(), this->unary_prefix());
     }
     return this->unary_postfix();
 }
@@ -184,7 +185,7 @@ Expression *Parser::cast()
 {
     Expression *result = this->unary_prefix();
     while (this->match(TOKEN_AS)) {
-        result = new Cast(result, this->type());
+        result = NEW_NODE(Cast, result, this->type());
     }
     return result;
 }
@@ -196,7 +197,7 @@ Expression *Parser::multiplication()
 {
     Expression *result = this->cast();
     while (this->match_any({{ TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT }})) {
-        result = new Binary(result, PREVIOUS(), this->cast());
+        result = NEW_NODE(Binary, result, PREVIOUS(), this->cast());
     }
     return result;
 }
@@ -208,7 +209,7 @@ Expression *Parser::addition()
 {
     Expression *result = this->multiplication();
     while (this->match_any({{ TOKEN_MINUS, TOKEN_PLUS }})) {
-        result = new Binary(result, PREVIOUS(), this->multiplication());
+        result = NEW_NODE(Binary, result, PREVIOUS(), this->multiplication());
     }
     return result;
 }
@@ -220,7 +221,7 @@ Expression *Parser::comparison()
 {
     Expression *result = this->addition();
     while (this->match_any({{ TOKEN_HIGHER, TOKEN_HIGHER_EQUAL, TOKEN_LOWER, TOKEN_LOWER_EQUAL }})) {
-        result = new Binary(result, PREVIOUS(), this->addition());
+        result = NEW_NODE(Binary, result, PREVIOUS(), this->addition());
     }
     return result;
 }
@@ -232,7 +233,7 @@ Expression *Parser::equality()
 {
     Expression *result = this->comparison();
     while (this->match_any({{ TOKEN_BANG_EQUAL, TOKEN_EQUAL_EQUAL }})) {
-        result = new Binary(result, PREVIOUS(), this->comparison());
+        result = NEW_NODE(Binary, result, PREVIOUS(), this->comparison());
     }
     return result;
 }
@@ -244,7 +245,7 @@ Expression *Parser::logical_and()
 {
     Expression *result = this->equality();
     while (this->match(TOKEN_AND)) {
-        result = new Logical(result, PREVIOUS(), this->equality());
+        result = NEW_NODE(Logical, result, PREVIOUS(), this->equality());
     }
     return result;
 }
@@ -256,7 +257,7 @@ Expression *Parser::logical_or()
 {
     Expression *result = this->logical_and();
     while (this->match(TOKEN_AND)) {
-        result = new Logical(result, PREVIOUS(), this->logical_and());
+        result = NEW_NODE(Logical, result, PREVIOUS(), this->logical_and());
     }
     return result;
 }
@@ -268,7 +269,7 @@ Expression *Parser::assignment()
 {
     Expression *result = this->logical_or();
     while (this->match(TOKEN_EQUAL)) {
-        result = new Assign(result, this->expression());
+        result = NEW_NODE(Assign, result, this->expression());
     }
     return result;
 }
@@ -291,7 +292,7 @@ Statement *Parser::variable_declaration()
     std::string type = this->type();
     Expression *initializer = nullptr;
     if (this->match(TOKEN_EQUAL)) initializer = this->expression();
-    return new Declaration(variable, type, initializer);
+    return NEW_NODE(Declaration, variable, type, initializer);
 }
 
 /*
@@ -299,7 +300,7 @@ expression_statement -> expression;
 */
 Statement *Parser::expression_statement()
 {
-    return new ExpressionStatement(this->expression());
+    return NEW_NODE(ExpressionStatement, this->expression());
 }
 
 /*
@@ -312,7 +313,7 @@ Statement *Parser::use_declaration()
     while (this->match(TOKEN_COMMA)) targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after ','")->to_string());
     this->consume(TOKEN_FROM, "Expected 'from' after the import target");
     std::string module = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'from'")->to_string();
-    return new Use(targets, module);
+    return NEW_NODE(Use, targets, module);
 }
 
 /*
@@ -332,7 +333,7 @@ Statement *Parser::fun_declaration()
     if (this->match(TOKEN_COLON)) return_type = this->type(false);
     std::vector<Statement *> body;
     if (this->match(TOKEN_RIGHT_ARROW)) {
-        body.push_back(new Return(this->expression()));
+        body.push_back(NEW_NODE(Return, this->expression()));
     } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
         body.push_back(this->statement(false));
     } else if (this->match(TOKEN_LEFT_BRACE)) {
@@ -343,7 +344,7 @@ Statement *Parser::fun_declaration()
         logger->error("Unknown token found after function. Expected '->', '=>' or '{'.", LINE());
         exit(EXIT_FAILURE);
     }
-    return new Function(name, parameters, return_type, body);
+    return NEW_NODE(Function, name, parameters, return_type, body);
 }
 
 /*
@@ -351,7 +352,7 @@ print_statement -> "print" expression;
 */
 Statement *Parser::print_statement()
 {
-    return new Print(this->expression());
+    return NEW_NODE(Print, this->expression());
 }
 
 /*
@@ -387,7 +388,7 @@ Statement *Parser::if_statement()
             exit(EXIT_FAILURE);
         }
     }
-    return new If(condition, then_branch, else_branch);
+    return NEW_NODE(If, condition, then_branch, else_branch);
 }
 
 Statement *Parser::while_statement()
@@ -404,7 +405,7 @@ Statement *Parser::while_statement()
         logger->error("Expected '{' or '=>' after 'while' condition.");
         exit(EXIT_FAILURE);
     }
-    return new While(condition, body);
+    return NEW_NODE(While, condition, body);
 }
 
 /*
@@ -429,7 +430,7 @@ Statement *Parser::for_statement()
         logger->error("Expected '{' or '=>' after 'for' iterator.");
         exit(EXIT_FAILURE);
     }
-    return new For(variable, index, iterator, body);
+    return NEW_NODE(For, variable, index, iterator, body);
 }
 
 /*
@@ -438,9 +439,9 @@ return_statement -> "return" expression?;
 Statement *Parser::return_statement()
 {
     if (this->match_any({{ TOKEN_NEW_LINE, TOKEN_EOF }})) {
-        return new Return(nullptr);
+        return NEW_NODE(Return, nullptr);
     }
-    return new Return(this->expression());
+    return NEW_NODE(Return, this->expression());
 }
 
 /*
@@ -544,26 +545,33 @@ std::string Parser::type(bool optional)
 }
 
 /*
-program ->
+program -> statement*;
 */
-std::vector<Statement *> Parser::parse(const char *source)
+void Parser::parse(std::vector<Statement *> *code)
 {
-    std::vector<Token> tokens = Lexer().scan(source);
+    std::vector<Token> *tokens = new std::vector<Token>;
+    Lexer *lexer = new Lexer(this->file);
+    // Scan the tokens.
+    lexer->scan(tokens);
 
     logger->info("Started parsing...");
-    this->current = &tokens[0];
-    std::vector<Statement *> code;
+    this->current = &(*tokens)[0];
 
-    while (!IS_AT_END()) code.push_back(this->statement());
+    while (!IS_AT_END()) code->push_back(this->statement());
 
     #if DEBUG
-        Parser::debug_ast(code);
+        Parser::debug_ast(*code);
         printf("\n");
     #endif
 
-    logger->success("Parsing completed");
+    delete lexer;
 
-    return code;
+    logger->success("Parsing completed");
+}
+
+Parser::Parser(const char *file)
+{
+    this->file = new std::string(file);
 }
 
 #undef CURRENT

@@ -107,11 +107,11 @@ Memory *VirtualMachine::get_current_memory()
     }
 }
 
-void VirtualMachine::interpret(const char *source)
+void VirtualMachine::interpret(const char *file)
 {
     // Compile the code.
     auto compiler = new Compiler;
-    this->program = compiler->compile(source);
+    this->program = compiler->compile(file);
     delete compiler;
     // Allocate the main frame registers.
     // this->frames[0].allocate_registers(this->program.main_registers);

@@ -15,6 +15,8 @@
 
 class Lexer
 {
+    // Stores the file where the tokens are beeing scanned.
+    const std::string *file;
     const char *start;
     const char *current;
     uint32_t line;
@@ -27,9 +29,15 @@ class Lexer
     TokenType is_string(bool simple);
     TokenType is_number();
     TokenType is_identifier();
-
+    void read_from_file(std::string *dest, const std::string *file);
     public:
-        std::vector<Token> scan(const char *source);
+        // Stores the source code of the file.
+        std::string *source = nullptr;
+        // Scans the source and stores the tokens.
+        void scan(std::vector<Token> *tokens);
+        // Initializes a lexer given a file name.
+        Lexer(const std::string *file);
+        ~Lexer();
 };
 
 #endif

@@ -14,6 +14,7 @@
 
 class Parser
 {
+    const std::string *file;
     // Stores a pointer to the current token beeing parsed.
     Token *current;
     // Consumes a token and returns it for futher use.
@@ -60,8 +61,9 @@ class Parser
         static void debug_ast(Expression *expression, uint16_t spacer = 0, bool print_spacer = true);
         static void debug_ast(Statement *statement, uint16_t spacer = 0);
         static void debug_ast(std::vector<Statement *> &statements, uint16_t spacer = 0);
-        // Parses a given source code and returns the AST.
-        std::vector<Statement *> parse(const char *source);
+        // Parses a given source code and returns the code.
+        void parse(std::vector<Statement *> *code);
+        Parser(const char *file);
 };
 
 #endif
