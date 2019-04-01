@@ -40,7 +40,8 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "use", TOKEN_USE },
     { "from", TOKEN_FROM },
     { "elif", TOKEN_ELIF },
-    { "in", TOKEN_IN }
+    { "in", TOKEN_IN },
+    { "export", TOKEN_EXPORT }
 };
 
 const std::string Lexer::token_error()
@@ -85,8 +86,8 @@ TokenType Lexer::is_string(bool simple)
     }
 
     if (IS_AT_END()) {
-        logger->error("Unterminated string literal", this->line);
-        exit(EXIT_FAILURE);
+        logger->add_entity(this->file, this->line, "Unterminated string literal");
+        exit(logger->crash());
     }
 
     NEXT(); // The " itelf
@@ -130,8 +131,8 @@ void Lexer::read_from_file(std::string *dest, const std::string *file)
 {
     std::ifstream file_stream = std::ifstream(file->c_str());
     if (!file_stream.is_open()) {
-        logger->error("Unable to open file '" + *file + "'");
-        exit(EXIT_FAILURE);
+        logger->add_entity(this->file, this->line, "Unable to open file '" + *file + "'");
+        exit(logger->crash());
     }
 
     *dest = std::string((std::istreambuf_iterator<char>(file_stream)), (std::istreambuf_iterator<char>()));
@@ -139,8 +140,6 @@ void Lexer::read_from_file(std::string *dest, const std::string *file)
 
 void Lexer::scan(std::vector<Token> *tokens)
 {
-    logger->info("Started scanning...");
-
     this->source = new std::string;
     this->read_from_file(this->source, this->file);
 
@@ -186,19 +185,13 @@ void Lexer::scan(std::vector<Token> *tokens)
             default: {
                 if (IS_DIGIT(c)) { ADD_TOKEN(this->is_number()); break; }
                 else if (IS_ALPHA(c)) { ADD_TOKEN(this->is_identifier()); break; }
-                logger->error(this->token_error(), this->line);
-                exit(EXIT_FAILURE);
+                logger->add_entity(this->file, this->line, this->token_error());
+                exit(logger->crash());
             }
         }
     }
 
     tokens->push_back(this->make_token(TOKEN_EOF));
-
-    #if DEBUG
-        Token::debug_tokens(*tokens);
-    #endif
-
-    logger->success("Scanning complete");
 }
 
 Lexer::Lexer(const std::string *file)

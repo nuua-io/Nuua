@@ -25,13 +25,15 @@
  * SOFTWARE.
  */
 #include "Application/include/application.hpp"
+#include <locale.h>
 
 int main(int argc, char *argv[])
 {
+    // Sets the locale of the language
+    setlocale(LC_ALL, "");
     // This starts a new Nuua application
     // It automatically determines the type
     // of the application and does all the work.
-    //
     // It also returns EXIT_SUCCESS if all went right.
     return Application(argc, argv).start();
 }

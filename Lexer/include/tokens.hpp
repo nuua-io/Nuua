@@ -67,6 +67,7 @@ typedef enum : uint8_t {
     TOKEN_STICK, // |
     TOKEN_ELIF, // ELIF
     TOKEN_IN, // in
+    TOKEN_EXPORT, // export
 } TokenType;
 
 class Token

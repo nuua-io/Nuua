@@ -7,67 +7,106 @@
  * https://nuua.io
  */
 #include "../include/logger.hpp"
-#include "../include/rang.hpp"
+#if defined(_WIN32) || defined(_WIN64)
+    #include <windows.h>
+#endif
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <cstdlib>
 
 Logger *logger = new Logger;
 
-void Logger::info(const std::string &msg, int line)
+static int red_printf(const char *format, ...)
 {
-    #if DEBUG
-        std::cout
-            << rang::style::bold
-            << rang::fg::cyan
-            << " > "
-            << rang::fg::yellow
-            << msg
-            << rang::style::reset
-            << rang::style::bold;
-        if (line >= 0) std::cout << " [Line " << line << "]";
-        std::cout << rang::style::reset << std::endl;
+    va_list arg;
+    int done;
+    va_start(arg, format);
+
+    #if defined(_WIN32) || defined(_WIN64)
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+        WORD saved_attributes;
+        /* Save current attributes */
+        GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+        saved_attributes = consoleInfo.wAttributes;
+        SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+        done = vfprintf(stderr, format, arg);
+        /* Restore original attributes */
+        SetConsoleTextAttribute(hConsole, saved_attributes);
+    #else
+        char *fmt = malloc(sizeof(char) * (strlen(format) + 10)); // \x1b[31m\x1b[0m = (9 + '\0')
+        strcpy(fmt, "\x1b[31m");
+        strcat(fmt, format);
+        strcat(fmt, "\x1b[0m");
+        done = vfprintf(stderr, fmt, arg);
     #endif
+
+    va_end(arg);
+
+    return done;
 }
 
-void Logger::success(const std::string &msg, int line)
+static void print_file_line(const char *file, const uint32_t line)
 {
-    #if DEBUG
-        std::cout
-            << rang::style::bold
-            << rang::fg::green
-            << " > "
-            << rang::fg::yellow
-            << msg
-            << rang::style::reset
-            << rang::style::bold;
-        if (line >= 0) std::cout << " [Line " << line << "]";
-        std::cout << rang::style::reset << std::endl;
-    #endif
+    FILE *source_file = fopen(file, "r");
+    if (source_file == NULL) {
+        printf("   \n   <unknown>\n");
+        exit(EXIT_FAILURE);
+    }
+    char buffer[MAX_LINE_LENGTH];
+    for (uint32_t current_line = 1; current_line <= line; current_line++) {
+        error_read_again:
+        fgets(buffer, sizeof(buffer), source_file);
+        if (buffer == NULL || *buffer == EOF) {
+            printf("   \n   <unknown>\n");
+            exit(EXIT_FAILURE);
+        }
+        if (strlen(buffer) == MAX_LINE_LENGTH && buffer[strlen(buffer) - 1] != '\n') {
+            goto error_read_again;
+        }
+    }
+    fclose(source_file);
+    // Trim the initial spaces / tabs.
+    uint16_t offset = 0;
+    while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
+    printf("   \n   %s\n", buffer + offset);
 }
 
-void Logger::warning(const std::string &msg, int line)
+void Logger::add_entity(const std::string *file, const uint32_t line, const std::string msg)
 {
-    #if DEBUG
-        std::cout
-            << rang::style::bold
-            << " > "
-            << rang::fg::yellow
-            << msg
-            << rang::style::reset
-            << rang::style::bold;
-        if (line >= 0) std::cout << " [Line " << line << "]";
-        std::cout << rang::style::reset << std::endl;
-    #endif
+    this->entities.push_back({ file, line, msg });
 }
 
-void Logger::error(const std::string &msg, int line)
+void Logger::pop_entity()
 {
-    std::cerr
-        << rang::style::bold
-        << rang::fg::red
-        << " > "
-        << rang::fg::yellow
-        << msg
-        << rang::style::reset
-        << rang::style::bold;
-    if (line >= 0) std::cerr << " [Line " << line << "]";
-    std::cerr << rang::style::reset << std::endl;
+    this->entities.pop_back();
+}
+
+int Logger::crash()
+{
+    if (this->entities.size() == 0) {
+        // Show a generic error since no entities exists.
+        red_printf("There was an error");
+        return EXIT_FAILURE;
+    }
+    // Display the error stack using the entities.
+    printf(" ------------------\n");
+    red_printf(" THERE WAS AN ERROR\n");
+    printf(" ------------------\n");
+    for (size_t i = 0; i < this->entities.size() - 1; i++) {
+        printf(
+            " > %s - %s, line %u\n",
+            this->entities[i].msg.c_str(),
+            this->entities[i].file->c_str(),
+            this->entities[i].line
+        );
+        print_file_line(this->entities[i].file->c_str(), this->entities[i].line);
+    }
+    printf(" > ");
+    red_printf("%s", this->entities[this->entities.size() - 1].msg.c_str());
+    printf(" - %s, line %u\n", this->entities[this->entities.size() - 1].file->c_str(), this->entities[this->entities.size() - 1].line);
+    print_file_line(this->entities[this->entities.size() - 1].file->c_str(), this->entities[this->entities.size() - 1].line);
+
+    return EXIT_FAILURE;
 }

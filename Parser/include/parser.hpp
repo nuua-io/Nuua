@@ -39,6 +39,7 @@ class Parser
     // Statements
     Statement *fun_declaration();
     Statement *use_declaration();
+    Statement *export_declaration();
     Statement *variable_declaration();
     Statement *print_statement();
     Statement *return_statement();
@@ -61,9 +62,15 @@ class Parser
         static void debug_ast(Expression *expression, uint16_t spacer = 0, bool print_spacer = true);
         static void debug_ast(Statement *statement, uint16_t spacer = 0);
         static void debug_ast(std::vector<Statement *> &statements, uint16_t spacer = 0);
+        // Helper to format a path.
+        static void format_path(std::string *path, const std::string *parent = nullptr);
         // Parses a given source code and returns the code.
         void parse(std::vector<Statement *> *code);
+        // Creates a new parser and formats the path.
         Parser(const char *file);
+        // Creates a new parser with a given formatted and initialized path.
+        Parser(const std::string *file)
+            : file(file) {}
 };
 
 #endif

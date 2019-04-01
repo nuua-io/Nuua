@@ -24,13 +24,13 @@ void Analyzer::analyze(Statement *rule)
                 auto type = Type(dec->initializer, &this->blocks);
                 // Check the types to know if it can be initialized.
                 if (!Type(dec->type).same_as(&type)) {
-                    logger->error(
+                    /* logger->add_entity(this->file, LINE(),
                         "Incompatible types: Need "
                         + Type(dec->type).to_string()
                         + ", got "
                         + type.to_string()
-                    );
-                    exit(EXIT_FAILURE);
+                    ); */
+                    exit(logger->crash());
                 }
             }
             break;
@@ -53,8 +53,8 @@ void Analyzer::analyze(Statement *rule)
             break;
         }
         default: {
-            logger->error("Invalid statement.", rule->line);
-            exit(EXIT_FAILURE);
+            // logger->add_entity(this->file, LINE(), "Invalid statement.");
+            exit(logger->crash());
         }
     }
 }
@@ -274,7 +274,6 @@ void Analyzer::analyze(Expression *rule)
 
 Block Analyzer::analyze(std::vector<Statement *> &block, std::vector<Statement *> arguments, std::string return_type)
 {
-    logger->info("Block analysis...");
     // Push a new block to the analyzed blocks.
     this->blocks.push_back(Block());
 
@@ -293,8 +292,8 @@ Block Analyzer::analyze(std::vector<Statement *> &block, std::vector<Statement *
             if (stmt->rule == RULE_RETURN) {
                 auto ret_type = Type(static_cast<Return *>(stmt)->value, &this->blocks);
                 if (!Type(return_type).same_as(&ret_type)) {
-                    logger->error("Function return value expects " + return_type + ", but got " + ret_type.to_string());
-                    exit(EXIT_FAILURE);
+                    // logger->add_entity(this->file, LINE(), "Function return value expects " + return_type + ", but got " + ret_type.to_string());
+                    exit(logger->crash());
                 }
             }
         }
@@ -316,19 +315,18 @@ BlockVariableType *Analyzer::must_have(std::string &name, uint32_t line)
         if (var) return var;
     }
 
-    logger->error("Undeclared variable", line);
-    exit(EXIT_FAILURE);
+    // logger->add_entity(this->file, LINE(), "Undeclared variable");
+    exit(logger->crash());
 }
 
 void Analyzer::declare(std::string name, std::string type, Expression *initializer)
 {
-    logger->info("Declaring...");
     auto block = &this->blocks.back();
 
     // Check if the variable exists already.
     if (block->get_variable(name)) {
-        logger->error("The variable '" + name + "' is already declared in this scope.");
-        exit(EXIT_FAILURE);
+        // logger->add_entity(this->file, LINE(), "The variable '" + name + "' is already declared in this scope.");
+        exit(logger->crash());
     }
 
     // Set the return type if it's a function value.
@@ -342,19 +340,19 @@ void Analyzer::declare(std::string name, std::string type, Expression *initializ
 
     // Declare the variable with the given type.
     block->variables[name] = BlockVariableType(type, arguments, return_type);
-    logger->info("Declared!");
 }
 
 void Analyzer::analyze(const char *file)
 {
-    this->code = new std::vector<Statement *>();
+    this->code = new std::vector<Statement *>;
     Parser(file).parse(this->code);
 
-    logger->info("Started analyzing...");
+    #if DEBUG
+        Parser::debug_ast(*this->code);
+        printf("\n");
+    #endif
 
     this->main_block = this->analyze(*this->code);
-
-    logger->success("Analyzis complete...");
 }
 
 void Analyzer::optimize()

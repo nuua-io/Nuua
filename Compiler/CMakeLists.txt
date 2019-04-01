@@ -1,2 +1,2 @@
-add_library (Compiler SHARED src/compiler.cpp src/program.cpp src/value.cpp)
+add_library (Compiler src/compiler.cpp src/program.cpp src/value.cpp)
 target_link_libraries (Compiler Analyzer Logger)

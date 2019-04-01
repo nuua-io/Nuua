@@ -38,16 +38,16 @@ Type::Type(std::string name)
             this->type = type.second;
             size_t last = name.rfind(']');
             if (last == std::string::npos) {
-                logger->error("Unfinished inner type specifier.");
-                exit(EXIT_FAILURE);
+                // logger->add_entity(this->file, LINE(), "Unfinished inner type specifier.");
+                exit(logger->crash());
             }
             this->inner_type = new Type(name.substr(position + 1, last));
             return;
         }
     }
 
-    logger->error("Unknown type '" + name + "'");
-    exit(EXIT_FAILURE);
+    // logger->add_entity(this->file, LINE(), "Unknown type '" + name + "'");
+    exit(logger->crash());
 }
 
 void Type::copy_to(Type *type)

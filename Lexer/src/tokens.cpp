@@ -58,7 +58,8 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_FROM",
     "TOKEN_STICK",
     "TOKEN_ELIF",
-    "TOKEN_IN"
+    "TOKEN_IN",
+    "TOKEN_EXPORT"
 };
 
 const std::unordered_map<char, char> Token::escaped_chars = {

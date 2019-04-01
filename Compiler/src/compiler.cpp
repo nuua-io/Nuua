@@ -36,8 +36,6 @@ Program Compiler::compile(const char *file)
     analyzer->optimize();
     std::vector<Statement *> *structure = analyzer->code;
 
-    logger->info("Started compiling...");
-
     // Compile the code.
     this->blocks.push_back(&analyzer->main_block);
     for (Statement *node : *structure) this->compile(node);
@@ -50,18 +48,13 @@ Program Compiler::compile(const char *file)
     this->add_opcodes(OP_EMPTY, 3);
 
     #if DEBUG
-        logger->info("Program memory:");
         this->program.program.dump();
-        logger->info("Functions memory:");
         this->program.functions.dump();
-        logger->info("Classes memory:");
         this->program.classes.dump();
     #endif
 
     // Store the ammount of needed registers for the main frame.
     this->program.main_registers = this->frame_info.front().current_register;
-
-    logger->success("Compiling completed");
 
     return this->program;
 }
@@ -73,8 +66,8 @@ void Compiler::compile(Statement *rule)
     switch (rule->rule) {
         case RULE_EXPRESSION:
         case RULE_STATEMENT: {
-            logger->error("Invalid rule to compile. Found Statement or expression without propper format.");
-            exit(EXIT_FAILURE);
+            // logger->add_entity(this->file, LINE(), "Invalid rule to compile. Found Statement or expression without propper format.");
+            exit(logger->crash());
             break; // I won't remove this line to keep it understandable
         }
         case RULE_PRINT: {
@@ -167,8 +160,8 @@ void Compiler::compile(Statement *rule)
             break;
         }
         default: {
-            logger->error("Invalid statement to compile.", rule->line);
-            exit(EXIT_FAILURE);
+            // logger->add_entity(this->file, LINE(), "Invalid statement to compile.");
+            exit(logger->crash());
         }
     }
     delete rule;
@@ -354,8 +347,8 @@ uint64_t Compiler::compile(Expression *rule, bool const_opcode, uint64_t *sugges
             break;
         }
         default: {
-            logger->error("Invalid expression to compile.", rule->line);
-            exit(EXIT_FAILURE);
+            // logger->add_entity(this->file, LINE(), "Invalid expression to compile.");
+            exit(logger->crash());
         }
     }
     delete rule;

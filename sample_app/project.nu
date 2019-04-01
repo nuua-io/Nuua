@@ -1,8 +1,6 @@
-use addition from operations
+use addition from "operations"
 
-fun test(adder: int): |int: int| {
-    return |x: int|: int -> x + adder
-}
+fun test(a: int) -> a + 10
 
 fun main() {
     // Variable declaration
@@ -23,10 +21,10 @@ fun main() {
         print index
     }
 
-    // Function call
-    adder: |int: int| = test(10)
+    // First class functions
+    adder: (int -> int) = test
 
-    // Closure call
+    // Function call
     print adder(10)
 
     // Imported function call

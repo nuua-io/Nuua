@@ -7,16 +7,17 @@ if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE Release)
 endif ()
 
-# Set the C++ general flags and flags for debug and release.
-if (CMAKE_COMPILER_IS_GNUCXX)
-    set (CMAKE_CXX_FLAGS "-Wall -Wextra -pipe")
-    set (CMAKE_CXX_FLAGS_DEBUG "-g -D DEBUG=true")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto -frename-registers -fopenmp -D_GLIBCXX_PARALLEL -DDEBUG=false")
-endif (CMAKE_COMPILER_IS_GNUCXX)
-
 # Set the C++ standard to use.
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Set the C++ general flags and flags for debug and release.
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set (LINK_FLAGS "-lstdc++fs")
+    set (CMAKE_CXX_FLAGS "-Wall -Wextra -pipe")
+    set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=true")
+    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -s -flto -frename-registers -fopenmp -D_GLIBCXX_PARALLEL -DDEBUG=false")
+endif (CMAKE_COMPILER_IS_GNUCXX)
 
 # Set the output directories.
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

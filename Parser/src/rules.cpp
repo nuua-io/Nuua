@@ -36,6 +36,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_FOR",
     "RULE_CAST",
     "RULE_IMPORT",
+    "RULE_EXPORT",
     "RULE_CLOSURE"
 };
 
@@ -209,12 +210,22 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
         }
         case RULE_USE: {
             Use *use = static_cast<Use *>(statement);
-            printf("Use[%s]\n", use->module.c_str());
+            printf("Use[%s]\n", use->module->c_str());
+            print_spaces(spacer + 1);
+            printf("[Targets]\n");
             for (std::string &identifier : use->targets) {
-                print_spaces(spacer + 1);
+                print_spaces(spacer + 2);
                 printf("%s\n", identifier.c_str());
             }
+            print_spaces(spacer + 1);
+            printf("[Code]\n");
+            Parser::debug_ast(*use->code, spacer + 2);
             break;
+        }
+        case RULE_EXPORT: {
+            Export *e = static_cast<Export *>(statement);
+            printf("Export\n");
+            Parser::debug_ast(e->statement, spacer + 1);
         }
         default: { break; }
     }

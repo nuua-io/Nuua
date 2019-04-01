@@ -43,6 +43,7 @@ typedef enum : uint8_t {
     RULE_FOR,
     RULE_CAST,
     RULE_USE,
+    RULE_EXPORT,
     RULE_CLOSURE,
 } Rule;
 
@@ -301,9 +302,18 @@ class Use : public Statement
 {
     public:
         std::vector<std::string> targets;
-        std::string module;
-        Use(const std::string *file, const uint32_t line, std::vector<std::string> targets, std::string module)
+        const std::string *module;
+        std::vector<Statement *> *code;
+        Use(const std::string *file, const uint32_t line, std::vector<std::string> targets, const std::string *module)
             : Statement(RULE_USE, file, line), targets(targets), module(module) {};
+};
+
+class Export : public Statement
+{
+    public:
+        Statement *statement;
+        Export(const std::string *file, const uint32_t line, Statement *statement)
+            : Statement(RULE_EXPORT, file, line), statement(statement) {}
 };
 
 #endif

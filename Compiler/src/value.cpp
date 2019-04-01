@@ -29,7 +29,10 @@ Value::Value(Type type)
         case VALUE_LIST: { this->value_list = new std::vector<Value>(); break; }
         case VALUE_DICT: { this->value_dict = new ValueDictionary(std::unordered_map<std::string, Value>(), std::vector<std::string>()); break; }
         case VALUE_FUN: { this->value_fun = new ValueFunction(0, nullptr); break; }
-        default: { logger->error("Can't declare this value type without an initializer."); exit(EXIT_FAILURE); }
+        default: {
+            // logger->add_entity(this->file, LINE(), "Can't declare this value type without an initializer.");
+            exit(logger->crash());
+        }
     }
 }
 
@@ -89,8 +92,8 @@ std::string Value::to_string()
             return fn;
         }
         case VALUE_REF: {
-            logger->error("Reference to_string() caught.");
-            exit(EXIT_FAILURE);
+            // logger->add_entity(this->file, LINE(), "Reference to_string() caught.");
+            exit(logger->crash());
         }
         default: { return "none"; }
     }
@@ -166,8 +169,8 @@ Value Value::cast(Type type)
             break;
         }
         default: {
-            logger->error("Invalid type conversion.");
-            exit(EXIT_FAILURE);
+            // logger->add_entity(this->file, LINE(), "Invalid type conversion.");
+            exit(logger->crash());
         }
     }
     return Value();
@@ -330,7 +333,10 @@ void Value::op_div(Value *dest, Value *src1, Value *src2)
     src1 = src1->get_value(), src2 = src2->get_value();
 
     auto bn = src2->to_double();
-    if (bn == 0) { logger->error("Division by zero."); exit(EXIT_FAILURE); }
+    if (bn == 0) {
+        // logger->add_entity(this->file, LINE(), "Division by zero.");
+        exit(logger->crash());
+    }
 
     auto val = src1->to_double() / bn;
     dest->deallocate();
