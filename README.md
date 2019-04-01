@@ -15,14 +15,15 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 
 - ~~From dynamic to static~~ :white_check_mark:
 - ~~Stack machine to Register Machine~~ :white_check_mark:
-- Re-write the syntax :construction:
+- ~~Re-write the syntax~~ :white_check_mark:
+- ~~Better error reporting~~ :white_check_mark:
+- ~~Implement modules (imports)~~ :white_check_mark:
 - Implement functions :construction:
-- Implement classes
+- Implement classes :construction:
 - Implement function overloading (?)
-- Implement modules (imports)
 - NUSL (Nuua Standard Library)
 - NUPAC (Nuua Package Manager)
-- Optimizations + Better error reporting
+- Optimizations
 - **Initial Release**
 
 ## How is nuua structured?
