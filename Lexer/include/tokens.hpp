@@ -77,14 +77,15 @@ class Token
         const char *start;
         uint32_t length;
         uint32_t line;
+        uint16_t column;
 
         static std::vector<std::string> token_names;
 
         // Contains the escaped chars of the language.
         static const std::unordered_map<char, char> escaped_chars;
 
-        Token(TokenType type, const char *start, uint32_t length, uint32_t line)
-            : type(type), start(start), length(length), line(line) {}
+        Token(TokenType type, const char *start, uint32_t length, uint32_t line, uint16_t column)
+            : type(type), start(start), length(length), line(line), column(column) {}
 
         void debug_token();
 

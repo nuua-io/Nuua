@@ -21,6 +21,7 @@
 #define IS_DIGIT(character) ((character) >= '0' && (character) <= '9')
 #define IS_ALPHA(character) (((character) >= 'a' && (character) <= 'z') || ((character) >= 'A' && (character) <= 'Z') || (character) == '_')
 #define IS_ALPHANUM(character) (IS_ALPHA(character) || IS_DIGIT(character))
+#define ADD_LOG(msg) logger->add_entity(this->file, this->line, this->column, msg);
 
 const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "true", TOKEN_TRUE },
@@ -65,7 +66,11 @@ Token Lexer::make_token(TokenType type)
 
     this->start = *this->current == ' ' ? this->current + 1 : this->current;
 
-    return Token(type, start, length, this->line);
+    Token t = Token(type, start, length, this->line, this->column);
+
+    this->column += length;
+
+    return t;
 }
 
 bool Lexer::match(const char c)
@@ -86,7 +91,7 @@ TokenType Lexer::is_string(bool simple)
     }
 
     if (IS_AT_END()) {
-        logger->add_entity(this->file, this->line, "Unterminated string literal");
+        ADD_LOG("Unterminated string literal");
         exit(logger->crash());
     }
 
@@ -131,7 +136,7 @@ void Lexer::read_from_file(std::string *dest, const std::string *file)
 {
     std::ifstream file_stream = std::ifstream(file->c_str());
     if (!file_stream.is_open()) {
-        logger->add_entity(this->file, this->line, "Unable to open file '" + *file + "'");
+        ADD_LOG("Unable to open file '" + *file + "'");
         exit(logger->crash());
     }
 
@@ -146,12 +151,14 @@ void Lexer::scan(std::vector<Token> *tokens)
     this->start = this->source->c_str();
     this->current = this->start;
     this->line = 1;
+    this->column = 1;
 
     while (!IS_AT_END()) {
         switch (char c = NEXT()) {
-            case ' ': { this->start = this->current; break; }
-            case '\r': case '\t': { break; }
-            case '\n': { this->line++; ADD_TOKEN(TOKEN_NEW_LINE); break; }
+            case ' ': { this->start = this->current; ++this->column; break; }
+            case '\r': { break; }
+            case '\t': { ++this->column; break; }
+            case '\n': { ++this->line; ADD_TOKEN(TOKEN_NEW_LINE); this->column = 1; break; }
             case '#': { while (PEEK() != '\n' && !IS_AT_END()) NEXT(); break; }
             case '(': { ADD_TOKEN(TOKEN_LEFT_PAREN); break; }
             case ')': { ADD_TOKEN(TOKEN_RIGHT_PAREN); break; }
@@ -185,7 +192,7 @@ void Lexer::scan(std::vector<Token> *tokens)
             default: {
                 if (IS_DIGIT(c)) { ADD_TOKEN(this->is_number()); break; }
                 else if (IS_ALPHA(c)) { ADD_TOKEN(this->is_identifier()); break; }
-                logger->add_entity(this->file, this->line, this->token_error());
+                ADD_LOG(this->token_error());
                 exit(logger->crash());
             }
         }
@@ -213,3 +220,4 @@ Lexer::~Lexer()
 #undef IS_DIGIT
 #undef IS_ALPHA
 #undef IS_ALPHANUM
+#undef ADD_LOG

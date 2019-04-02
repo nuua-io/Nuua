@@ -47,7 +47,7 @@ static int red_printf(const char *format, ...)
     return done;
 }
 
-static void print_file_line(const char *file, const uint32_t line)
+static void print_file_line(const char *file, const uint32_t line, const uint16_t column)
 {
     FILE *source_file = fopen(file, "r");
     if (source_file == NULL) {
@@ -70,12 +70,14 @@ static void print_file_line(const char *file, const uint32_t line)
     // Trim the initial spaces / tabs.
     uint16_t offset = 0;
     while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
-    printf("   \n   %s\n", buffer + offset);
+    printf("   \n   %s   ", buffer + offset);
+    for (size_t i = 1; i < column - offset; i++) printf(" ");
+    printf("^\n");
 }
 
-void Logger::add_entity(const std::string *file, const uint32_t line, const std::string msg)
+void Logger::add_entity(const std::string *file, const uint32_t line, const uint16_t column, const std::string msg)
 {
-    this->entities.push_back({ file, line, msg });
+    this->entities.push_back({ file, line, column, msg });
 }
 
 void Logger::pop_entity()
@@ -91,22 +93,32 @@ int Logger::crash()
         return EXIT_FAILURE;
     }
     // Display the error stack using the entities.
-    printf(" ------------------\n");
-    red_printf(" THERE WAS AN ERROR\n");
-    printf(" ------------------\n");
+    printf(" ----------------------\n");
+    red_printf(" > THERE WAS AN ERROR <\n");
+    printf(" ----------------------\n");
     for (size_t i = 0; i < this->entities.size() - 1; i++) {
         printf(
-            " > %s - %s, line %u\n",
+            " > %s - %s, line: %u, column: %u\n",
             this->entities[i].msg.c_str(),
             this->entities[i].file->c_str(),
-            this->entities[i].line
+            this->entities[i].line,
+            this->entities[i].column
         );
-        print_file_line(this->entities[i].file->c_str(), this->entities[i].line);
+        print_file_line(this->entities[i].file->c_str(), this->entities[i].line, this->entities[i].column);
     }
     printf(" > ");
     red_printf("%s", this->entities[this->entities.size() - 1].msg.c_str());
-    printf(" - %s, line %u\n", this->entities[this->entities.size() - 1].file->c_str(), this->entities[this->entities.size() - 1].line);
-    print_file_line(this->entities[this->entities.size() - 1].file->c_str(), this->entities[this->entities.size() - 1].line);
+    printf(
+        " - %s, line: %u, column: %u\n",
+        this->entities[this->entities.size() - 1].file->c_str(),
+        this->entities[this->entities.size() - 1].line,
+        this->entities[this->entities.size() - 1].column
+    );
+    print_file_line(
+        this->entities[this->entities.size() - 1].file->c_str(),
+        this->entities[this->entities.size() - 1].line,
+        this->entities[this->entities.size() - 1].column
+    );
 
     return EXIT_FAILURE;
 }

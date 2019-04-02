@@ -1,6 +1,8 @@
 use addition from "operations"
 
-fun test(a: int) -> a + 10
+fun test(a: int) {
+    return a + 10 **
+}
 
 fun main() {
     // Variable declaration

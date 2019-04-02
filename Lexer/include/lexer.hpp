@@ -20,6 +20,7 @@ class Lexer
     const char *start;
     const char *current;
     uint32_t line;
+    uint16_t column;
 
     static const std::unordered_map<std::string, TokenType> reserved_words;
 

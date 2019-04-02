@@ -22,10 +22,12 @@ class LoggerEntity {
         const std::string *file;
         // Stores the line of the log.
         const uint32_t line;
+        // Stores the column of the log.
+        const uint16_t column;
         // Stores the message of the log.
         const std::string msg;
-        LoggerEntity(const std::string *file, const uint32_t line, const std::string msg)
-            : file(file), line(line), msg(msg) {}
+        LoggerEntity(const std::string *file, const uint32_t line, const uint16_t column, const std::string msg)
+            : file(file), line(line), column(column), msg(msg) {}
 };
 
 // Represents the logger used in the whole toolchain.
@@ -35,7 +37,7 @@ class Logger
     std::vector<LoggerEntity> entities;
     public:
         // Adds a new entity to the entity stack.
-        void add_entity(const std::string *file, const uint32_t line, const std::string msg);
+        void add_entity(const std::string *file, const uint32_t line, const uint16_t column, const std::string msg);
         // Pops an entity from the entity stack.
         void pop_entity();
         // Crashes the program by emmiting the whole entity stack as an error.

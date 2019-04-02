@@ -18,14 +18,17 @@
 #define IS_AT_END() (CHECK(TOKEN_EOF))
 #define LOOKAHEAD(n) (*(this->current + n))
 #define LINE() (this->current->line)
+#define COL() (this->current->column)
+#define ADD_LOG(msg) logger->add_entity(this->file, LINE(), COL(), msg)
+#define ADD_LOG_PAR(line, col, msg) logger->add_entity(this->file, line, col, msg)
 #define EXPECT_NEW_LINE() if (!this->match_any({{TOKEN_NEW_LINE, TOKEN_EOF}})) { \
-    logger->add_entity(this->file, LINE(), "Expected a new line or EOF but got '" + CURRENT().to_string() + "'."); exit(logger->crash()); }
-#define NEW_NODE(type, ...) (new type(this->file, LINE(), __VA_ARGS__))
+    ADD_LOG("Expected a new line or EOF but got '" + CURRENT().to_string() + "'."); exit(logger->crash()); }
+#define NEW_NODE(type, ...) (new type(this->file, LINE(), COL(), __VA_ARGS__))
 
 Token *Parser::consume(TokenType type, const char *message)
 {
     if (this->current->type == type) return NEXT();
-    logger->add_entity(this->file, LINE(), std::string(message));
+    ADD_LOG(std::string(message));
     exit(logger->crash());
 }
 
@@ -75,7 +78,7 @@ Expression *Parser::primary()
         if (this->match(TOKEN_RIGHT_SQUARE)) return NEW_NODE(List, values);
         for (;;) {
             if (IS_AT_END()) {
-                logger->add_entity(this->file, LINE(), "Unfinished list, Expecting ']' after the last list element.");
+                ADD_LOG("Unfinished list, Expecting ']' after the last list element.");
                 exit(logger->crash());
             }
             values.push_back(expression());
@@ -90,12 +93,12 @@ Expression *Parser::primary()
         if (this->match(TOKEN_RIGHT_BRACE)) return NEW_NODE(Dictionary, values, keys);
         for (;;) {
             if (IS_AT_END()) {
-                logger->add_entity(this->file, LINE(), "Unfinished dictionary, Expecting '}' after the last dictionary element.");
+                ADD_LOG("Unfinished dictionary, Expecting '}' after the last dictionary element.");
                 exit(logger->crash());
             }
             Expression *key = this->expression();
             if (key->rule != RULE_VARIABLE) {
-                logger->add_entity(this->file, LINE(), "Expected an identifier as a key");
+                ADD_LOG("Expected an identifier as a key");
                 exit(logger->crash());
             }
             this->consume(TOKEN_COLON, "Expected ':' after dictionary key");
@@ -130,12 +133,12 @@ Expression *Parser::primary()
             body = this->body();
             this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after closure body.");
         } else {
-            logger->add_entity(this->file, LINE(), "Unknown token found after closure. Expected '->', '=>' or '{'.");
+            ADD_LOG("Unknown token found after closure. Expected '->', '=>' or '{'.");
             exit(logger->crash());
         }
         return NEW_NODE(Closure, parameters, return_type, body);
     }
-    logger->add_entity(this->file, LINE(), "Expected an expression but got '" + CURRENT().to_string() + "'");
+    ADD_LOG("Expected an expression but got '" + CURRENT().to_string() + "'");
     exit(logger->crash());
 }
 
@@ -162,7 +165,7 @@ Expression *Parser::unary_postfix()
                 break;
             }
             default: {
-                logger->add_entity(this->file, LINE(), "Invalid unary postfix operator");
+                ADD_LOG("Invalid unary postfix operator");
                 exit(logger->crash());
             };
         }
@@ -358,7 +361,7 @@ Statement *Parser::fun_declaration()
         body = this->body();
         this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after function body.");
     } else {
-        logger->add_entity(this->file, LINE(), "Unknown token found after function. Expected '->', '=>' or '{'.");
+        ADD_LOG("Unknown token found after function. Expected '->', '=>' or '{'.");
         exit(logger->crash());
     }
     return NEW_NODE(Function, name, parameters, return_type, body);
@@ -387,7 +390,7 @@ Statement *Parser::if_statement()
     } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
         then_branch.push_back(this->statement(false));
     } else {
-        logger->add_entity(this->file, LINE(), "Expected '{' or '=>' after 'if' condition.");
+        ADD_LOG("Expected '{' or '=>' after 'if' condition.");
         exit(logger->crash());
     }
     // Else branch
@@ -401,7 +404,7 @@ Statement *Parser::if_statement()
         } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
             else_branch.push_back(this->statement(false));
         } else {
-            logger->add_entity(this->file, LINE(), "Expected '{' or '=>' after 'else'.");
+            ADD_LOG("Expected '{' or '=>' after 'else'.");
             exit(logger->crash());
         }
     }
@@ -419,7 +422,7 @@ Statement *Parser::while_statement()
     } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
         body.push_back(this->statement(false));
     } else {
-        logger->add_entity(this->file, LINE(), "Expected '{' or '=>' after 'while' condition.");
+        ADD_LOG("Expected '{' or '=>' after 'while' condition.");
         exit(logger->crash());
     }
     return NEW_NODE(While, condition, body);
@@ -444,7 +447,7 @@ Statement *Parser::for_statement()
     } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
         body.push_back(this->statement(false));
     } else {
-        logger->add_entity(this->file, LINE(), "Expected '{' or '=>' after 'for' iterator.");
+        ADD_LOG("Expected '{' or '=>' after 'for' iterator.");
         exit(logger->crash());
     }
     return NEW_NODE(For, variable, index, iterator, body);
@@ -482,36 +485,36 @@ Statement *Parser::statement(bool new_line)
 
     // Check what type of statement we're parsing.
     if (this->match(TOKEN_USE)) {
-        logger->add_entity(this->file, LINE(), "Parsing use declaration");
+        ADD_LOG("Parsing use declaration");
         result = this->use_declaration();
     } else if (this->match(TOKEN_EXPORT)) {
-        logger->add_entity(this->file, LINE(), "Parsing export declaration");
+        ADD_LOG("Parsing export declaration");
         result = this->export_declaration();
     } else if (this->match(TOKEN_CLASS)) {
-        logger->add_entity(this->file, LINE(), "Parsing class declaration");
+        ADD_LOG("Parsing class declaration");
     } else if (this->match(TOKEN_FUN)) {
-        logger->add_entity(this->file, LINE(), "Parsing function declaration");
+        ADD_LOG("Parsing function declaration");
         result = this->fun_declaration();
     } else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
-        logger->add_entity(this->file, LINE(), "Parsing variable declaration");
+        ADD_LOG("Parsing variable declaration");
         result = this->variable_declaration();
     } else if (this->match(TOKEN_IF)) {
-        logger->add_entity(this->file, LINE(), "Parsing class declaration");
+        ADD_LOG("Parsing class declaration");
         result = this->if_statement();
     } else if (this->match(TOKEN_WHILE)) {
-        logger->add_entity(this->file, LINE(), "Parsing while statement");
+        ADD_LOG("Parsing while statement");
         result = this->while_statement();
     } else if (this->match(TOKEN_FOR)) {
-        logger->add_entity(this->file, LINE(), "Parsing for statement");
+        ADD_LOG("Parsing for statement");
         result = this->for_statement();
     } else if (this->match(TOKEN_RETURN)) {
-        logger->add_entity(this->file, LINE(), "Parsing return statement");
+        ADD_LOG("Parsing return statement");
         result = this->return_statement();
     } else if (this->match(TOKEN_PRINT)) {
-        logger->add_entity(this->file, LINE(), "Parsing print statement");
+        ADD_LOG("Parsing print statement");
         result = this->print_statement();
     } else {
-        logger->add_entity(this->file, LINE(), "Parsing expression");
+        ADD_LOG("Parsing expression");
         result = this->expression_statement();
     }
 
@@ -529,7 +532,7 @@ std::vector<Statement *> Parser::parameters()
         do {
             Statement *parameter = this->statement(false);
             if (parameter->rule != RULE_DECLARATION) {
-                logger->add_entity(this->file, parameter->line, "Invalid argument when defining the function. Expected a declaration.");
+                ADD_LOG_PAR(parameter->line, parameter->column, "Invalid argument when defining the function. Expected a declaration.");
                 exit(logger->crash());
             }
             parameters.push_back(parameter);
@@ -583,7 +586,7 @@ std::string Parser::type(bool optional)
         return this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
     } else if (optional && (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL))) return "";
 
-    logger->add_entity(this->file, LINE(), "Unknown type token expected.");
+    ADD_LOG("Unknown type token expected.");
     exit(logger->crash());
 }
 
@@ -638,3 +641,6 @@ void Parser::format_path(std::string *path, const std::string *parent)
 #undef IS_AT_END
 #undef LOOKAHEAD
 #undef LINE
+#undef COL
+#undef ADD_LOG
+#undef ADD_LOG_PAR
