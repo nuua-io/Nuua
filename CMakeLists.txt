@@ -13,7 +13,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set the C++ general flags and flags for debug and release.
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set (LINK_FLAGS "-lstdc++fs")
     set (CMAKE_CXX_FLAGS "-Wall -Wextra -pipe")
     set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=true")
     set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -s -flto -frename-registers -fopenmp -D_GLIBCXX_PARALLEL -DDEBUG=false")

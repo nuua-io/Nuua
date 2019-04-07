@@ -71,7 +71,7 @@ static void print_file_line(const char *file, const uint32_t line, const uint16_
     uint16_t offset = 0;
     while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
     printf("   \n   %s   ", buffer + offset);
-    for (size_t i = 1; i < column - offset; i++) printf(" ");
+    for (uint16_t i = 1; i < column - offset; i++) printf(" ");
     printf("^\n");
 }
 
@@ -89,7 +89,7 @@ int Logger::crash()
 {
     if (this->entities.size() == 0) {
         // Show a generic error since no entities exists.
-        red_printf("There was an error");
+        red_printf("There was an error\n");
         return EXIT_FAILURE;
     }
     // Display the error stack using the entities.

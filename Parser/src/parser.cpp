@@ -25,6 +25,12 @@
     ADD_LOG("Expected a new line or EOF but got '" + CURRENT().to_string() + "'."); exit(logger->crash()); }
 #define NEW_NODE(type, ...) (new type(this->file, LINE(), COL(), __VA_ARGS__))
 
+// Stores the relation between a file_name and the
+// parsed Abstract Syntax Tree and the pointer to the
+// original long lived file name string.
+// Acts as a temporal cache to avoid re-parsing a file.
+static std::unordered_map<std::string, std::pair<std::vector<Statement *> *, const std::string *>> parsed_files;
+
 Token *Parser::consume(TokenType type, const char *message)
 {
     if (this->current->type == type) return NEXT();
@@ -115,6 +121,7 @@ Expression *Parser::primary()
         this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after a group expression");
         return NEW_NODE(Group, value);
     }
+    /*
     if (this->match(TOKEN_STICK)) {
         std::vector<Statement *> parameters = this->parameters();
         if (!this->match(TOKEN_STICK)) {
@@ -138,6 +145,7 @@ Expression *Parser::primary()
         }
         return NEW_NODE(Closure, parameters, return_type, body);
     }
+    */
     ADD_LOG("Expected an expression but got '" + CURRENT().to_string() + "'");
     exit(logger->crash());
 }
@@ -321,19 +329,31 @@ Statement *Parser::use_declaration()
     this->consume(TOKEN_FROM, "Expected 'from' after the import target");
     std::string module = this->consume(TOKEN_STRING, "Expected an identifier after 'from'")->to_string();
     Parser::format_path(&module, this->file);
-    Use *use = NEW_NODE(Use, targets, new std::string(module));
+    Use *use;
     // Parse the contents of the target.
-    use->code = new std::vector<Statement *>;
-    Parser(use->module).parse(use->code);
+    if (parsed_files.find(module) == parsed_files.end()) {
+        use = NEW_NODE(Use, targets, new std::string(module));
+        use->code = new std::vector<Statement *>;
+        Parser(use->module).parse(use->code);
+    } else {
+        use = NEW_NODE(Use, targets, parsed_files[module].second);
+        use->code = parsed_files[module].first;
+    }
+
     return use;
 }
 
 /*
-export_declaration -> "export" statement
+export_declaration -> "export" top_level_declaration
 */
 Statement *Parser::export_declaration()
 {
-    return NEW_NODE(Export, this->statement());
+    Statement *stmt = this->top_level_declaration();
+    if (stmt->rule == RULE_EXPORT) {
+        ADD_LOG("Can't export an export. Does that even make sense?.");
+        exit(logger->crash());
+    }
+    return NEW_NODE(Export, stmt);
 }
 
 /*
@@ -465,11 +485,7 @@ Statement *Parser::return_statement()
 }
 
 /*
-statement -> use_declaration "\n"
-    | export_declaration "\n"
-    | class_declaration "\n"
-    | fun_declaration "\n"
-    | variable_declaration "\n"?
+statement -> variable_declaration "\n"?
     | if_statement "\n"
     | while_statement "\n"
     | for_statement "\n"
@@ -484,22 +500,11 @@ Statement *Parser::statement(bool new_line)
     while (this->match(TOKEN_NEW_LINE));
 
     // Check what type of statement we're parsing.
-    if (this->match(TOKEN_USE)) {
-        ADD_LOG("Parsing use declaration");
-        result = this->use_declaration();
-    } else if (this->match(TOKEN_EXPORT)) {
-        ADD_LOG("Parsing export declaration");
-        result = this->export_declaration();
-    } else if (this->match(TOKEN_CLASS)) {
-        ADD_LOG("Parsing class declaration");
-    } else if (this->match(TOKEN_FUN)) {
-        ADD_LOG("Parsing function declaration");
-        result = this->fun_declaration();
-    } else if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
+    if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
         ADD_LOG("Parsing variable declaration");
         result = this->variable_declaration();
     } else if (this->match(TOKEN_IF)) {
-        ADD_LOG("Parsing class declaration");
+        ADD_LOG("Parsing if declaration");
         result = this->if_statement();
     } else if (this->match(TOKEN_WHILE)) {
         ADD_LOG("Parsing while statement");
@@ -517,11 +522,40 @@ Statement *Parser::statement(bool new_line)
         ADD_LOG("Parsing expression");
         result = this->expression_statement();
     }
-
     if (new_line) EXPECT_NEW_LINE();
-
     logger->pop_entity();
+    return result;
+}
 
+/*
+top_level_declaration -> use_declaration "\n"
+    | export_declaration "\n"
+    | class_declaration "\n"
+    | fun_declaration "\n";
+*/
+Statement *Parser::top_level_declaration()
+{
+    Statement *result;
+    // Remove blank lines
+    while (this->match(TOKEN_NEW_LINE));
+
+    if (this->match(TOKEN_USE)) {
+        ADD_LOG("Parsing 'use' declaration");
+        result = this->use_declaration();
+    } else if (this->match(TOKEN_EXPORT)) {
+        ADD_LOG("Parsing 'export' declaration");
+        result = this->export_declaration();
+    } else if (this->match(TOKEN_CLASS)) {
+        ADD_LOG("Parsing 'class' declaration");
+    } else if (this->match(TOKEN_FUN)) {
+        ADD_LOG("Parsing 'fun' declaration");
+        result = this->fun_declaration();
+    } else {
+        ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
+        exit(logger->crash());
+    }
+    EXPECT_NEW_LINE();
+    logger->pop_entity();
     return result;
 }
 
@@ -532,7 +566,7 @@ std::vector<Statement *> Parser::parameters()
         do {
             Statement *parameter = this->statement(false);
             if (parameter->rule != RULE_DECLARATION) {
-                ADD_LOG_PAR(parameter->line, parameter->column, "Invalid argument when defining the function. Expected a declaration.");
+                ADD_LOG_PAR(parameter->line, parameter->column, "Invalid argument when defining the function. Expected a variable declaration.");
                 exit(logger->crash());
             }
             parameters.push_back(parameter);
@@ -575,7 +609,7 @@ std::string Parser::type(bool optional)
         // Dict type.
         return ("{" + this->type()) + this->consume(TOKEN_RIGHT_BRACE, "A list type needs to end with '}'")->to_string();
     } else if (this->match(TOKEN_LEFT_PAREN)) {
-        // Closure type.
+        // Function type.
         std::string type = "(";
         type += this->type();
         while (this->match(TOKEN_COMMA)) type += ", " + this->type();
@@ -591,7 +625,7 @@ std::string Parser::type(bool optional)
 }
 
 /*
-program -> statement*;
+program -> top_level_declaration*;
 */
 void Parser::parse(std::vector<Statement *> *code)
 {
@@ -599,11 +633,9 @@ void Parser::parse(std::vector<Statement *> *code)
     Lexer *lexer = new Lexer(this->file);
     // Scan the tokens.
     lexer->scan(tokens);
-
     this->current = &(*tokens)[0];
-
-    while (!IS_AT_END()) code->push_back(this->statement());
-
+    while (!IS_AT_END()) code->push_back(this->top_level_declaration());
+    parsed_files[*this->file] = std::make_pair(code, this->file);
     delete lexer;
 }
 

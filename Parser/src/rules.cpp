@@ -37,7 +37,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_CAST",
     "RULE_IMPORT",
     "RULE_EXPORT",
-    "RULE_CLOSURE"
+    // "RULE_CLOSURE"
 };
 
 void Parser::debug_rule(Rule rule)
@@ -77,12 +77,14 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_space
         case RULE_VARIABLE: { printf("Variable\n"); break; }
         case RULE_LIST: { printf("List\n"); break; }
         case RULE_DICTIONARY: { printf("Dictionary\n"); break; }
+        /*
         case RULE_CLOSURE: {
             Closure *closure = static_cast<Closure *>(expression);
             printf("Closure[%s]\n", closure->return_type.c_str());
             Parser::debug_ast(closure->body, spacer + 1);
             break;
         }
+        */
         case RULE_BINARY: {
             Binary *binary = static_cast<Binary *>(expression);
             printf("Binary[%s]\n", binary->op.to_string().c_str());

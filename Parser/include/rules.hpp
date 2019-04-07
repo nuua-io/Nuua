@@ -44,7 +44,7 @@ typedef enum : uint8_t {
     RULE_CAST,
     RULE_USE,
     RULE_EXPORT,
-    RULE_CLOSURE,
+    // RULE_CLOSURE,
 } Rule;
 
 class Expression
@@ -210,6 +210,7 @@ class Cast : public Expression
             : Expression(RULE_CAST, file, line, column), expression(expression), type(type) {}
 };
 
+/*
 class Closure : public Expression
 {
     public:
@@ -220,6 +221,7 @@ class Closure : public Expression
         Closure(const std::string *file, const uint32_t line, const uint32_t column, std::vector<Statement *> parameters, std::string return_type, std::vector<Statement *> body)
             : Expression(RULE_CLOSURE, file, line, column), parameters(parameters), return_type(return_type), body(body) {}
 };
+*/
 
 /* Statements */
 class Print : public Statement

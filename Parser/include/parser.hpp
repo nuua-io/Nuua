@@ -14,6 +14,7 @@
 
 class Parser
 {
+    // Stores the current parsing file.
     const std::string *file;
     // Stores a pointer to the current token beeing parsed.
     Token *current;
@@ -48,6 +49,7 @@ class Parser
     Statement *for_statement();
     Statement *expression_statement();
     Statement *statement(bool new_line = true);
+    Statement *top_level_declaration();
     // Helpers
     std::vector<Statement *> parameters();
     std::vector<Expression *> arguments();
