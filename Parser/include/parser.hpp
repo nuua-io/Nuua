@@ -48,12 +48,15 @@ class Parser
     Statement *while_statement();
     Statement *for_statement();
     Statement *expression_statement();
+    Statement *class_statement();
     Statement *statement(bool new_line = true);
     Statement *top_level_declaration();
+    Statement *class_body_declaration();
     // Helpers
     std::vector<Statement *> parameters();
     std::vector<Expression *> arguments();
     std::vector<Statement *> body();
+    std::vector<Statement *> class_body();
     std::string type(bool optional = true);
     public:
         // Debugging functions

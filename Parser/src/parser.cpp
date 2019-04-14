@@ -25,6 +25,18 @@
     ADD_LOG("Expected a new line or EOF but got '" + CURRENT().to_string() + "'."); exit(logger->crash()); }
 #define NEW_NODE(type, ...) (new type(this->file, LINE(), COL(), __VA_ARGS__))
 
+// Stores the parsing file stack, to avoid
+// cyclic imports.
+static std::vector<const std::string *> file_stack;
+
+#define PREVENT_CYCLIC(file_ptr) \
+{ \
+    if (std::find(file_stack.begin(), file_stack.end(), file) != file_stack.end()) { \
+        ADD_LOG("Cyclic import detected. Can't use '" + *file_ptr + "'. Cyclic imports are not available in nuua."); \
+        exit(logger->crash()); \
+    } \
+}
+
 // Stores the relation between a file_name and the
 // parsed Abstract Syntax Tree and the pointer to the
 // original long lived file name string.
@@ -333,13 +345,14 @@ Statement *Parser::use_declaration()
     // Parse the contents of the target.
     if (parsed_files.find(module) == parsed_files.end()) {
         use = NEW_NODE(Use, targets, new std::string(module));
+        PREVENT_CYCLIC(use->module);
         use->code = new std::vector<Statement *>;
         Parser(use->module).parse(use->code);
     } else {
         use = NEW_NODE(Use, targets, parsed_files[module].second);
+        PREVENT_CYCLIC(use->module);
         use->code = parsed_files[module].first;
     }
-
     return use;
 }
 
@@ -484,6 +497,15 @@ Statement *Parser::return_statement()
     return NEW_NODE(Return, this->expression());
 }
 
+Statement *Parser::class_statement()
+{
+    std::string name = this->consume(TOKEN_IDENTIFIER, "Expected identifier after 'class'.")->to_string();
+    this->consume(TOKEN_LEFT_BRACE, "Expected '{' after 'class' name.");
+    std::vector<Statement *> body = this->class_body();
+    this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'class' body.");
+    return NEW_NODE(Class, name, body);
+}
+
 /*
 statement -> variable_declaration "\n"?
     | if_statement "\n"
@@ -547,11 +569,32 @@ Statement *Parser::top_level_declaration()
         result = this->export_declaration();
     } else if (this->match(TOKEN_CLASS)) {
         ADD_LOG("Parsing 'class' declaration");
+        result = this->class_statement();
     } else if (this->match(TOKEN_FUN)) {
         ADD_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
     } else {
         ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
+        exit(logger->crash());
+    }
+    EXPECT_NEW_LINE();
+    logger->pop_entity();
+    return result;
+}
+
+Statement *Parser::class_body_declaration()
+{
+    Statement *result;
+    // Remove blank lines
+    while (this->match(TOKEN_NEW_LINE));
+
+    if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
+        ADD_LOG("Parsing variable declaration");
+    } else if (this->match(TOKEN_FUN)) {
+        ADD_LOG("Parsing 'fun' declaration");
+        result = this->fun_declaration();
+    } else {
+        ADD_LOG("Invalid class block declaration. Expected 'fun' or variable declaration. But got '" + CURRENT().to_string() + "'");
         exit(logger->crash());
     }
     EXPECT_NEW_LINE();
@@ -590,6 +633,15 @@ std::vector<Statement *> Parser::body()
     std::vector<Statement *> body;
     while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) {
         body.push_back(this->statement());
+    }
+    return body;
+}
+
+std::vector<Statement *> Parser::class_body()
+{
+    std::vector<Statement *> body;
+    while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) {
+        body.push_back(this->class_body_declaration());
     }
     return body;
 }

@@ -44,6 +44,7 @@ typedef enum : uint8_t {
     RULE_CAST,
     RULE_USE,
     RULE_EXPORT,
+    RULE_CLASS,
     // RULE_CLOSURE,
 } Rule;
 
@@ -318,6 +319,15 @@ class Export : public Statement
         Statement *statement;
         Export(const std::string *file, const uint32_t line, const uint32_t column, Statement *statement)
             : Statement(RULE_EXPORT, file, line, column), statement(statement) {}
+};
+
+class Class : public Statement
+{
+    public:
+        std::string name;
+        std::vector<Statement *> body;
+        Class(const std::string *file, const uint32_t line, const uint32_t column, std::string name, std::vector<Statement *> body)
+            : Statement(RULE_CLASS, file, line, column), name(name), body(body) {}
 };
 
 #endif

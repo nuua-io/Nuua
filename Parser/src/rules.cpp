@@ -37,6 +37,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_CAST",
     "RULE_IMPORT",
     "RULE_EXPORT",
+    "RULE_CLASS"
     // "RULE_CLOSURE"
 };
 
@@ -228,6 +229,13 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             Export *e = static_cast<Export *>(statement);
             printf("Export\n");
             Parser::debug_ast(e->statement, spacer + 1);
+            break;
+        }
+        case RULE_CLASS: {
+            Class *c = static_cast<Class *>(statement);
+            printf("Class[%s]\n", c->name.c_str());
+            Parser::debug_ast(c->body, spacer + 1);
+            break;
         }
         default: { break; }
     }
