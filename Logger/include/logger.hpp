@@ -14,6 +14,8 @@
 
 // Defines a max line length when printing file lengths.
 #define MAX_LINE_LENGTH 500
+// Defines the max chars to show when printing errors to prevent lines that are too long.
+#define MAX_LINE_CHARS 60
 
 // Represents a log entity.
 class LoggerEntity {
@@ -35,6 +37,7 @@ class Logger
 {
     // Stores all the log entities.
     std::vector<LoggerEntity> entities;
+    void display_log(uint16_t index, bool red);
     public:
         // Adds a new entity to the entity stack.
         void add_entity(const std::string *file, const uint32_t line, const uint16_t column, const std::string msg);

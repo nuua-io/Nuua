@@ -37,8 +37,9 @@ static std::vector<std::string> RuleNames = {
     "RULE_CAST",
     "RULE_IMPORT",
     "RULE_EXPORT",
-    "RULE_CLASS"
-    // "RULE_CLOSURE"
+    "RULE_CLASS",
+    "RULE_SLICE",
+    "RULE_RANGE"
 };
 
 void Parser::debug_rule(Rule rule)
@@ -69,6 +70,7 @@ static void print_spaces(uint16_t ammount)
 void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_spacer)
 {
     if (print_spacer) print_spaces(spacer);
+    if (!expression) { printf("-\n"); return; };
     switch (expression->rule) {
         case RULE_INTEGER: { printf("Integer\n"); break; }
         case RULE_UNSIGNED: { printf("Unsigned\n"); break; }
@@ -133,8 +135,24 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_space
         }
         case RULE_CAST: {
             Cast *cast = static_cast<Cast *>(expression);
-            printf("Cast[%s]\n", cast->type.c_str());
+            printf("Cast[%s]\n", cast->type->to_string().c_str());
             Parser::debug_ast(cast->expression, spacer + 1);
+            break;
+        }
+        case RULE_SLICE: {
+            Slice *slice = static_cast<Slice *>(expression);
+            printf("Slice\n");
+            Parser::debug_ast(slice->target, spacer + 1);
+            Parser::debug_ast(slice->start, spacer + 1);
+            Parser::debug_ast(slice->end, spacer + 1);
+            Parser::debug_ast(slice->step, spacer + 1);
+            break;
+        }
+        case RULE_RANGE: {
+            Range *range = static_cast<Range *>(expression);
+            printf("Range\n");
+            Parser::debug_ast(range->start, spacer + 1);
+            Parser::debug_ast(range->end, spacer + 1);
             break;
         }
         default: { break; }
@@ -144,6 +162,7 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_space
 void Parser::debug_ast(Statement *statement, uint16_t spacer)
 {
     print_spaces(spacer);
+    if (!statement) { printf("-\n"); return; };
     switch (statement->rule) {
         case RULE_EXPRESSION_STATEMENT: {
             Parser::debug_ast(static_cast<ExpressionStatement *>(statement)->expression, spacer, false);
@@ -156,15 +175,13 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
         }
         case RULE_DECLARATION: {
             Declaration *dec = static_cast<Declaration *>(statement);
-            printf("Declaration[%s: %s]\n", dec->name.c_str(), dec->type.c_str());
-            if (dec->initializer) {
-                Parser::debug_ast(dec->initializer, spacer + 1);
-            }
+            printf("Declaration[%s: %s]\n", dec->name.c_str(), dec->type->to_string().c_str());
+            Parser::debug_ast(dec->initializer, spacer + 1);
             break;
         }
         case RULE_FUNCTION: {
             Function *function= static_cast<Function *>(statement);
-            printf("Function[%s: %s]\n", function->name.c_str(), function->return_type.c_str());
+            printf("Function[%s: %s]\n", function->name.c_str(), function->return_type ? function->return_type->to_string().c_str() : "<no-return>");
             Parser::debug_ast(function->body, spacer + 1);
             break;
         }

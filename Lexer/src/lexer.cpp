@@ -53,22 +53,22 @@ const std::string Lexer::token_error()
 Token Lexer::make_token(TokenType type)
 {
     const char *start;
-    uint32_t length;
+    uint32_t length, length_cpy = TOK_LENGTH();
 
     if (type == TOKEN_STRING) {
         // The '"' must be eliminated in both sides.
         start = this->start + 1; // +(The initial '"")
-        length = TOK_LENGTH() - 2; // -(The initial '"' + The final '"')
+        length = length_cpy - 2; // -(The initial '"' + The final '"')
     } else {
         start = this->start;
-        length = TOK_LENGTH();
+        length = length_cpy;
     }
 
     this->start = *this->current == ' ' ? this->current + 1 : this->current;
 
     Token t = Token(type, start, length, this->line, this->column);
 
-    this->column += length;
+    this->column += length_cpy;
 
     return t;
 }
@@ -167,9 +167,24 @@ void Lexer::scan(std::vector<Token> *tokens)
             case '[': { ADD_TOKEN(TOKEN_LEFT_SQUARE); break; }
             case ']': { ADD_TOKEN(TOKEN_RIGHT_SQUARE); break; }
             case ',': { ADD_TOKEN(TOKEN_COMMA); break; }
-            case '.': { ADD_TOKEN(TOKEN_DOT); break; }
+            case '.': {
+                // Possible dot, double or triple dot.
+                if (this->match('.')) {
+                    // Possible double or triple dot.
+                    if (this->match('.')) {
+                        // Triple dot.
+                        ADD_TOKEN(TOKEN_TRIPLE_DOT);
+                        break;
+                    }
+                    ADD_TOKEN(TOKEN_DOUBLE_DOT);
+                    break;
+                }
+                ADD_TOKEN(TOKEN_DOT);
+                break;
+            }
             case ':': { ADD_TOKEN(TOKEN_COLON); break; }
             case '|': { ADD_TOKEN(TOKEN_STICK); break; }
+            case '!': { ADD_TOKEN(TOKEN_BANG); break; }
             case '-': {
                 if (this->match('>')) { ADD_TOKEN(TOKEN_RIGHT_ARROW); break; }
                 ADD_TOKEN(TOKEN_MINUS); break;

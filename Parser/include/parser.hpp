@@ -10,6 +10,7 @@
 #define PARSER_HPP
 
 #include "../../Lexer/include/tokens.hpp"
+#include "type.hpp"
 #include "rules.hpp"
 
 class Parser
@@ -35,6 +36,7 @@ class Parser
     Expression *equality();
     Expression *logical_and();
     Expression *logical_or();
+    Expression *range();
     Expression *assignment();
     Expression *expression();
     // Statements
@@ -53,11 +55,11 @@ class Parser
     Statement *top_level_declaration();
     Statement *class_body_declaration();
     // Helpers
-    std::vector<Statement *> parameters();
+    void parameters(std::vector<Declaration *> *dest);
     std::vector<Expression *> arguments();
     std::vector<Statement *> body();
     std::vector<Statement *> class_body();
-    std::string type(bool optional = true);
+    Type *type(bool optional = true);
     public:
         // Debugging functions
         static void debug_rule(Rule rule);

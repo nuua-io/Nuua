@@ -3,44 +3,31 @@
 
 #include "../../Parser/include/rules.hpp"
 #include "../../Parser/include/block.hpp"
+#include "module.hpp"
 
 // The base nuua analyzer and optimizer.
 //
 // Analyzes:
 // - Declared variables
 // - Function return value match
+// - Non-assignment for functions without return
 // - Argument type match
 // - Assignment type match
 // - List / Dictionary index type
 // - Variable lifetime (last_use)
+// - Use / Export declarations.
+// - Check for iterator (must be list / dict)
 // Optimizes:
 // -
 class Analyzer
 {
-    // Stores the current analized block.
-    std::vector<Block> blocks;
-    // Analyzes a given statement.
-    void analyze(Statement *rule);
-    // Analyzes a given expression.
-    void analyze(Expression *rule);
-    // Analyzes a block of statements. Additional arguments may be used
-    // to initialize the block variable types.
-    Block analyze(std::vector<Statement *> &block, std::vector<Statement *> arguments = {}, std::string return_type = "");
-    // Stops the execution if the current block does not
-    // have the given variable declared. It also returns
-    // it's address to use it if nessesary.
-    BlockVariableType *must_have(std::string &name, uint32_t line);
-    // Declares a variable given a name and a type.
-    void declare(std::string name, std::string type, Expression *initializer);
+    // Stores the main file name.
+    const char *file;
     public:
-        // Stores the block of code to use.
-        std::vector<Statement *> *code;
-        // Stores the main block.
-        Block main_block;
-        // Analizes the input string and finds any errors.
-        void analyze(const char *file);
-        // Optimizes the input AST.
-        void optimize();
+        // Creates an analyzer given the file name.
+        Analyzer(const char *file);
+        // Analyzes the code. The result AST is stored in the destination. It returns the main module.
+        Module analyze(std::vector<Statement *> *destination);
 };
 
 #endif

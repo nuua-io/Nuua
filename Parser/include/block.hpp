@@ -5,8 +5,9 @@
 #include <vector>
 #include <utility>
 
-// Forward declaration
-class Expression;
+// Forward declarations
+class Node;
+class Type;
 
 // The BlockVariableType determines the
 // representation of a variable type
@@ -15,18 +16,18 @@ class BlockVariableType
 {
     public:
         // Represents the variable type
-        std::string type;
+        Type *type;
+        // Stores the AST node where this variable is.
+        Node *node;
         // Represents the registers where it's stored.
         uint32_t reg;
-        // Represents the variable arguments (FUNCTION ARGUMENTS)
-        std::vector<std::string> arguments;
-        // Represents the variable return type (FUNCTION RETURN TYPE)
-        std::string return_type;
+        // Determines in the variable is exported. (only applies to TLDs).
+        bool exported;
         // Represents the last use of the variable (Variable life)
-        Expression *last_use = nullptr;
+        Node *last_use = nullptr;
         BlockVariableType() {};
-        BlockVariableType(std::string type, std::vector<std::string> arguments, std::string return_type)
-            : type(type), arguments(arguments), return_type(return_type) {}
+        BlockVariableType(Type *type, Node *node, bool exported = false)
+            : type(type), node(node), exported(exported) {}
 };
 
 // The block class represents a block
@@ -36,10 +37,13 @@ class Block
 {
     public:
         // Stores the variable name and the type of it.
-        // var => {type: ..., int_representation: ..., arguments: ..., return_type: ...}
         std::unordered_map<std::string, BlockVariableType> variables;
         // Gets a variable from the current block or returns nullptr.
         BlockVariableType *get_variable(std::string &name);
+        void set_variable(std::string name, BlockVariableType type);
+        bool is_exported(std::string &name);
+        void debug();
+        static BlockVariableType *get_single_variable(std::string &name, std::vector<Block *> *blocks);
         Block()
             : variables({}) {};
         Block(std::unordered_map<std::string, BlockVariableType> variables)

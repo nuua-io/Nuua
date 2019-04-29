@@ -91,10 +91,12 @@ std::string Value::to_string()
             sprintf(fn, "<Function: 0x%llx>", reinterpret_cast<std::uintptr_t>(value->value_fun));
             return fn;
         }
+        /*
         case VALUE_REF: {
             // logger->add_entity(this->file, LINE(), "Reference to_string() caught.");
             exit(logger->crash());
         }
+        */
         default: { return "none"; }
     }
 }
@@ -179,7 +181,7 @@ Value Value::cast(Type type)
 Value *Value::get_value()
 {
     auto value = this;
-    while (value->type.type == VALUE_REF) value = value->value_ref;
+    // while (value->type.type == VALUE_REF) value = value->value_ref;
     return value;
 }
 
@@ -217,7 +219,7 @@ void Value::copy_to(Value *dest)
         case VALUE_LIST: { dest->value_list = new std::vector<Value>(*this->value_list); break; }
         case VALUE_DICT: { dest->value_dict = new ValueDictionary(*this->value_dict); break; }
         case VALUE_FUN: { dest->value_fun = new ValueFunction(*this->value_fun); break; }
-        case VALUE_REF: { dest->value_ref = this->value_ref; break; }
+        // case VALUE_REF: { dest->value_ref = this->value_ref; break; }
         default: { break; }
     }
 }

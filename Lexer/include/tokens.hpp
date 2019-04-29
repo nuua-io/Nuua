@@ -23,6 +23,8 @@ typedef enum : uint8_t {
     TOKEN_RIGHT_BRACE, // }
     TOKEN_COMMA, // ,
     TOKEN_DOT, // .
+    TOKEN_DOUBLE_DOT, // ..
+    TOKEN_TRIPLE_DOT, // ...
     TOKEN_MINUS, // -
     TOKEN_PLUS, // +
     TOKEN_SLASH, // /
@@ -80,6 +82,7 @@ class Token
         uint16_t column;
 
         static std::vector<std::string> token_names;
+        static std::vector<std::string> type_names;
 
         // Contains the escaped chars of the language.
         static const std::unordered_map<char, char> escaped_chars;
@@ -88,12 +91,11 @@ class Token
             : type(type), start(start), length(length), line(line), column(column) {}
 
         void debug_token();
-
         std::string to_string();
-
+        std::string to_type_string();
         static void debug_token(TokenType token);
-        static void debug_tokens(std::vector<Token> tokens);
-        static void debug_tokens(std::vector<TokenType> tokens);
+        static void debug_tokens(std::vector<Token> &tokens);
+        static void debug_tokens(std::vector<TokenType> &tokens);
 };
 
 #endif

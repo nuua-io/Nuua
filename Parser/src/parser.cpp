@@ -19,11 +19,14 @@
 #define LOOKAHEAD(n) (*(this->current + n))
 #define LINE() (this->current->line)
 #define COL() (this->current->column)
+#define PLINE() ((this->current - 1)->line)
+#define PCOL() ((this->current - 1)->column)
 #define ADD_LOG(msg) logger->add_entity(this->file, LINE(), COL(), msg)
+#define ADD_PREV_LOG(msg) logger->add_entity(this->file, PLINE(), PCOL(), msg)
 #define ADD_LOG_PAR(line, col, msg) logger->add_entity(this->file, line, col, msg)
-#define EXPECT_NEW_LINE() if (!this->match_any({{TOKEN_NEW_LINE, TOKEN_EOF}})) { \
+#define EXPECT_NEW_LINE() if (!this->match_any({{ TOKEN_NEW_LINE, TOKEN_EOF }})) { \
     ADD_LOG("Expected a new line or EOF but got '" + CURRENT().to_string() + "'."); exit(logger->crash()); }
-#define NEW_NODE(type, ...) (new type(this->file, LINE(), COL(), __VA_ARGS__))
+#define NEW_NODE(type, ...) (new type(this->file, PLINE(), PCOL(), __VA_ARGS__))
 
 // Stores the parsing file stack, to avoid
 // cyclic imports.
@@ -31,7 +34,7 @@ static std::vector<const std::string *> file_stack;
 
 #define PREVENT_CYCLIC(file_ptr) \
 { \
-    if (std::find(file_stack.begin(), file_stack.end(), file) != file_stack.end()) { \
+    if (std::find(file_stack.begin(), file_stack.end(), file_ptr) != file_stack.end()) { \
         ADD_LOG("Cyclic import detected. Can't use '" + *file_ptr + "'. Cyclic imports are not available in nuua."); \
         exit(logger->crash()); \
     } \
@@ -87,7 +90,7 @@ Expression *Parser::primary()
 {
     if (this->match(TOKEN_FALSE)) return NEW_NODE(Boolean, false);
     if (this->match(TOKEN_TRUE)) return NEW_NODE(Boolean, true);
-    if (this->match(TOKEN_INTEGER)) return NEW_NODE(Integer, std::stoi(PREVIOUS().to_string()));
+    if (this->match(TOKEN_INTEGER)) return NEW_NODE(Integer, std::stoll(PREVIOUS().to_string()));
     if (this->match(TOKEN_FLOAT)) return NEW_NODE(Float, std::stof(PREVIOUS().to_string()));
     if (this->match(TOKEN_STRING)) return NEW_NODE(String, PREVIOUS().to_string());
     if (this->match(TOKEN_IDENTIFIER)) return NEW_NODE(Variable, PREVIOUS().to_string());
@@ -163,7 +166,8 @@ Expression *Parser::primary()
 }
 
 /*
-unary_postfix -> primary ("[" primary "]" | "(" arguments? ")")*;
+unary_postfix -> primary ("[" expression "]" | slice | "(" arguments? ")")*;
+slice -> "[" expression? ":" expression? (":" expression?)? "]"
 arguments -> expression ("," expression)*;
 */
 Expression *Parser::unary_postfix()
@@ -173,9 +177,29 @@ Expression *Parser::unary_postfix()
         Token op = PREVIOUS();
         switch (op.type) {
             case TOKEN_LEFT_SQUARE: {
-                Expression *expr = this->primary();
+                Expression *start = nullptr;
+                Expression *end = nullptr;
+                Expression *step = nullptr;
+                if (this->match(TOKEN_COLON)) goto parser_is_slice1;
+                start = this->expression();
+                if (this->match(TOKEN_COLON)) {
+                    // It's a Slice, not an access
+                    parser_is_slice1:
+                    if (this->match(TOKEN_RIGHT_SQUARE)) goto parser_finish_slice;
+                    if (this->match(TOKEN_COLON)) goto parser_is_slice2;
+                    end = this->expression();
+                    if (this->match(TOKEN_COLON)) goto parser_is_slice3;
+                    parser_is_slice2:
+                    if (this->match(TOKEN_RIGHT_SQUARE)) goto parser_finish_slice;
+                    step = this->expression();
+                    parser_is_slice3:
+                    this->consume(TOKEN_RIGHT_SQUARE, "Expected ']' after the slice access");
+                    parser_finish_slice:
+                    result = NEW_NODE(Slice, result, start, end, step);
+                    break;
+                }
                 this->consume(TOKEN_RIGHT_SQUARE, "Expected ']' after the access index");
-                result = NEW_NODE(Access, result, expr);
+                result = NEW_NODE(Access, result, start);
                 break;
             }
             case TOKEN_LEFT_PAREN: {
@@ -194,13 +218,15 @@ Expression *Parser::unary_postfix()
 }
 
 /*
-unary_prefix -> ("!" | "-") unary_prefix
+unary_prefix -> ("!" | "+" | "-") unary_prefix
     | unary_postfix;
 */
 Expression *Parser::unary_prefix()
 {
-    if (this->match_any({{ TOKEN_BANG, TOKEN_MINUS }})) {
-        return NEW_NODE(Unary, PREVIOUS(), this->unary_prefix());
+    if (this->match_any({{ TOKEN_BANG, TOKEN_PLUS, TOKEN_MINUS }})) {
+        Token op = PREVIOUS();
+        Expression *expr = this->unary_prefix();
+        return NEW_NODE(Unary, op, expr);
     }
     return this->unary_postfix();
 }
@@ -212,7 +238,8 @@ Expression *Parser::cast()
 {
     Expression *result = this->unary_prefix();
     while (this->match(TOKEN_AS)) {
-        result = NEW_NODE(Cast, result, this->type());
+        Type *type = this->type();
+        result = NEW_NODE(Cast, result, type);
     }
     return result;
 }
@@ -224,7 +251,9 @@ Expression *Parser::multiplication()
 {
     Expression *result = this->cast();
     while (this->match_any({{ TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT }})) {
-        result = NEW_NODE(Binary, result, PREVIOUS(), this->cast());
+        Token op = PREVIOUS();
+        Expression *expr = this->cast();
+        result = NEW_NODE(Binary, result, op, expr);
     }
     return result;
 }
@@ -236,7 +265,9 @@ Expression *Parser::addition()
 {
     Expression *result = this->multiplication();
     while (this->match_any({{ TOKEN_MINUS, TOKEN_PLUS }})) {
-        result = NEW_NODE(Binary, result, PREVIOUS(), this->multiplication());
+        Token op = PREVIOUS();
+        Expression *expr = this->multiplication();
+        result = NEW_NODE(Binary, result, op, expr);
     }
     return result;
 }
@@ -248,7 +279,9 @@ Expression *Parser::comparison()
 {
     Expression *result = this->addition();
     while (this->match_any({{ TOKEN_HIGHER, TOKEN_HIGHER_EQUAL, TOKEN_LOWER, TOKEN_LOWER_EQUAL }})) {
-        result = NEW_NODE(Binary, result, PREVIOUS(), this->addition());
+        Token op = PREVIOUS();
+        Expression *expr = this->addition();
+        result = NEW_NODE(Binary, result, op, expr);
     }
     return result;
 }
@@ -260,7 +293,9 @@ Expression *Parser::equality()
 {
     Expression *result = this->comparison();
     while (this->match_any({{ TOKEN_BANG_EQUAL, TOKEN_EQUAL_EQUAL }})) {
-        result = NEW_NODE(Binary, result, PREVIOUS(), this->comparison());
+        Token op = PREVIOUS();
+        Expression *expr = this->comparison();
+        result = NEW_NODE(Binary, result, op, expr);
     }
     return result;
 }
@@ -272,7 +307,9 @@ Expression *Parser::logical_and()
 {
     Expression *result = this->equality();
     while (this->match(TOKEN_AND)) {
-        result = NEW_NODE(Logical, result, PREVIOUS(), this->equality());
+        Token op = PREVIOUS();
+        Expression *expr = this->equality();
+        result = NEW_NODE(Logical, result, op, expr);
     }
     return result;
 }
@@ -284,19 +321,35 @@ Expression *Parser::logical_or()
 {
     Expression *result = this->logical_and();
     while (this->match(TOKEN_AND)) {
-        result = NEW_NODE(Logical, result, PREVIOUS(), this->logical_and());
+        Token op = PREVIOUS();
+        Expression *expr = this->logical_and();
+        result = NEW_NODE(Logical, result, op, expr);
     }
     return result;
 }
 
 /*
-assignment -> logical_or ("=" logical_or)*;
+range -> logical_or ((".." | "...") logical_or)*;
+*/
+Expression *Parser::range()
+{
+    Expression *result = this->logical_or();
+    while (this->match_any({{ TOKEN_DOUBLE_DOT, TOKEN_TRIPLE_DOT }})) {
+        Expression *right = this->expression();
+        result = NEW_NODE(Range, result, right, PREVIOUS().type == TOKEN_DOUBLE_DOT ? false : true);
+    }
+    return result;
+}
+
+/*
+assignment -> range ("=" range)*;
 */
 Expression *Parser::assignment()
 {
-    Expression *result = this->logical_or();
+    Expression *result = this->range();
     while (this->match(TOKEN_EQUAL)) {
-        result = NEW_NODE(Assign, result, this->expression());
+        Expression *expr = this->range();
+        result = NEW_NODE(Assign, result, expr);
     }
     return result;
 }
@@ -316,7 +369,7 @@ Statement *Parser::variable_declaration()
 {
     std::string variable = this->consume(TOKEN_IDENTIFIER, "Expected an identifier in a declaration statement")->to_string();
     this->consume(TOKEN_COLON, "Expected ':' after identifier in a declaration statement");
-    std::string type = this->type();
+    Type *type = this->type();
     Expression *initializer = nullptr;
     if (this->match(TOKEN_EQUAL)) initializer = this->expression();
     return NEW_NODE(Declaration, variable, type, initializer);
@@ -327,7 +380,8 @@ expression_statement -> expression;
 */
 Statement *Parser::expression_statement()
 {
-    return NEW_NODE(ExpressionStatement, this->expression());
+    Expression *expr = this->expression();
+    return NEW_NODE(ExpressionStatement, expr);
 }
 
 /*
@@ -377,12 +431,12 @@ Statement *Parser::fun_declaration()
 {
     std::string name = this->consume(TOKEN_IDENTIFIER, "Expected an identifier (function name) after 'fun'.")->to_string();
     this->consume(TOKEN_LEFT_PAREN, "Expected '(' after the function name.");
-    std::vector<Statement *> parameters;
+    std::vector<Declaration *> parameters;
     if (!this->match(TOKEN_RIGHT_PAREN)) {
-        parameters = this->parameters();
+        this->parameters(&parameters);
         this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after the function parameters");
     }
-    std::string return_type;
+    Type *return_type = nullptr;
     if (this->match(TOKEN_COLON)) return_type = this->type(false);
     std::vector<Statement *> body;
     if (this->match(TOKEN_RIGHT_ARROW)) {
@@ -405,7 +459,8 @@ print_statement -> "print" expression;
 */
 Statement *Parser::print_statement()
 {
-    return NEW_NODE(Print, this->expression());
+    Expression *expr = this->expression();
+    return NEW_NODE(Print, expr);
 }
 
 /*
@@ -494,7 +549,8 @@ Statement *Parser::return_statement()
     if (this->match_any({{ TOKEN_NEW_LINE, TOKEN_EOF }})) {
         return NEW_NODE(Return, nullptr);
     }
-    return NEW_NODE(Return, this->expression());
+    Expression *expr = this->expression();
+    return NEW_NODE(Return, expr);
 }
 
 Statement *Parser::class_statement()
@@ -521,24 +577,28 @@ Statement *Parser::statement(bool new_line)
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
 
+    // Save the current line / column.
+    uint32_t line = LINE();
+    uint16_t column = COL();
+
     // Check what type of statement we're parsing.
     if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
         ADD_LOG("Parsing variable declaration");
         result = this->variable_declaration();
     } else if (this->match(TOKEN_IF)) {
-        ADD_LOG("Parsing if declaration");
+        ADD_PREV_LOG("Parsing if declaration");
         result = this->if_statement();
     } else if (this->match(TOKEN_WHILE)) {
-        ADD_LOG("Parsing while statement");
+        ADD_PREV_LOG("Parsing while statement");
         result = this->while_statement();
     } else if (this->match(TOKEN_FOR)) {
-        ADD_LOG("Parsing for statement");
+        ADD_PREV_LOG("Parsing for statement");
         result = this->for_statement();
     } else if (this->match(TOKEN_RETURN)) {
-        ADD_LOG("Parsing return statement");
+        ADD_PREV_LOG("Parsing return statement");
         result = this->return_statement();
     } else if (this->match(TOKEN_PRINT)) {
-        ADD_LOG("Parsing print statement");
+        ADD_PREV_LOG("Parsing print statement");
         result = this->print_statement();
     } else {
         ADD_LOG("Parsing expression");
@@ -546,6 +606,11 @@ Statement *Parser::statement(bool new_line)
     }
     if (new_line) EXPECT_NEW_LINE();
     logger->pop_entity();
+
+    // Set the line / column to overwrite the ones in the node.
+    result->line = line;
+    result->column = column;
+
     return result;
 }
 
@@ -561,17 +626,21 @@ Statement *Parser::top_level_declaration()
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
 
+    // Save the current line / column.
+    uint32_t line = LINE();
+    uint16_t column = COL();
+
     if (this->match(TOKEN_USE)) {
-        ADD_LOG("Parsing 'use' declaration");
+        ADD_PREV_LOG("Parsing 'use' declaration");
         result = this->use_declaration();
     } else if (this->match(TOKEN_EXPORT)) {
-        ADD_LOG("Parsing 'export' declaration");
+        ADD_PREV_LOG("Parsing 'export' declaration");
         result = this->export_declaration();
     } else if (this->match(TOKEN_CLASS)) {
-        ADD_LOG("Parsing 'class' declaration");
+        ADD_PREV_LOG("Parsing 'class' declaration");
         result = this->class_statement();
     } else if (this->match(TOKEN_FUN)) {
-        ADD_LOG("Parsing 'fun' declaration");
+        ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
     } else {
         ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
@@ -579,6 +648,11 @@ Statement *Parser::top_level_declaration()
     }
     EXPECT_NEW_LINE();
     logger->pop_entity();
+
+    // Set the line / column to overwrite the ones in the node.
+    result->line = line;
+    result->column = column;
+
     return result;
 }
 
@@ -588,10 +662,14 @@ Statement *Parser::class_body_declaration()
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
 
+    // Save the current line / column.
+    uint32_t line = LINE();
+    uint16_t column = COL();
+
     if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
         ADD_LOG("Parsing variable declaration");
     } else if (this->match(TOKEN_FUN)) {
-        ADD_LOG("Parsing 'fun' declaration");
+        ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
     } else {
         ADD_LOG("Invalid class block declaration. Expected 'fun' or variable declaration. But got '" + CURRENT().to_string() + "'");
@@ -599,12 +677,16 @@ Statement *Parser::class_body_declaration()
     }
     EXPECT_NEW_LINE();
     logger->pop_entity();
+
+    // Set the line / column to overwrite the ones in the node.
+    result->line = line;
+    result->column = column;
+
     return result;
 }
 
-std::vector<Statement *> Parser::parameters()
+void Parser::parameters(std::vector<Declaration *> *dest)
 {
-    std::vector<Statement *> parameters;
     if (!CHECK(TOKEN_RIGHT_PAREN)) {
         do {
             Statement *parameter = this->statement(false);
@@ -612,10 +694,9 @@ std::vector<Statement *> Parser::parameters()
                 ADD_LOG_PAR(parameter->line, parameter->column, "Invalid argument when defining the function. Expected a variable declaration.");
                 exit(logger->crash());
             }
-            parameters.push_back(parameter);
+            dest->push_back(static_cast<Declaration *>(parameter));
         } while (this->match(TOKEN_COMMA));
     }
-    return parameters;
 }
 
 std::vector<Expression *> Parser::arguments()
@@ -652,25 +733,43 @@ type -> "[" type "]"
     | "(" type ("," type)* ("->" type)? ")"
     | IDENTIFIER;
 */
-std::string Parser::type(bool optional)
+Type *Parser::type(bool optional)
 {
+    Type *type;
     if (this->match(TOKEN_LEFT_SQUARE)) {
         // List type.
-        return ("[" + this->type()) + this->consume(TOKEN_RIGHT_SQUARE, "A list type needs to end with ']'")->to_string();
+        type = new Type(VALUE_LIST, this->type());
+        this->consume(TOKEN_RIGHT_SQUARE, "A list type needs to end with ']'");
+        return type;
     } else if (this->match(TOKEN_LEFT_BRACE)) {
         // Dict type.
-        return ("{" + this->type()) + this->consume(TOKEN_RIGHT_BRACE, "A list type needs to end with '}'")->to_string();
+        type = new Type(VALUE_DICT, this->type());
+        this->consume(TOKEN_RIGHT_BRACE, "A dictionary type needs to end with '}'");
+        return type;
     } else if (this->match(TOKEN_LEFT_PAREN)) {
         // Function type.
-        std::string type = "(";
-        type += this->type();
-        while (this->match(TOKEN_COMMA)) type += ", " + this->type();
-        if (this->match(TOKEN_RIGHT_ARROW)) type += " -> " + this->type();
-        return type + this->consume(TOKEN_RIGHT_PAREN, "A function type needs to end with ')'")->to_string();
+        if (this->match(TOKEN_RIGHT_PAREN)) {
+            // Empty function (no paramenters or return type)
+            return new Type(VALUE_FUN);
+        } else if (this->match(TOKEN_RIGHT_ARROW)) {
+            // Function without arguments and only a return type.
+            Type *t = this->type();
+            this->consume(TOKEN_RIGHT_PAREN, "A function type needs to end with ')'");
+            return new Type(VALUE_FUN, t);
+        }
+        // The function have arguments (+ return)?
+        type = new Type(VALUE_FUN);
+        // Add the parameters.
+        do type->parameters.push_back(this->type());
+        while (this->match(TOKEN_COMMA));
+        // Add the return type if needed.
+        if (this->match(TOKEN_RIGHT_ARROW)) type->inner_type = this->type();
+        this->consume(TOKEN_RIGHT_PAREN, "A function type needs to end with ')'");
+        return type;
     } else if (CHECK(TOKEN_IDENTIFIER)) {
         // Other types (native + custom).
-        return this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
-    } else if (optional && (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL))) return "";
+        return new Type(this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string());
+    } else if (optional && (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL))) return nullptr;
 
     ADD_LOG("Unknown type token expected.");
     exit(logger->crash());
@@ -685,8 +784,14 @@ void Parser::parse(std::vector<Statement *> *code)
     Lexer *lexer = new Lexer(this->file);
     // Scan the tokens.
     lexer->scan(tokens);
+    // Token::debug_tokens(*tokens);
     this->current = &(*tokens)[0];
     while (!IS_AT_END()) code->push_back(this->top_level_declaration());
+    // Check the code size to avoid empty files.
+    if (code->size() == 0) {
+        logger->add_entity(this->file, 0, 0, "Empty file detected, you might need to check the file or make sure it's not empty.");
+        exit(logger->crash());
+    }
     parsed_files[*this->file] = std::make_pair(code, this->file);
     delete lexer;
 }
@@ -726,5 +831,10 @@ void Parser::format_path(std::string *path, const std::string *parent)
 #undef LOOKAHEAD
 #undef LINE
 #undef COL
+#undef PLINE
+#undef PCOL
 #undef ADD_LOG
 #undef ADD_LOG_PAR
+#undef ADD_PREV_LOG
+#undef EXPECT_NEW_LINE
+#undef NEW_NODE

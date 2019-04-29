@@ -9,7 +9,7 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
-#include "../../Analyzer/include/type.hpp"
+#include "../../Analyzer/include/module.hpp"
 #include <string>
 #include <vector>
 
@@ -108,12 +108,10 @@ class ValueDictionary
     public:
         // Represents the hashmap of the dictionary.
         std::unordered_map<std::string, Value> values;
-
         // Represent the current key order of the hashmap.
         // Even with an ordered map, the key order is still
         // important.
         std::vector<std::string> key_order;
-
         // The basic constructor of the dictionary.
         ValueDictionary(std::unordered_map<std::string, Value> values, std::vector<std::string> key_order)
             : values(values), key_order(key_order) {}
@@ -125,10 +123,8 @@ class ValueFunction
     public:
         // Stores the function index where it's code begin.
         uint64_t index;
-
         // Stores the frame where the function relies on.
         Frame *frame;
-
         // Basic constructor for the function value.
         ValueFunction(uint64_t index, Frame *frame)
             : index(index), frame(frame) {}

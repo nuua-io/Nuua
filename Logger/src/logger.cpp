@@ -72,7 +72,24 @@ static void print_file_line(const char *file, const uint32_t line, const uint16_
     while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
     printf("   \n   %s   ", buffer + offset);
     for (uint16_t i = 1; i < column - offset; i++) printf(" ");
-    printf("^\n");
+    printf("^\n   ");
+}
+
+static void print_msg(const std::string &msg, bool red)
+{
+    printf("   ");
+    size_t current_char = 0, current_col = 0;
+    while (current_char <= msg.length()) {
+        if (current_col > MAX_LINE_CHARS && msg[current_char] == ' ') {
+            printf("\n   ");
+            ++current_char;
+            current_col = 0;
+        }
+        if (red) red_printf("%c", msg[current_char++]);
+        else printf("%c", msg[current_char++]);
+        ++current_col;
+    }
+    printf("\n");
 }
 
 void Logger::add_entity(const std::string *file, const uint32_t line, const uint16_t column, const std::string msg)
@@ -93,32 +110,32 @@ int Logger::crash()
         return EXIT_FAILURE;
     }
     // Display the error stack using the entities.
-    printf(" ----------------------\n");
-    red_printf(" > THERE WAS AN ERROR <\n");
-    printf(" ----------------------\n");
+    // printf(" ----------------------\n");
+    // red_printf(" > THERE WAS AN ERROR <\n");
+    // printf(" ----------------------\n");
     for (size_t i = 0; i < this->entities.size() - 1; i++) {
-        printf(
-            " > %s - %s, line: %u, column: %u\n",
-            this->entities[i].msg.c_str(),
-            this->entities[i].file->c_str(),
-            this->entities[i].line,
-            this->entities[i].column
-        );
-        print_file_line(this->entities[i].file->c_str(), this->entities[i].line, this->entities[i].column);
+        display_log(i, false);
     }
-    printf(" > ");
-    red_printf("%s", this->entities[this->entities.size() - 1].msg.c_str());
-    printf(
-        " - %s, line: %u, column: %u\n",
-        this->entities[this->entities.size() - 1].file->c_str(),
-        this->entities[this->entities.size() - 1].line,
-        this->entities[this->entities.size() - 1].column
-    );
-    print_file_line(
-        this->entities[this->entities.size() - 1].file->c_str(),
-        this->entities[this->entities.size() - 1].line,
-        this->entities[this->entities.size() - 1].column
-    );
+    display_log(this->entities.size() - 1, true);
 
     return EXIT_FAILURE;
+}
+
+void Logger::display_log(uint16_t index, bool red)
+{
+    printf(
+        "\n > %s, line: %u, column: %u\n\n",
+        this->entities[index].file->c_str(),
+        this->entities[index].line,
+        this->entities[index].column
+    );
+    print_msg(this->entities[index].msg, red);
+    if (this->entities[index].line != 0 && this->entities[index].column != 0) {
+        print_file_line(
+            this->entities[index].file->c_str(),
+            this->entities[index].line,
+            this->entities[index].column
+        );
+        printf("\n");
+    }
 }

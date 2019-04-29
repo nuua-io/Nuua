@@ -17,6 +17,8 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_RIGHT_BRACE",
     "TOKEN_COMMA",
     "TOKEN_DOT",
+    "TOKEN_DOUBLE_DOT",
+    "TOKEN_TRIPLE_DOT",
     "TOKEN_MINUS",
     "TOKEN_PLUS",
     "TOKEN_SLASH",
@@ -61,28 +63,82 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_IN",
     "TOKEN_EXPORT"
 };
+std::vector<std::string> Token::type_names = {
+    "\\n",
+    "(",
+    ")",
+    "{",
+    "}",
+    ",",
+    ".",
+    "..",
+    "...",
+    "-",
+    "+",
+    "/",
+    "*",
+    "->",
+    "!",
+    "!=",
+    "=",
+    "==",
+    ">",
+    ">=",
+    "<",
+    "<=",
+    "<identifier>",
+    "<string>",
+    "<integer number>",
+    "<integer number>.<integer number>",
+    "as",
+    "or",
+    "and",
+    "class",
+    "fun",
+    "else",
+    "true",
+    "false",
+    "while",
+    "for",
+    "if",
+    "self",
+    "\\0",
+    "%",
+    "[",
+    "]",
+    "=>",
+    ":", // :
+    "return", // return
+    "print", // print
+    "use", // use
+    "from", // from,
+    "|", // |
+    "elif", // ELIF
+    "in", // in
+    "export", // export
+};
 
 const std::unordered_map<char, char> Token::escaped_chars = {
     { '\\', '\\' },
     { '\'', '\'' },
     { '"', '"' },
     { 'n', '\n' },
-    { 't', '\t'},
-    { 'r', '\r'},
-    { 'b', '\b'},
-    { 'f', '\f'},
-    { 'v', '\v'},
-    { '0', '\0'}
+    { 't', '\t' },
+    { 'r', '\r' },
+    { 'b', '\b' },
+    { 'f', '\f' },
+    { 'v', '\v' },
+    { '0', '\0' }
 };
 
 std::string Token::to_string()
 {
     std::string s;
     for (uint32_t i = 0; i < this->length; i++) {
-        auto c = this->start + i;
+        const char *c = this->start + i;
         s += *c;
         if (*c == '\\') {
-            auto nc = *(c + 1);
+            const char nc = *(c + 1);
             if (Token::escaped_chars.find(nc) != Token::escaped_chars.end()) {
                 s.pop_back();
                 s += Token::escaped_chars.at(nc);
@@ -92,6 +148,11 @@ std::string Token::to_string()
     }
 
     return s;
+}
+
+std::string Token::to_type_string()
+{
+    return Token::type_names[this->type];
 }
 
 void Token::debug_token()
@@ -104,9 +165,9 @@ void Token::debug_token(TokenType token)
     printf("%s\n", Token::token_names[token].c_str());
 }
 
-void Token::debug_tokens(std::vector<Token> tokens)
+void Token::debug_tokens(std::vector<Token> &tokens)
 {
-    for (auto token : tokens) {
+    for (Token token : tokens) {
         printf("%s ", token_names[token.type].c_str());
         if (token.type == TOKEN_NEW_LINE) {
             printf("\n");
@@ -115,9 +176,9 @@ void Token::debug_tokens(std::vector<Token> tokens)
     printf("\n");
 }
 
-void Token::debug_tokens(std::vector<TokenType> tokens)
+void Token::debug_tokens(std::vector<TokenType> &tokens)
 {
-    for (auto token : tokens) {
+    for (TokenType token : tokens) {
         printf("%s ", token_names[token].c_str());
         if (token == TOKEN_NEW_LINE) printf("\n");
     }

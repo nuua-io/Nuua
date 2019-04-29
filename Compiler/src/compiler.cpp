@@ -31,17 +31,14 @@ void Compiler::add_opcodes(uint64_t opcode, uint8_t times)
 
 Program Compiler::compile(const char *file)
 {
-    Analyzer *analyzer = new Analyzer();
-    analyzer->analyze(file);
-    analyzer->optimize();
-    std::vector<Statement *> *structure = analyzer->code;
+    Analyzer analyzer = Analyzer(file);
+    std::vector<Statement *> *code = new std::vector<Statement *>;
+    Module module = analyzer.analyze(code);
 
     // Compile the code.
-    this->blocks.push_back(&analyzer->main_block);
-    for (Statement *node : *structure) this->compile(node);
+    this->blocks.push_back(&module.main_block);
+    // for (Statement *node : *code) this->compile(node);
     this->blocks.pop_back();
-
-    delete analyzer;
 
     // Add the exit opcode.
     this->add_opcode(OP_EXIT);
@@ -114,7 +111,7 @@ void Compiler::compile(Statement *rule)
             } else {
                 this->add_opcode(OP_MOVE_RC);
                 this->add_opcode(reg);
-                this->add_constant_only(Type(declaration->type));
+                this->add_constant_only(declaration->type);
                 this->add_opcodes(OP_EMPTY, 1);
             }
             break;
