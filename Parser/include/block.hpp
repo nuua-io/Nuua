@@ -5,6 +5,8 @@
 #include <vector>
 #include <utility>
 
+typedef uint32_t register_t;
+
 // Forward declarations
 class Node;
 class Type;
@@ -16,13 +18,13 @@ class BlockVariableType
 {
     public:
         // Represents the variable type
-        Type *type;
+        Type *type = nullptr;
         // Stores the AST node where this variable is.
-        Node *node;
+        Node *node = nullptr;
         // Represents the registers where it's stored.
-        uint32_t reg;
+        register_t reg = 0;
         // Determines in the variable is exported. (only applies to TLDs).
-        bool exported;
+        bool exported = false;
         // Represents the last use of the variable (Variable life)
         Node *last_use = nullptr;
         BlockVariableType() {};
@@ -40,6 +42,7 @@ class Block
         std::unordered_map<std::string, BlockVariableType> variables;
         // Gets a variable from the current block or returns nullptr.
         BlockVariableType *get_variable(std::string &name);
+        // Sets a variable and returns it's reference.
         void set_variable(std::string name, BlockVariableType type);
         bool is_exported(std::string &name);
         void debug();

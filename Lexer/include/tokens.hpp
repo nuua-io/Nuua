@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <string>
 #include <stdint.h>
+#include "../../Logger/include/logger.hpp" // For the file_t line_t and column_t
 
 typedef enum : uint8_t {
     TOKEN_NEW_LINE, // \n
@@ -78,8 +79,8 @@ class Token
         TokenType type;
         const char *start;
         uint32_t length;
-        uint32_t line;
-        uint16_t column;
+        line_t line;
+        column_t column;
 
         static std::vector<std::string> token_names;
         static std::vector<std::string> type_names;
@@ -87,7 +88,7 @@ class Token
         // Contains the escaped chars of the language.
         static const std::unordered_map<char, char> escaped_chars;
 
-        Token(TokenType type, const char *start, uint32_t length, uint32_t line, uint16_t column)
+        Token(TokenType type, const char *start, uint32_t length, line_t line, column_t column)
             : type(type), start(start), length(length), line(line), column(column) {}
 
         void debug_token();

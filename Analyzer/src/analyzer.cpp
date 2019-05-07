@@ -9,7 +9,7 @@ Analyzer::Analyzer(const char *file)
     this->file = file;
 }
 
-Module Analyzer::analyze(std::vector<Statement *> *destination)
+Block Analyzer::analyze(std::vector<Statement *> *destination)
 {
     // Parses the code.
     Parser(this->file).parse(destination);
@@ -19,5 +19,5 @@ Module Analyzer::analyze(std::vector<Statement *> *destination)
     // Analyze the module
     m.analyze(destination, true);
     // Return the main module
-    return m;
+    return m.main_block;
 }

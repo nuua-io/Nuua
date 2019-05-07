@@ -5,7 +5,7 @@
 #define INST (this->program_counter)
 #define AS_LITERAL(op) (INST->op)
 #define AS_REGISTER(op) (this->top_frame->registers + INST->op)
-#define AS_CONSTANT(op) (&this->get_current_memory()->constants[INST->op])
+#define AS_CONSTANT(op) (&this->program.memory.constants[INST->op])
 
 void VirtualMachine::run()
 {
@@ -14,6 +14,7 @@ void VirtualMachine::run()
         switch (this->program_counter->instruction) {
             // Others
             case OP_EXIT: { return; }
+            /*
 
             // Register manipulation
             case OP_MOVE_RR: { AS_REGISTER(op2)->copy_to(AS_REGISTER(op1)); break; }
@@ -94,30 +95,22 @@ void VirtualMachine::run()
             // Utilities
             case OP_PRINT_R: { AS_REGISTER(op1)->println(); break; }
             case OP_PRINT_C: { AS_CONSTANT(op1)->println(); break; }
+            */
         }
-    }
-}
-
-Memory *VirtualMachine::get_current_memory()
-{
-    switch (*this->current_memory) {
-        case FUNCTIONS_MEMORY: { return &this->program.functions; }
-        case CLASSES_MEMORY: { return &this->program.classes; }
-        default: { return &this->program.program; }
     }
 }
 
 void VirtualMachine::interpret(const char *file)
 {
     // Compile the code.
-    auto compiler = new Compiler;
+    Compiler *compiler = new Compiler;
     this->program = compiler->compile(file);
     delete compiler;
     // Allocate the main frame registers.
     // this->frames[0].allocate_registers(this->program.main_registers);
-    this->top_frame->allocate_registers(this->program.main_registers);
+    *this->top_frame = this->program.main_frame;
     // Set the first opcode
-    this->program_counter = (Instruction *) &this->program.program.code[0];
+    // this->program_counter = (Instruction *) &this->program.memory.code[0];
     // Run the compiled code.
     // this->run();
     // Clear the main frame registers

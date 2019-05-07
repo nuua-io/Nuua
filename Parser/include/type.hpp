@@ -19,6 +19,7 @@ class Type
 {
     static const std::unordered_map<std::string, ValueType> value_types;
     static const std::vector<std::string> types_string;
+    bool deallocated = false;
     public:
         // Stores the type.
         ValueType type;

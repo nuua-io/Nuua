@@ -9,9 +9,9 @@
 class Module
 {
     // Stores the file name of that module.
-    const std::string *file;
+    const std::string *file = nullptr;
     // Stores the code of that module.
-    std::vector<Statement *> *code;
+    std::vector<Statement *> *code = nullptr;
     // Stores the blocks used while analyzing the module.
     std::vector<Block *> blocks;
     // Return variable if needs to be checked. Only 1 can exist since

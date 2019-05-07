@@ -578,8 +578,8 @@ Statement *Parser::statement(bool new_line)
     while (this->match(TOKEN_NEW_LINE));
 
     // Save the current line / column.
-    uint32_t line = LINE();
-    uint16_t column = COL();
+    line_t line = LINE();
+    column_t column = COL();
 
     // Check what type of statement we're parsing.
     if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
@@ -627,8 +627,8 @@ Statement *Parser::top_level_declaration()
     while (this->match(TOKEN_NEW_LINE));
 
     // Save the current line / column.
-    uint32_t line = LINE();
-    uint16_t column = COL();
+    line_t line = LINE();
+    column_t column = COL();
 
     if (this->match(TOKEN_USE)) {
         ADD_PREV_LOG("Parsing 'use' declaration");
@@ -658,13 +658,13 @@ Statement *Parser::top_level_declaration()
 
 Statement *Parser::class_body_declaration()
 {
-    Statement *result;
+    Statement *result = nullptr;
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
 
     // Save the current line / column.
-    uint32_t line = LINE();
-    uint16_t column = COL();
+    line_t line = LINE();
+    column_t column = COL();
 
     if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
         ADD_LOG("Parsing variable declaration");

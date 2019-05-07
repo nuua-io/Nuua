@@ -27,7 +27,7 @@ class Analyzer
         // Creates an analyzer given the file name.
         Analyzer(const char *file);
         // Analyzes the code. The result AST is stored in the destination. It returns the main module.
-        Module analyze(std::vector<Statement *> *destination);
+        Block analyze(std::vector<Statement *> *destination);
 };
 
 #endif

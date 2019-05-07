@@ -1,1 +1,1 @@
-add_library (Logger SHARED src/logger.cpp)
+add_library (Logger src/logger.cpp)

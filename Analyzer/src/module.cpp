@@ -110,6 +110,7 @@ void Module::analyze_code(Expression *rule)
                     exit(logger->crash());
                 }
             }
+            list->type = new Type(rule, &this->blocks);
             break;
         }
         case RULE_DICTIONARY: {
@@ -129,6 +130,7 @@ void Module::analyze_code(Expression *rule)
                     exit(logger->crash());
                 }
             }
+            dict->type = new Type(rule, &this->blocks);
             break;
         }
         case RULE_GROUP: {
@@ -391,6 +393,12 @@ void Module::analyze_code(Statement *rule, bool no_declare)
                 }
                 ADD_LOG(fun, "Expected at least 1 function top level return. Returns found inside conditionals or loops are not guaranted to happen.");
                 exit(logger->crash());
+            } else {
+                for (Statement *rule : fun->body) {
+                    if (rule->rule == RULE_RETURN) goto continue_rule_function;
+                }
+                // Add an ending return because the function didn't have any!
+                fun->body.push_back(new Return(fun->body.back()->file, fun->body.back()->line, fun->body.back()->column));
             }
             continue_rule_function:
             // Analyze the function body.
@@ -443,6 +451,7 @@ void Module::analyze_code(Statement *rule, bool no_declare)
         }
         case RULE_RETURN: {
             Return *ret = static_cast<Return *>(rule);
+            if (!ret->value) break;
             this->analyze_code(ret->value);
             if (!this->return_type) {
                 ADD_LOG(ret, "Non-situational return. There is no return type expected.");

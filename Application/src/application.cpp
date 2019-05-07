@@ -21,6 +21,7 @@ Application::Application(int argc, char *argv[])
     switch (argc) {
         case 2: { this->application_type = APPLICATION_FILE; this->file_name = std::string(argv[1]); break; }
         default: {
+            this->application_type = APPLICATION_FILE; this->file_name = std::string("C:/Nuua/simple_app/test.nu"); break;
             // logger->add_entity(this->file, LINE(), "Invalid usage. Try: nuua <path_to_file>\n");
             logger->crash();
             exit(64); // Exit status for incorrect command usage.

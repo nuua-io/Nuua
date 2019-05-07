@@ -34,10 +34,15 @@ BlockVariableType *Block::get_single_variable(std::string &name, std::vector<Blo
 
 void Block::debug()
 {
-    printf("\nBlock variables: (%d)\n", this->variables.size());
+    printf("\nBlock variables: (%llu)\n\n", this->variables.size());
     for (auto &[name, variable] : this->variables) {
-        printf("%s: %s", name.c_str(), variable.type->to_string().c_str());
-        if (variable.exported) printf(" (exported)\n");
-        else printf("\n");
+        printf(
+            "Register: %05d -> %s%s %s\n",
+            variable.reg,
+            name.c_str(),
+            variable.exported ? "*:" : ":",
+            variable.type->to_string().c_str()
+        );
     }
+    printf("\n");
 }

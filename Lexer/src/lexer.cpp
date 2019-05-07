@@ -8,7 +8,6 @@
  */
 
 #include "../include/lexer.hpp"
-#include "../../Logger/include/logger.hpp"
 #include <string.h>
 #include <fstream>
 

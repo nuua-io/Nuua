@@ -47,7 +47,7 @@ static int red_printf(const char *format, ...)
     return done;
 }
 
-static void print_file_line(const char *file, const uint32_t line, const uint16_t column)
+static void print_file_line(const char *file, const line_t line, const column_t column)
 {
     FILE *source_file = fopen(file, "r");
     if (source_file == NULL) {
@@ -55,7 +55,7 @@ static void print_file_line(const char *file, const uint32_t line, const uint16_
         exit(EXIT_FAILURE);
     }
     char buffer[MAX_LINE_LENGTH];
-    for (uint32_t current_line = 1; current_line <= line; current_line++) {
+    for (line_t current_line = 1; current_line <= line; current_line++) {
         error_read_again:
         fgets(buffer, sizeof(buffer), source_file);
         if (buffer == NULL || *buffer == EOF) {
@@ -71,7 +71,7 @@ static void print_file_line(const char *file, const uint32_t line, const uint16_
     uint16_t offset = 0;
     while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
     printf("   \n   %s   ", buffer + offset);
-    for (uint16_t i = 1; i < column - offset; i++) printf(" ");
+    for (column_t i = 1; i < column - offset; i++) printf(" ");
     printf("^\n   ");
 }
 
@@ -92,7 +92,7 @@ static void print_msg(const std::string &msg, bool red)
     printf("\n");
 }
 
-void Logger::add_entity(const std::string *file, const uint32_t line, const uint16_t column, const std::string msg)
+void Logger::add_entity(const std::string *file, const line_t line, const column_t column, const std::string &msg)
 {
     this->entities.push_back({ file, line, column, msg });
 }

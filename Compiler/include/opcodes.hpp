@@ -4,93 +4,135 @@
 #include <string>
 #include <stdint.h>
 
-#define MAX_OPERANDS 3
+typedef size_t opcode_t;
 
 // Defines the known opcodes for the program.
 typedef enum : uint8_t {
     // Others
-    OP_EMPTY, // Empty space (nothing)
     OP_EXIT, // EXIT - - -
 
     // Register manipulation
-    OP_MOVE_RR, // MOVE RX RY -
-    OP_MOVE_RC, // LOAD RX C1 -
+    OP_MOVE, // MOVE RX RY
+    OP_LOAD_C, // OP_LOAD_C RX C1
+    OP_LOAD_G, // OP_LOAD_G RX G1
+    OP_SET_G, // OP_SET_G G1 RX
+
+    // Stack manipulation
+    OP_PUSH, // PUSH RX
+    OP_PUSH_C, // PUSH C1
+    OP_POP, // POP RX
+
+    // List releated
+    OP_LPUSH, // LPUSH RX RY
+    OP_LPOP, // LPOP RX
+
+    // Function releated
+    OP_CALL, // CALL RX
+    OP_RETURN, // RETUR
+
+    /* Casting Operations */
+
+    // Value casting
+    OP_CAST_INT_FLOAT, // CAST_INT_FLOAT RX RY
+    OP_CAST_INT_BOOL, // CAST_INT_BOOL RX RY
+    OP_CAST_INT_STRING, // CAST_INT_STRING RX RY
+    OP_CAST_FLOAT_INT, // CAST_FLOAT_INT RX RY
+    OP_CAST_FLOAT_BOOL, // CAST_FLOAT_BOOL RX RY
+    OP_CAST_FLOAT_STRING, // CAST_FLOAT_STRING RX RY
+    OP_CAST_BOOL_INT, // CAST_BOOL_INT RX RY
+    OP_CAST_BOOL_FLOAT, // CAST_BOOL_FLOAT RX RY
+    OP_CAST_BOOL_STRING, // CAST_BOOL_STRING RX RY
+    OP_CAST_LIST_STRING, // CAST_LIST_STRING RX RY
+    OP_CAST_LIST_BOOL, // CAST_LIST_BOOL RX RY
+    OP_CAST_DICT_STRING, // CAST_DICT_STRING RX RY
+    OP_CAST_DICT_BOOL, // CAST_DICT_BOOL RX RY
+    OP_CAST_STRING_BOOL, // CAST_STRING_BOOL RX RY
+
+    /* Unary Operations */
+
+    // Negation
+    OP_NEG_BOOL, // NEG_BOOL RX RY
+    // Minus operations
+    OP_MINUS_INT, // MINUS_INT RX RY
+    OP_MINUS_FLOAT, // MINUS_FLOAT RX RY
+    OP_MINUS_BOOL, // MINUS_BOOL RX RY
+    // Plus operations
+    OP_PLUS_INT, // PLUS_INT RX RY
+    OP_PLUS_FLOAT, // PLUS_FLOAT RX RY
+    OP_PLUS_BOOL, // PLUS_BOOL RX RY
+
+    /* Binary Operations */
 
     // Addition
-    OP_ADD_RR, // ADD RX RY RZ
-    OP_ADD_RC, // ADD RX RY C1
-    OP_ADD_CR, // ADD RX C1 RY
-    OP_ADD_CC, // ADD RX C1 C2
-
+    OP_ADD_INT, // ADD_INT RX RY RZ
+    OP_ADD_FLOAT, // ADD_FLOAT RX RY RZ
+    OP_ADD_STRING, // ADD_STRING RX RY RZ
+    OP_ADD_BOOL, // ADD_BOOL RX RY RZ
+    OP_ADD_LIST, // ADD_LIST RX RY RZ
+    OP_ADD_DICT, // ADD_DICT RX RY RZ
     // Substraction
-    OP_SUB_RR, // SUB RX RY RZ
-    OP_SUB_RC, // SUB RX RY C1
-    OP_SUB_CR, // SUB RX C1 RY
-    OP_SUB_CC, // SUB RX C1 C2
-
+    OP_SUB_INT, // SUB_INT RX RY RZ
+    OP_SUB_FLOAT, // SUB_FLOAT RX RY RZ
+    OP_SUB_BOOL, // SUB_BOOL RX RY RZ
     // Multiplication
-    OP_MUL_RR, // MUL RX RY RZ
-    OP_MUL_RC, // MUL RX RY C1
-    OP_MUL_CR, // MUL RX C1 RY
-    OP_MUL_CC, // MUL RX C1 C2
-
+    OP_MUL_INT, // MUL_INT RX RY RZ
+    OP_MUL_FLOAT, // MUL_FLOAT RX RY RZ
+    OP_MUL_BOOL, // MUL_BOOL RX RY RZ
+    OP_MUL_INT_STRING, // MUL_INT_STRING RX RY RZ
+    OP_MUL_STRING_INT, // MUL_STRING_INT RX RY RZ
+    OP_MUL_INT_LIST, // MUL_INT_LIST RX RY RZ
+    OP_MUL_LIST_INT, // MUL_LIST_INT RX RY RZ
     // Division
-    OP_DIV_RR, // DIV RX RY RZ
-    OP_DIV_RC, // DIV RX RY C1
-    OP_DIV_CR, // DIV RX C1 RY
-    OP_DIV_CC, // DIV RX C1 C2
-
+    OP_DIV_INT, // DIV_INT RX RY RZ
+    OP_DIV_FLOAT, // DIV_FLOAT RX RY RZ
+    OP_DIV_STRING_INT, // DIV_STRING_INT RX RY RZ
+    OP_DIV_LIST_INT, // DIV_LIST_INT RX RY RZ
     // Equality
-    OP_EQ_RR, // EQ RX RY RZ
-    OP_EQ_RC, // EQ RX RY C1
-    OP_EQ_CR, // EQ RX C1 RY
-    OP_EQ_CC, // EQ RX C1 C2
-
-    // No equality
-    OP_NEQ_RR, // NEQ RX RY RZ
-    OP_NEQ_RC, // NEQ RX RY C1
-    OP_NEQ_CR, // NEQ RX C1 RY
-    OP_NEQ_CC, // NEQ RX C1 C2
-
+    OP_EQ_INT, // EQ_INT RX RY RZ
+    OP_EQ_FLOAT, // EQ_FLOAT RX RY RZ
+    OP_EQ_STRING, // EQ_STRING RX RY RZ
+    OP_EQ_BOOL, // EQ_BOOL RX RY RZ
+    OP_EQ_LIST, // EQ_LIST RX RY RZ
+    OP_EQ_DICT, // EQ_DICT RX RY RZ
+    // Not Equality
+    OP_NEQ_INT, // NEQ_INT RX RY RZ
+    OP_NEQ_FLOAT, // NEQ_FLOAT RX RY RZ
+    OP_NEQ_STRING, // NEQ_STRING RX RY RZ
+    OP_NEQ_BOOL, // NEQ_BOOL RX RY RZ
+    OP_NEQ_LIST, // NEQ_LIST RX RY RZ
+    OP_NEQ_DICT, // NEQ_DICT RX RY RZ
     // Higher than
-    OP_HT_RR, // HT RX RY RZ
-    OP_HT_RC, // HT RX RY C1
-    OP_HT_CR, // HT RX C1 RY
-    OP_HT_CC, // HT RX C1 C2
-
-    // Higher than or equal
-    OP_HTE_RR, // HTE RX RY RZ
-    OP_HTE_RC, // HTE RX RY C1
-    OP_HTE_CR, // HTE RX C1 RY
-    OP_HTE_CC, // HTE RX C1 C2
-
-    // Lower then
-    OP_LT_RR, // LT RX RY RZ
-    OP_LT_RC, // LT RX RY C1
-    OP_LT_CR, // LT RX C1 RY
-    OP_LT_CC, // LT RX C1 C2
-
-    // Lower than or equal
-    OP_LTE_RR, // LTE RX RY RZ
-    OP_LTE_RC, // LTE RX RY C1
-    OP_LTE_CR, // LTE RX C1 RY
-    OP_LTE_CC, // LTE RX C1 C2
+    OP_HT_INT, // HT_INT RX RY RZ
+    OP_HT_FLOAT, // HT_FLOAT RX RY RZ
+    OP_HT_STRING, // HT_STRING RX RY RZ
+    OP_HT_BOOL, // HT_BOOL RX RY RZ
+    // Higher than or equal to
+    OP_HTE_INT, // HTE_INT RX RY RZ
+    OP_HTE_FLOAT, // HTE_FLOAT RX RY RZ
+    OP_HTE_STRING, // HTE_STRING RX RY RZ
+    OP_HTE_BOOL, // HTE_BOOL RX RY RZ
+    // Lower than
+    OP_LT_INT, // LT_INT RX RY RZ
+    OP_LT_FLOAT, // LT_FLOAT RX RY RZ
+    OP_LT_STRING, // LT_STRING RX RY RZ
+    OP_LT_BOOL, // LT_BOOL RX RY RZ
+    // Lower than or equal to
+    OP_LTE_INT, // LTE_INT RX RY RZ
+    OP_LTE_FLOAT, // LTE_FLOAT RX RY RZ
+    OP_LTE_STRING, // LTE_STRING RX RY RZ
+    OP_LTE_BOOL, // LTE_BOOL RX RY RZ
 
     // Control flow (All relative jumps)
-    OP_FJUMP, // FJUMP A - -
-    OP_BJUMP, // BJUMP A - -
-    OP_FJUMP_R, // FJUMP A RX -
-    OP_BJUMP_R, // BJUMP A RX -
-    OP_FJUMP_C, // FJUMP A C1 -
-    OP_BJUMP_C, // BJUMP A C1 -
-    OP_FNJUMP_R, // FNJUMP A RX -
-    OP_BNJUMP_R, // BNJUMP A RX -
-    OP_FNJUMP_C, // FNJUMP A C1 -
-    OP_BNJUMP_C, // BNJUMP A C1 -
+    OP_FJUMP, // FJUMP A
+    OP_BJUMP, // BJUMP A
+    OP_CFJUMP, // FJUMP A RX
+    OP_CBJUMP, // BJUMP A RX
+    OP_CFNJUMP, // FNJUMP A RX
+    OP_CBNJUMP, // BNJUMP A RX
 
     // Utilities
-    OP_PRINT_R, // PRINT RX - -
-    OP_PRINT_C, // PRINT C1 - -
+    OP_PRINT, // PRINT RX
+    OP_PRINT_C, // PRINT C1
 } OpCode;
 
 #endif

@@ -324,9 +324,15 @@ bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype
 void Type::copy_to(Type *type)
 {
     type->type = this->type;
-    if (this->inner_type) type->inner_type = new Type(*this->inner_type);  // Possible mem leak
+    if (this->inner_type) {
+        type->inner_type = new Type; // Possible mem leak
+        this->inner_type->copy_to(type->inner_type);
+    }
     type->class_name = this->class_name;
-    for (Type *t : this->parameters) type->parameters.push_back(new Type(*t));
+    for (Type *t : this->parameters) {
+        type->parameters.push_back(new Type);
+        t->copy_to(type->parameters.back());
+    }
 }
 
 bool Type::same_as(Type *type)
@@ -503,14 +509,24 @@ Type::Type(Expression *rule, std::vector<Block *> *blocks)
 
 void Type::deallocate()
 {
-    // Deallocate the innter type.
-    if (this->inner_type) {
-        this->inner_type->deallocate();
-        delete this->inner_type;
+    if (!this->deallocated) {
+        // Deallocate the innter type.
+        if (this->inner_type != nullptr) {
+            printf("Inner...\n");
+            this->inner_type->deallocate();
+            printf("Outer...\n");
+            // delete this->inner_type;
+            this->inner_type = nullptr;
+        }
+        // Deallocate the parameters if needed.
+        if (this->parameters.size() > 0) {
+            for (Type *t : this->parameters) {
+                t->deallocate();
+                delete t;
+                t = nullptr;
+            }
+        }
+        this->deallocated = true;
     }
-    // Deallocate the parameters if needed.
-    for (Type *t : this->parameters) {
-        t->deallocate();
-        delete t;
-    }
+    printf("Deallocated OK!");
 }

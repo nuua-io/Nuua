@@ -27,12 +27,6 @@ class VirtualMachine
     Program program;
     // Virtual machine program counter.
     Instruction *program_counter;
-    // Stores the stack of the memories used.
-    MemoryType memories[MEMORY_SIZE] = { PROGRAM_MEMORY };
-    // The current memory where the program counter is pointing.
-    MemoryType *current_memory = this->memories;
-    // Returns the current used memory.
-    Memory *get_current_memory();
     // Stores the current frame stack.
     Frame frames[MAX_FRAMES];
     // Indicates the top level frame.
