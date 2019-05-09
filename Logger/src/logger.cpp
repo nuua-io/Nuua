@@ -92,7 +92,7 @@ static void print_msg(const std::string &msg, bool red)
     printf("\n");
 }
 
-void Logger::add_entity(const std::string *file, const line_t line, const column_t column, const std::string &msg)
+void Logger::add_entity(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg)
 {
     this->entities.push_back({ file, line, column, msg });
 }

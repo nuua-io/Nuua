@@ -12,11 +12,13 @@
 
 #include "tokens.hpp"
 #include <unordered_map>
+#include <memory>
+#include <utility>
 
 class Lexer
 {
     // Stores the file where the tokens are beeing scanned.
-    const std::string *file;
+    std::shared_ptr<const std::string> file;
     const char *start;
     const char *current;
     line_t line;
@@ -30,15 +32,14 @@ class Lexer
     TokenType is_string(bool simple);
     TokenType is_number();
     TokenType is_identifier();
-    void read_from_file(std::string *dest, const std::string *file);
+    void read_from_file(std::unique_ptr<std::string> &dest, std::shared_ptr<const std::string> &file);
     public:
         // Stores the source code of the file.
-        std::string *source = nullptr;
+        std::unique_ptr<std::string> source;
         // Scans the source and stores the tokens.
-        void scan(std::vector<Token> *tokens);
+        void scan(std::unique_ptr<std::vector<Token>> &tokens);
         // Initializes a lexer given a file name.
-        Lexer(const std::string *file);
-        ~Lexer();
+        Lexer(std::shared_ptr<const std::string> &file);
 };
 
 #endif

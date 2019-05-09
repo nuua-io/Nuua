@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+#include <memory>
 
 typedef uint32_t register_t;
 
@@ -18,18 +19,18 @@ class BlockVariableType
 {
     public:
         // Represents the variable type
-        Type *type = nullptr;
+        std::shared_ptr<Type> type;
         // Stores the AST node where this variable is.
-        Node *node = nullptr;
+        std::shared_ptr<Node> node;
         // Represents the registers where it's stored.
         register_t reg = 0;
         // Determines in the variable is exported. (only applies to TLDs).
         bool exported = false;
         // Represents the last use of the variable (Variable life)
-        Node *last_use = nullptr;
+        std::shared_ptr<Node> last_use;
         BlockVariableType() {};
-        BlockVariableType(Type *type, Node *node, bool exported = false)
-            : type(type), node(node), exported(exported) {}
+        BlockVariableType(const std::shared_ptr<Type> &type, const std::shared_ptr<Node> &node, bool exported = false)
+            : type(type), node(node), exported(exported) { }
 };
 
 // The block class represents a block
@@ -37,20 +38,16 @@ class BlockVariableType
 // to determine the current state of a given block.
 class Block
 {
+    // Stores the variable name and the type of it.
+    std::unordered_map<std::string, BlockVariableType> variables;
     public:
-        // Stores the variable name and the type of it.
-        std::unordered_map<std::string, BlockVariableType> variables;
         // Gets a variable from the current block or returns nullptr.
-        BlockVariableType *get_variable(std::string &name);
+        BlockVariableType *get_variable(const std::string &name);
         // Sets a variable and returns it's reference.
-        void set_variable(std::string name, BlockVariableType type);
-        bool is_exported(std::string &name);
+        void set_variable(const std::string &name, const BlockVariableType &var);
+        bool is_exported(const std::string &name);
         void debug();
-        static BlockVariableType *get_single_variable(std::string &name, std::vector<Block *> *blocks);
-        Block()
-            : variables({}) {};
-        Block(std::unordered_map<std::string, BlockVariableType> variables)
-            : variables(variables) {};
+        static BlockVariableType *get_single_variable(const std::string &name, const std::vector<std::shared_ptr<Block>> *blocks);
 };
 
 #endif

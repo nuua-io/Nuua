@@ -9,15 +9,19 @@ Analyzer::Analyzer(const char *file)
     this->file = file;
 }
 
-Block Analyzer::analyze(std::vector<Statement *> *destination)
+std::shared_ptr<Block> Analyzer::analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &destination)
 {
+    printf("----> Analyzer\n");
     // Parses the code.
-    Parser(this->file).parse(destination);
+    auto p = Parser(this->file);
+    printf("Middle\n");
+    p.parse(destination);
     // Parser::debug_ast(*destination);
     // Create the main module
     Module m = Module(destination->front()->file);
     // Analyze the module
     m.analyze(destination, true);
     // Return the main module
+    printf("----> !Analyzer\n");
     return m.main_block;
 }

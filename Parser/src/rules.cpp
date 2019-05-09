@@ -42,24 +42,24 @@ static std::vector<std::string> RuleNames = {
     "RULE_RANGE"
 };
 
-void Parser::debug_rule(Rule rule)
+void Parser::debug_rule(const Rule rule)
 {
     printf("%s\n", RuleNames[rule].c_str());
 }
 
-void Parser::debug_rule(Statement *statement)
+void Parser::debug_rule(const std::shared_ptr<Statement> &statement)
 {
     printf("%s\n", RuleNames[statement->rule].c_str());
 }
 
-void Parser::debug_rules(std::vector<Rule> &rules)
+void Parser::debug_rules(const std::vector<Rule> &rules)
 {
-    for (Rule rule : rules) printf("%s\n", RuleNames[rule].c_str());
+    for (const Rule rule : rules) printf("%s\n", RuleNames[rule].c_str());
 }
 
-void Parser::debug_rules(std::vector<Statement *> &rules)
+void Parser::debug_rules(const std::vector<std::shared_ptr<Statement>> &rules)
 {
-    for (Statement *stmt : rules) Parser::debug_rule(stmt);
+    for (const std::shared_ptr<Statement> &stmt : rules) Parser::debug_rule(stmt);
 }
 
 static void print_spaces(uint16_t ammount)
@@ -67,7 +67,7 @@ static void print_spaces(uint16_t ammount)
     for (; ammount > 0; ammount--) printf("  ");
 }
 
-void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_spacer)
+void Parser::debug_ast(const std::shared_ptr<Expression> &expression, const uint16_t spacer, const bool print_spacer)
 {
     if (print_spacer) print_spaces(spacer);
     if (!expression) { printf("-\n"); return; };
@@ -89,58 +89,57 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_space
         }
         */
         case RULE_BINARY: {
-            Binary *binary = static_cast<Binary *>(expression);
+            std::shared_ptr<Binary> binary = std::static_pointer_cast<Binary>(expression);
             printf("Binary[%s]\n", binary->op.to_string().c_str());
             Parser::debug_ast(binary->left, spacer + 1);
             Parser::debug_ast(binary->right, spacer + 1);
             break;
         }
         case RULE_UNARY: {
-            Unary *unary = static_cast<Unary *>(expression);
+            std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(expression);
             printf("Unary[%s]\n", unary->op.to_string().c_str());
             Parser::debug_ast(unary->right, spacer + 1);
             break;
         }
         case RULE_GROUP: {
             printf("Group\n");
-            Parser::debug_ast(static_cast<Group *>(expression)->expression, spacer + 1);
+            Parser::debug_ast(std::static_pointer_cast<Group>(expression)->expression, spacer + 1);
             break;
         }
         case RULE_ASSIGN: {
-            Assign *assign = static_cast<Assign *>(expression);
+            std::shared_ptr<Assign> assign = std::static_pointer_cast<Assign>(expression);
             printf("Assign\n");
             Parser::debug_ast(assign->target, spacer + 1);
             Parser::debug_ast(assign->value, spacer + 1);
             break;
         }
         case RULE_LOGICAL: {
-            Logical *logical = static_cast<Logical *>(expression);
+            std::shared_ptr<Logical> logical = std::static_pointer_cast<Logical>(expression);
             printf("Logical[%s]\n", logical->op.to_string().c_str());
             Parser::debug_ast(logical->left, spacer + 1);
             Parser::debug_ast(logical->right, spacer + 1);
             break;
         }
         case RULE_CALL: {
-            Call *call = static_cast<Call *>(expression);
             printf("Call\n");
-            Parser::debug_ast(call->target, spacer + 1);
+            Parser::debug_ast(std::static_pointer_cast<Call>(expression)->target, spacer + 1);
             break;
         }
         case RULE_ACCESS: {
-            Access *access = static_cast<Access *>(expression);
+            std::shared_ptr<Access> access = std::static_pointer_cast<Access>(expression);
             printf("Access\n");
             Parser::debug_ast(access->target, spacer + 1);
             Parser::debug_ast(access->index, spacer + 1);
             break;
         }
         case RULE_CAST: {
-            Cast *cast = static_cast<Cast *>(expression);
+            std::shared_ptr<Cast> cast = std::static_pointer_cast<Cast>(expression);
             printf("Cast[%s]\n", cast->type->to_string().c_str());
             Parser::debug_ast(cast->expression, spacer + 1);
             break;
         }
         case RULE_SLICE: {
-            Slice *slice = static_cast<Slice *>(expression);
+            std::shared_ptr<Slice> slice = std::static_pointer_cast<Slice>(expression);
             printf("Slice\n");
             Parser::debug_ast(slice->target, spacer + 1);
             Parser::debug_ast(slice->start, spacer + 1);
@@ -149,7 +148,7 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_space
             break;
         }
         case RULE_RANGE: {
-            Range *range = static_cast<Range *>(expression);
+            std::shared_ptr<Range> range = std::static_pointer_cast<Range>(expression);
             printf("Range\n");
             Parser::debug_ast(range->start, spacer + 1);
             Parser::debug_ast(range->end, spacer + 1);
@@ -159,39 +158,39 @@ void Parser::debug_ast(Expression *expression, uint16_t spacer, bool print_space
     }
 }
 
-void Parser::debug_ast(Statement *statement, uint16_t spacer)
+void Parser::debug_ast(const std::shared_ptr<Statement> &statement, const uint16_t spacer)
 {
     print_spaces(spacer);
     if (!statement) { printf("-\n"); return; };
     switch (statement->rule) {
         case RULE_EXPRESSION_STATEMENT: {
-            Parser::debug_ast(static_cast<ExpressionStatement *>(statement)->expression, spacer, false);
+            Parser::debug_ast(std::static_pointer_cast<ExpressionStatement>(statement)->expression, spacer, false);
             break;
         }
         case RULE_PRINT: {
             printf("Print\n");
-            Parser::debug_ast(static_cast<Print *>(statement)->expression, spacer + 1);
+            Parser::debug_ast(std::static_pointer_cast<Print>(statement)->expression, spacer + 1);
             break;
         }
         case RULE_DECLARATION: {
-            Declaration *dec = static_cast<Declaration *>(statement);
+            std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(statement);
             printf("Declaration[%s: %s]\n", dec->name.c_str(), dec->type->to_string().c_str());
             Parser::debug_ast(dec->initializer, spacer + 1);
             break;
         }
         case RULE_FUNCTION: {
-            Function *function= static_cast<Function *>(statement);
+            std::shared_ptr<Function> function= std::static_pointer_cast<Function>(statement);
             printf("Function[%s: %s]\n", function->name.c_str(), function->return_type ? function->return_type->to_string().c_str() : "<no-return>");
             Parser::debug_ast(function->body, spacer + 1);
             break;
         }
         case RULE_RETURN: {
             printf("Return\n");
-            Parser::debug_ast(static_cast<Return *>(statement)->value, spacer + 1);
+            Parser::debug_ast(std::static_pointer_cast<Return>(statement)->value, spacer + 1);
             break;
         }
         case RULE_IF: {
-            If *ifs = static_cast<If *>(statement);
+            std::shared_ptr<If> ifs = std::static_pointer_cast<If>(statement);
             printf("If\n");
             print_spaces(spacer + 1);
             printf("[Condition]\n");
@@ -207,7 +206,7 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             break;
         }
         case RULE_WHILE: {
-            While *whiles = static_cast<While *>(statement);
+            std::shared_ptr<While> whiles = std::static_pointer_cast<While>(statement);
             printf("While\n");
             print_spaces(spacer + 1);
             printf("[Condition]\n");
@@ -218,7 +217,7 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             break;
         }
         case RULE_FOR: {
-            For *fors = static_cast<For *>(statement);
+            std::shared_ptr<For> fors = std::static_pointer_cast<For>(statement);
             printf("For[%s, %s]\n", fors->variable.c_str(), fors->index.c_str());
             print_spaces(spacer + 1);
             printf("[Iterator]\n");
@@ -229,7 +228,7 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             break;
         }
         case RULE_USE: {
-            Use *use = static_cast<Use *>(statement);
+            std::shared_ptr<Use> use = std::static_pointer_cast<Use>(statement);
             printf("Use[%s]\n", use->module->c_str());
             print_spaces(spacer + 1);
             printf("[Targets]\n");
@@ -243,13 +242,12 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
             break;
         }
         case RULE_EXPORT: {
-            Export *e = static_cast<Export *>(statement);
             printf("Export\n");
-            Parser::debug_ast(e->statement, spacer + 1);
+            Parser::debug_ast(std::static_pointer_cast<Export>(statement)->statement, spacer + 1);
             break;
         }
         case RULE_CLASS: {
-            Class *c = static_cast<Class *>(statement);
+            std::shared_ptr<Class> c = std::static_pointer_cast<Class>(statement);
             printf("Class[%s]\n", c->name.c_str());
             Parser::debug_ast(c->body, spacer + 1);
             break;
@@ -258,7 +256,7 @@ void Parser::debug_ast(Statement *statement, uint16_t spacer)
     }
 }
 
-void Parser::debug_ast(std::vector<Statement *> &statements, uint16_t spacer)
+void Parser::debug_ast(const std::vector<std::shared_ptr<Statement>> &statements, const uint16_t spacer)
 {
-    for (Statement *stmt : statements) Parser::debug_ast(stmt, spacer);
+    for (const std::shared_ptr<Statement> &stmt : statements) Parser::debug_ast(stmt, spacer);
 }

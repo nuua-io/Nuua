@@ -15,46 +15,44 @@
 
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))
 
-static std::vector<std::vector<Statement *> *> compiled_modules;
-
-Program Compiler::compile(const char *file)
+void Compiler::compile(const char *file)
 {
+    printf("----> Compiler\n");
     Analyzer analyzer = Analyzer(file);
-    std::vector<Statement *> *code = new std::vector<Statement *>;
-    Block block = analyzer.analyze(code);
+    std::shared_ptr<std::vector<std::shared_ptr<Statement>>>code = std::make_shared<std::vector<std::shared_ptr<Statement>>>();
+    std::shared_ptr<Block> block = analyzer.analyze(code);
 
-    // Create the program memory.
-    this->program.memory = new Memory();
     // Register the TLDs.
-    this->register_tld(code, &block);
+    this->register_tld(code, block);
     // Allocate the main registers.
-    this->program.main_frame.registers_size = this->global.current_register;
-    this->program.main_frame.allocate_registers();
+    this->program->main_frame.registers_size = this->global.current_register;
+    this->program->main_frame.allocate_registers();
 
     // Compile the code.
-    this->compile_module(code, &block);
+    this->compile_module(code, block);
 
     // Add the exit opcode.
     this->add_opcodes({{ OP_EXIT }});
 
-    this->program.memory->dump();
+    this->program->memory->dump();
 
-    return this->program;
+    printf("----> !Compiler\n");
 }
 
-void Compiler::compile_module(std::vector<Statement *> *code, Block *block)
+void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block)
 {
-    std::vector<Use *> delay_usages;
+    static std::vector<std::shared_ptr<std::vector<std::shared_ptr<Statement>>>> compiled_modules;
+    std::vector<std::shared_ptr<Use>> delay_usages;
     this->blocks.push_back(block);
-    for (Statement *node : *code) {
+    for (std::shared_ptr<Statement> &node : *code) {
         compiler_compile_module:
         switch (node->rule) {
             case RULE_USE: {
-                delay_usages.push_back(static_cast<Use *>(node));
+                delay_usages.push_back(std::static_pointer_cast<Use>(node));
                 break;
             }
             case RULE_EXPORT: {
-                node = static_cast<Export *>(node)->statement;
+                node = std::static_pointer_cast<Export>(node)->statement;
                 goto compiler_compile_module;
                 break;
             }
@@ -62,13 +60,13 @@ void Compiler::compile_module(std::vector<Statement *> *code, Block *block)
                 break;
             }
             case RULE_FUNCTION: {
-                Function *fun = static_cast<Function *>(node);
+                std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(node);
                 // Get the entry point of the function.
-                size_t entry = this->program.memory->code->size();
+                size_t entry = this->program->memory->code.size();
                 // Push the function block.
-                this->blocks.push_back(&fun->block);
+                this->blocks.push_back(fun->block);
                 // Pop the function parameters.
-                for (Declaration *param : fun->parameters) {
+                for (const std::shared_ptr<Declaration> &param : fun->parameters) {
                     // Get the variable from the block.
                     BlockVariableType *var = this->get_variable(param->name).first;
                     // Assign the register to the parameter.
@@ -77,11 +75,11 @@ void Compiler::compile_module(std::vector<Statement *> *code, Block *block)
                     this->add_opcodes({{ OP_POP, var->reg }});
                 }
                 // Compile the function body.
-                for (Statement *n : fun->body) this->compile(n);
+                for (const std::shared_ptr<Statement> &n : fun->body) this->compile(n);
                 this->blocks.pop_back();
                 // Create the function value and move it to the register.
                 Value(entry, this->local.current_register).copy_to(
-                    this->program.main_frame.registers + block->get_variable(fun->name)->reg
+                    this->program->main_frame.registers + block->get_variable(fun->name)->reg
                 );
                 // Reset the local frame info.
                 this->local.reset();
@@ -94,30 +92,30 @@ void Compiler::compile_module(std::vector<Statement *> *code, Block *block)
         }
     }
     this->blocks.pop_back();
-    for (Use *use : delay_usages) {
+    for (const std::shared_ptr<Use> use : delay_usages) {
         // Only compile if needed.
         if (std::find(compiled_modules.begin(), compiled_modules.end(), code) == compiled_modules.end()) {
             // Register the module.
-            this->compile_module(use->code, &use->block);
+            this->compile_module(use->code, use->block);
             // Set the module as registered.
             compiled_modules.push_back(code);
         }
     }
 }
 
-void Compiler::register_tld(std::vector<Statement *> *code, Block *block)
+void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block)
 {
-    static std::vector<std::vector<Statement *> *> registered_modules;
-    std::vector<Use *> delay_usages;
-    for (Statement *tld : *code) {
+    static std::vector<std::shared_ptr<std::vector<std::shared_ptr<Statement>>>> registered_modules;
+    std::vector<std::shared_ptr<Use>> delay_usages;
+    for (std::shared_ptr<Statement> &tld : *code) {
         compiler_register_tld:
         switch (tld->rule) {
             case RULE_USE: {
-                delay_usages.push_back(static_cast<Use *>(tld));
+                delay_usages.push_back(std::static_pointer_cast<Use>(tld));
                 break;
             }
             case RULE_EXPORT: {
-                tld = static_cast<Export *>(tld)->statement;
+                tld = std::static_pointer_cast<Export>(tld)->statement;
                 goto compiler_register_tld;
                 break;
             }
@@ -125,7 +123,7 @@ void Compiler::register_tld(std::vector<Statement *> *code, Block *block)
                 break;
             }
             case RULE_FUNCTION: {
-                Function *fun = static_cast<Function *>(tld);
+                std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(tld);
                 BlockVariableType *var = block->get_variable(fun->name);
                 var->reg = this->global.get_register(true);
                 break;
@@ -136,27 +134,27 @@ void Compiler::register_tld(std::vector<Statement *> *code, Block *block)
             }
         }
     }
-    for (Use *use : delay_usages) {
+    for (const std::shared_ptr<Use> &use : delay_usages) {
         // Make sure it's not registered yet.
         if (std::find(registered_modules.begin(), registered_modules.end(), use->code) == registered_modules.end()) {
             // Register the module.
-            this->register_tld(use->code, &use->block);
+            this->register_tld(use->code, use->block);
             // Set the module as registered.
             registered_modules.push_back(use->code);
         }
         // Register the targets in the current block with the same register as use block.
-        for (std::string &name : use->targets) {
-            block->get_variable(name)->reg = use->block.get_variable(name)->reg;
+        for (const std::string &name : use->targets) {
+            block->get_variable(name)->reg = use->block->get_variable(name)->reg;
         }
     }
     block->debug();
 }
 
-void Compiler::compile(Statement *rule)
+void Compiler::compile(const std::shared_ptr<Statement> &rule)
 {
     switch (rule->rule) {
         case RULE_PRINT: {
-            Print *print = static_cast<Print *>(rule);
+            std::shared_ptr<Print> print = std::static_pointer_cast<Print>(rule);
             if (this->is_constant(print->expression)) {
                 this->add_opcodes({{ OP_PRINT_C }});
                 this->compile(print->expression, false);
@@ -168,11 +166,11 @@ void Compiler::compile(Statement *rule)
             break;
         }
         case RULE_EXPRESSION_STATEMENT: {
-            this->compile(static_cast<ExpressionStatement *>(rule)->expression);
+            this->compile(std::static_pointer_cast<ExpressionStatement>(rule)->expression);
             break;
         }
         case RULE_DECLARATION: {
-            Declaration *dec = static_cast<Declaration *>(rule);
+            std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(rule);
             // Get a register from the register allocator.
             register_t rx = this->local.get_register(true);
             // Set the variable register in the current block.
@@ -188,7 +186,7 @@ void Compiler::compile(Statement *rule)
             break;
         }
         case RULE_RETURN: {
-            Return *ret = static_cast<Return *>(rule);
+            std::shared_ptr<Return> ret = std::static_pointer_cast<Return>(rule);
             if (ret->value) {
                 if (this->is_constant(ret->value)) {
                     this->add_opcodes({{ OP_PUSH_C }});
@@ -203,15 +201,15 @@ void Compiler::compile(Statement *rule)
             break;
         }
         case RULE_IF: {
-            If *rif = static_cast<If *>(rule);
+            std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             break;
         }
         case RULE_WHILE: {
-            While *rwhile = static_cast<While *>(rule);
+            std::shared_ptr<While> rwhile = std::static_pointer_cast<While>(rule);
             break;
         }
         case RULE_FOR: {
-            For *rfor = static_cast<For *>(rule);
+            std::shared_ptr<For> rfor = std::static_pointer_cast<For>(rule);
             break;
         }
         default: {
@@ -219,35 +217,34 @@ void Compiler::compile(Statement *rule)
             exit(logger->crash());
         }
     }
-    delete rule;
 }
 
-register_t Compiler::compile(Expression *rule, bool load_constant, register_t *suggested_register)
+register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool load_constant, const register_t *suggested_register)
 {
     register_t result = 0;
     switch (rule->rule) {
         case RULE_INTEGER: {
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
-            this->add_opcodes({{ this->add_constant({ static_cast<Integer *>(rule)->value }) }});
+            this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Integer>(rule)->value }) }});
             break;
         }
         case RULE_FLOAT: {
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
-            this->add_opcodes({{ this->add_constant({ static_cast<Float *>(rule)->value }) }});
+            this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Float>(rule)->value }) }});
             break;
         }
         case RULE_STRING: {
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
-            this->add_opcodes({{ this->add_constant({ static_cast<String *>(rule)->value }) }});
+            this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<String>(rule)->value }) }});
             break;
         }
         case RULE_BOOLEAN: {
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
-            this->add_opcodes({{ this->add_constant({ static_cast<Boolean *>(rule)->value }) }});
+            this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Boolean>(rule)->value }) }});
             break;
         }
         case RULE_LIST: {
-            List *list = static_cast<List *>(rule);
+            std::shared_ptr<List> list = std::static_pointer_cast<List>(rule);
             result = suggested_register ? *suggested_register : this->local.get_register();
             if (this->is_constant(list)) {
                 // The list can be stored in the constant pool.
@@ -261,7 +258,7 @@ register_t Compiler::compile(Expression *rule, bool load_constant, register_t *s
                 printf("OK!\n");
                 this->add_opcodes({{ OP_LOAD_C, result, a }});
                 printf("OK!\n");
-                for (Expression *e : list->value) {
+                for (const std::shared_ptr<Expression> &e : list->value) {
                     Parser::debug_ast(e);
                     register_t ry = this->compile(e);
                     printf("COMPILED LIST ITEM\n");
@@ -273,23 +270,23 @@ register_t Compiler::compile(Expression *rule, bool load_constant, register_t *s
             break;
         }
         case RULE_DICTIONARY: {
-            Dictionary *dict = static_cast<Dictionary *>(rule);
+            std::shared_ptr<Dictionary> dict = std::static_pointer_cast<Dictionary>(rule);
             break;
         }
         case RULE_GROUP: {
-            this->compile(static_cast<Group *>(rule)->expression, suggested_register);
+            this->compile(std::static_pointer_cast<Group>(rule)->expression, suggested_register);
             break;
         }
         case RULE_CAST: {
-            Cast *cast = static_cast<Cast *>(rule);
+            std::shared_ptr<Cast> cast = std::static_pointer_cast<Cast>(rule);
             break;
         }
         case RULE_UNARY: {
-            Unary *unary = static_cast<Unary *>(rule);
+            std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(rule);
             break;
         }
         case RULE_BINARY: {
-            Binary *binary = static_cast<Binary *>(rule);
+            std::shared_ptr<Binary> binary = std::static_pointer_cast<Binary>(rule);
             opcode_t base = OP_ADD_INT;
             register_t ry = this->compile(binary->left);
             register_t rz = this->compile(binary->right);
@@ -297,7 +294,7 @@ register_t Compiler::compile(Expression *rule, bool load_constant, register_t *s
             break;
         }
         case RULE_VARIABLE: {
-            std::pair<BlockVariableType *, bool> var = this->get_variable(static_cast<Variable *>(rule)->name);
+            std::pair<BlockVariableType *, bool> var = this->get_variable(std::static_pointer_cast<Variable>(rule)->name);
             if (var.second) {
                 // The variable is global, and needs to be loaded first.
                 result = suggested_register ? *suggested_register : this->local.get_register();
@@ -306,27 +303,27 @@ register_t Compiler::compile(Expression *rule, bool load_constant, register_t *s
             break;
         }
         case RULE_ASSIGN: {
-            Assign *assign = static_cast<Assign *>(rule);
+            std::shared_ptr<Assign> assign = std::static_pointer_cast<Assign>(rule);
             break;
         }
         case RULE_LOGICAL: {
-            Logical *logical = static_cast<Logical *>(rule);
+            std::shared_ptr<Logical> logical = std::static_pointer_cast<Logical>(rule);
             break;
         }
         case RULE_CALL: {
-            Call *call = static_cast<Call *>(rule);
+            std::shared_ptr<Call> call = std::static_pointer_cast<Call>(rule);
             break;
         }
         case RULE_ACCESS: {
-            Access *access = static_cast<Access *>(rule);
+            std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
             break;
         }
         case RULE_SLICE: {
-            Slice *slice = static_cast<Slice *>(rule);
+            std::shared_ptr<Slice> slice = std::static_pointer_cast<Slice>(rule);
             break;
         }
         case RULE_RANGE: {
-            Range *range = static_cast<Range *>(rule);
+            std::shared_ptr<Range> range = std::static_pointer_cast<Range>(rule);
             break;
         }
         default: {
@@ -334,11 +331,10 @@ register_t Compiler::compile(Expression *rule, bool load_constant, register_t *s
             exit(logger->crash());
         }
     }
-    delete rule;
     return result;
 }
 
-std::pair<BlockVariableType *, bool> Compiler::get_variable(std::string &name)
+std::pair<BlockVariableType *, bool> Compiler::get_variable(const std::string &name)
 {
     for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
         BlockVariableType *var = this->blocks[i]->get_variable(name);
@@ -347,65 +343,76 @@ std::pair<BlockVariableType *, bool> Compiler::get_variable(std::string &name)
     return { nullptr, false };
 }
 
-void Compiler::add_opcodes(std::vector<opcode_t> opcodes)
+void Compiler::add_opcodes(const std::vector<opcode_t> &opcodes)
 {
-    for (opcode_t &op : opcodes) this->program.memory->code->push_back(op);
+    for (const opcode_t &op : opcodes) this->program->memory->code.push_back(op);
 }
 
-size_t Compiler::add_constant(Value value)
+size_t Compiler::add_constant(const Value &value)
 {
     printf("Adding constant: %s\n", value.type.to_string().c_str());
-    this->program.memory->constants.push_back(value);
+    this->program->memory->constants.push_back(std::move(value));
     printf("Constant added.\n");
-    return this->program.memory->constants.size() - 1;
+    return this->program->memory->constants.size() - 1;
 }
 
-Value Compiler::constant_list(List *list)
+void Compiler::constant_list(const std::shared_ptr<List> &list, Value &dest)
 {
-    Value dest = Value(list->type);
-    for (Expression *e : list->value) {
-        switch (e->rule) {
-            case RULE_INTEGER: { dest.value_list->push_back({ static_cast<Integer *>(e)->value }); break; }
-            case RULE_FLOAT: { dest.value_list->push_back({ static_cast<Float *>(e)->value }); break; }
-            case RULE_BOOLEAN: { dest.value_list->push_back({ static_cast<Boolean *>(e)->value }); break; }
-            case RULE_STRING:  { dest.value_list->push_back({ static_cast<String *>(e)->value }); break; }
+    for (const std::shared_ptr<Expression> &value : list->value) {
+        switch (value->rule) {
+            case RULE_INTEGER: { dest.value_list->push_back({ std::static_pointer_cast<Integer>(value)->value }); break; }
+            case RULE_FLOAT: { dest.value_list->push_back({ std::static_pointer_cast<Float>(value)->value }); break; }
+            case RULE_BOOLEAN: { dest.value_list->push_back({ std::static_pointer_cast<Boolean>(value)->value }); break; }
+            case RULE_STRING:  { dest.value_list->push_back({ std::static_pointer_cast<String>(value)->value }); break; }
             case RULE_LIST: {
-                dest.value_list->push_back(this->constant_list(static_cast<List *>(e)));
+                Value v;
+                this->constant_list(std::static_pointer_cast<List>(value), v);
+                dest.value_list->push_back(std::move(v));
                 break;
             }
-            case RULE_DICTIONARY: { dest.value_list->push_back(this->constant_dict(static_cast<Dictionary *>(e))); break; }
+            case RULE_DICTIONARY: {
+                Value v;
+                this->constant_dict(std::static_pointer_cast<Dictionary>(value), v);
+                dest.value_list->push_back(std::move(v));
+                break;
+            }
             default: {
-                logger->add_entity(e->file, e->line, e->column, "Unable to create a constant list because of unknown constant list item.");
+                logger->add_entity(value->file, value->line, value->column, "Unable to create a constant list because of unknown constant list item.");
                 exit(logger->crash());
             }
         }
-        delete e;
     }
-    return dest;
 }
 
-Value Compiler::constant_dict(Dictionary *dict)
+void Compiler::constant_dict(const std::shared_ptr<Dictionary> &dict, Value &dest)
 {
-    Value v = Value(dict->type);
-    for (std::pair<std::string, Expression *> el : dict->value) {
-        switch (el.second->rule) {
-            case RULE_INTEGER: { v.value_dict->insert(el.first, { static_cast<Integer *>(el.second)->value }); break; }
-            case RULE_FLOAT: { v.value_dict->insert(el.first, { static_cast<Float *>(el.second)->value }); break; }
-            case RULE_BOOLEAN: { v.value_dict->insert(el.first, { static_cast<Boolean *>(el.second)->value }); break; }
-            case RULE_STRING:  { v.value_dict->insert(el.first, { static_cast<String *>(el.second)->value }); break; }
-            case RULE_LIST: { v.value_dict->insert(el.first, this->constant_list(static_cast<List *>(el.second))); break; }
-            case RULE_DICTIONARY: { v.value_dict->insert(el.first, this->constant_dict(static_cast<Dictionary *>(el.second))); break; }
+    for (const auto &[key, value] : dict->value) {
+        switch (value->rule) {
+            case RULE_INTEGER: { dest.value_dict->insert(key, { std::static_pointer_cast<Integer>(value)->value }); break; }
+            case RULE_FLOAT: { dest.value_dict->insert(key, { std::static_pointer_cast<Float>(value)->value }); break; }
+            case RULE_BOOLEAN: { dest.value_dict->insert(key, { std::static_pointer_cast<Boolean>(value)->value }); break; }
+            case RULE_STRING:  { dest.value_dict->insert(key, { std::static_pointer_cast<String>(value)->value }); break; }
+            case RULE_LIST: {
+                Value v;
+                this->constant_list(std::static_pointer_cast<List>(value), v);
+                dest.value_dict->insert(key, std::move(v));
+                break;
+            }
+            case RULE_DICTIONARY: {
+                Value v;
+                this->constant_dict(std::static_pointer_cast<Dictionary>(value), v);
+                dest.value_dict->insert(key, std::move(v));
+                break;
+            }
             default: {
-                logger->add_entity(el.second->file, el.second->line, el.second->column, "Unable to create a constant dictionary because of unknown constant dictionary item.");
+                logger->add_entity(value->file, value->line, value->column, "Unable to create a constant list because of unknown constant list item.");
                 exit(logger->crash());
             }
         }
-        delete el.second;
     }
-    return v;
 }
 
-bool Compiler::is_constant(Expression *expression)
+bool Compiler::is_constant(const std::shared_ptr<Expression> &expression)
 {
     switch (expression->rule) {
         case RULE_INTEGER:
@@ -413,15 +420,13 @@ bool Compiler::is_constant(Expression *expression)
         case RULE_BOOLEAN:
         case RULE_STRING: { return true; }
         case RULE_LIST: {
-            List *l = static_cast<List *>(expression);
-            for (Expression *value : l->value) {
+            for (const std::shared_ptr<Expression> &value : std::static_pointer_cast<List>(expression)->value) {
                 if (!this->is_constant(value)) return false;
             }
             return true;
         }
         case RULE_DICTIONARY: {
-            Dictionary *d = static_cast<Dictionary *>(expression);
-            for (auto &[key, value] : d->value) {
+            for (const auto &[key, value] : std::static_pointer_cast<Dictionary>(expression)->value) {
                 if (!this->is_constant(value)) return false;
             }
             return true;
@@ -430,29 +435,20 @@ bool Compiler::is_constant(Expression *expression)
     }
 }
 
-void Compiler::set_file(const std::string *file)
+void Compiler::set_file(const std::shared_ptr<const std::string> &file)
 {
-    this->program.memory->files->insert(
-        {{ this->program.memory->code->size(), file }}
-    );
-
+    this->program->memory->files[this->program->memory->code.size()] = file;
     this->current_file = file;
 }
 
 void Compiler::set_line(const line_t line)
 {
-    this->program.memory->lines->insert(
-        {{ this->program.memory->code->size(), line }}
-    );
-
+    this->program->memory->lines[this->program->memory->code.size()] = line;
     this->current_line = line;
 }
 void Compiler::set_column(const column_t column)
 {
-    this->program.memory->columns->insert(
-        {{ this->program.memory->code->size(), column }}
-    );
-
+    this->program->memory->columns[this->program->memory->code.size()] = column;
     this->current_column = column;
 }
 

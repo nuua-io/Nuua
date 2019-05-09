@@ -9,6 +9,7 @@
 #ifndef COMPILER_HPP
 #define COMPILER_HPP
 
+#include "memory.hpp"
 #include "program.hpp"
 #include "../../Analyzer/include/analyzer.hpp"
 
@@ -16,41 +17,41 @@
 class Compiler
 {
     // Stores the program itself where everything is beeing compiled to.
-    Program program;
+    std::shared_ptr<Program> program;
     // Stores the current block.
-    std::vector<Block *> blocks;
+    std::vector<std::shared_ptr<Block>> blocks;
     // Stores the global frame information.
     FrameInfo global;
     // Sotres the current local information (it resets automatically).
     FrameInfo local;
     // Compiles a module.
-    void compile_module(std::vector<Statement *> *code, Block *block);
+    void compile_module(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block);
     // Registers the top level declarations by assigning a register to them.
     // it registers all TLD of all modules in the same main frame info.
-    void register_tld(std::vector<Statement *> *code, Block *block);
+    void register_tld(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block);
     // Compiles a list of statements
     // Defines a basic compilation for a Statement.
-    void compile(Statement *rule);
+    void compile(const std::shared_ptr<Statement> &rule);
     // Defines a basic compilation for an Expression. (Returns the register with the result).
     // If const_opcode is true and the expression is a constant expression, it will move it
     // to a new register. Otherwise, it will just add the constant and the constant index.
     // suggested_register will use that register as the result.
-    register_t compile(Expression *rule, bool load_constant = true, register_t *suggested_register = nullptr);
+    register_t compile(const std::shared_ptr<Expression> &rule, const bool load_constant = true, const register_t *suggested_register = nullptr);
     // Adds an opcode to the program.
-    void add_opcodes(std::vector<opcode_t> opcodes);
+    void add_opcodes(const std::vector<opcode_t> &opcodes);
     // Adds a constant to the constant pool of the current frame
     // and return it's position.
-    size_t add_constant(Value value);
+    size_t add_constant(const Value &value);
     // Creates a constant list or dictionary from the given list expression.
     // Take into consideration that the list MUST be checked if
     // it's constant using is_constant() function.
-    Value constant_list(List *list);
-    Value constant_dict(Dictionary *dict);
+    void constant_list(const std::shared_ptr<List> &list, Value &dest);
+    void constant_dict(const std::shared_ptr<Dictionary> &dict, Value &dest);
     // Determines if an expression is constant (is in the constant pool).
-    bool is_constant(Expression *expression);
+    bool is_constant(const std::shared_ptr<Expression> &expression);
     // Sets a file flag at the current code location.
-    const std::string *current_file;
-    void set_file(const std::string *file);
+    std::shared_ptr<const std::string> current_file;
+    void set_file(const std::shared_ptr<const std::string> &file);
     // Sets a line flag at the current code location.
     line_t current_line;
     void set_line(const line_t line);
@@ -60,10 +61,12 @@ class Compiler
     // Get a variable from the block stack and
     // return a pair containing the variable and a boolean
     // to indicate if it's global or not.
-    std::pair<BlockVariableType *, bool> get_variable(std::string &name);
+    std::pair<BlockVariableType *, bool> get_variable(const std::string &name);
     public:
         // Compile an input source and returns the result program.
-        Program compile(const char *file);
+        void compile(const char *file);
+        Compiler(const std::shared_ptr<Program> &program)
+            : program(program) { }
 };
 
 #endif

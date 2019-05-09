@@ -24,9 +24,9 @@ typedef struct {
 class VirtualMachine
 {
     // Stores the program to be executed.
-    Program program;
+    std::shared_ptr<Program> program;
     // Virtual machine program counter.
-    Instruction *program_counter;
+    Instruction *program_counter = nullptr;
     // Stores the current frame stack.
     Frame frames[MAX_FRAMES];
     // Indicates the top level frame.
@@ -38,6 +38,7 @@ class VirtualMachine
         void interpret(const char *file);
         // Resets the virtual machine program memories.
         void reset();
+        VirtualMachine();
 };
 
 #endif

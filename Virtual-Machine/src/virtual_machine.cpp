@@ -102,24 +102,30 @@ void VirtualMachine::run()
 
 void VirtualMachine::interpret(const char *file)
 {
+    printf("----> Virtual Machine\n");
     // Compile the code.
-    Compiler *compiler = new Compiler;
-    this->program = compiler->compile(file);
-    delete compiler;
+    Compiler compiler = Compiler(this->program);
+    compiler.compile(file);
     // Allocate the main frame registers.
     // this->frames[0].allocate_registers(this->program.main_registers);
-    *this->top_frame = this->program.main_frame;
+    *this->top_frame = this->program->main_frame;
     // Set the first opcode
     // this->program_counter = (Instruction *) &this->program.memory.code[0];
     // Run the compiled code.
     // this->run();
     // Clear the main frame registers
     this->top_frame->free_registers();
+    printf("----> !Virtual Machine\n");
 }
 
 void VirtualMachine::reset()
 {
 
+}
+
+VirtualMachine::VirtualMachine()
+{
+    this->program = std::make_shared<Program>();
 }
 
 #undef INST

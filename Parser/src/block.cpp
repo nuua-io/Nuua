@@ -1,19 +1,19 @@
 #include "../include/block.hpp"
 #include "../include/type.hpp"
 
-BlockVariableType *Block::get_variable(std::string &name)
+BlockVariableType *Block::get_variable(const std::string &name)
 {
     return this->variables.find(name) == this->variables.end()
         ? nullptr
         : &this->variables[name];
 }
 
-void Block::set_variable(std::string name, BlockVariableType type)
+void Block::set_variable(const std::string &name, const BlockVariableType &var)
 {
-    this->variables[name] = type;
+    this->variables[name] = std::move(var);
 }
 
-bool Block::is_exported(std::string &name)
+bool Block::is_exported(const std::string &name)
 {
     if (BlockVariableType *var = this->get_variable(name)) {
         return var->exported;
@@ -22,7 +22,7 @@ bool Block::is_exported(std::string &name)
     return false;
 }
 
-BlockVariableType *Block::get_single_variable(std::string &name, std::vector<Block *> *blocks)
+BlockVariableType *Block::get_single_variable(const std::string &name, const std::vector<std::shared_ptr<Block>> *blocks)
 {
     for (size_t i = blocks->size() - 1; i >= 0; i--) {
         BlockVariableType *res = (*blocks)[i]->get_variable(name);

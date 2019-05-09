@@ -70,13 +70,14 @@ class Program
         // Stores the main frame of the program.
         Frame main_frame;
         // Stores the program memory (The main code).
-        Memory *memory;
+        std::unique_ptr<Memory> memory;
+        Program();
 };
 
 // Basic conversation from opcode to string.
-std::string opcode_to_string(opcode_t opcode);
-std::vector<OpCodeType> *opcode_operands(opcode_t opcode);
+std::string opcode_to_string(const opcode_t opcode);
+std::vector<OpCodeType> *opcode_operands(const opcode_t opcode);
 // Prints a given opcode to the screen.
-void print_opcode(opcode_t opcode);
+void print_opcode(const opcode_t opcode);
 
 #endif

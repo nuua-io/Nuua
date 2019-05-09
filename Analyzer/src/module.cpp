@@ -1,6 +1,7 @@
 #include "../include/module.hpp"
 #include "../../Logger/include/logger.hpp"
 
+#define NODE(rule) (std::static_pointer_cast<Node>(rule))
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))
 #define ADD_NULL_LOG(file_ptr, msg) (logger->add_entity(file_ptr, 0, 0, msg))
 
@@ -10,7 +11,7 @@ std::unordered_map<std::string, Module> modules;
 // Determines the main function name.
 static std::string main_fun = "main";
 
-Block Module::analyze(std::vector<Statement *> *code, bool require_main)
+std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, bool require_main)
 {
     // Set the AST source.
     this->code = code;
@@ -18,7 +19,7 @@ Block Module::analyze(std::vector<Statement *> *code, bool require_main)
     this->analyze_tld();
     if (require_main) {
         // Check if the main function exists
-        BlockVariableType *var = this->main_block.get_variable(main_fun);
+        BlockVariableType *var = this->main_block->get_variable(main_fun);
         if (!var || var->type->type != VALUE_FUN) {
             logger->add_entity(this->file, 0, 0, "The main block requires a '" + main_fun + "()' function as the entry point");
             exit(logger->crash());
@@ -32,12 +33,12 @@ Block Module::analyze(std::vector<Statement *> *code, bool require_main)
     return this->main_block;
 }
 
-void Module::analyze_tld(Statement *tld, Block *block, bool set_exported)
+void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
 {
     // List of analyzed files to avoid unesseary work.
     switch (tld->rule) {
         case RULE_USE: {
-            Use *use = static_cast<Use *>(tld);
+            std::shared_ptr<Use> use = std::static_pointer_cast<Use>(tld);
             if (modules.find(std::string(*use->module)) == modules.end()) {
                 use->block = Module(use->module).analyze(use->code);
             } else {
@@ -47,25 +48,25 @@ void Module::analyze_tld(Statement *tld, Block *block, bool set_exported)
             // else use->block = blocks[use->module];
             // Check if the imports are exported first.
             for (std::string &target : use->targets) {
-                BlockVariableType *var = use->block.get_variable(target);
+                BlockVariableType *var = use->block->get_variable(target);
                 if (!var) {
                     // Trying to import something that is not declared on that module.
                     ADD_NULL_LOG(use->module, "Importing an unknown target. Make sure your target '" + target + "' is defined in " + *use->module);
                     exit(logger->crash());
                 }
-                if (!use->block.is_exported(target)) {
+                if (!use->block->is_exported(target)) {
                     // Trying to import something that's not exported.
                     ADD_LOG(var->node, "Importing an unexported target. Make sure your export '" + target + "' in " + *use->module);
                     exit(logger->crash());
                 }
                 // All good. Add the variable to the local block.
-                block->set_variable(target, { var->type, var->node });
+                this->main_block->set_variable(target, { var->type, var->node });
             }
             break;
         }
         case RULE_EXPORT: {
             // It still needs to analyze the statement.
-            this->analyze_tld(static_cast<Export *>(tld)->statement, block, true);
+            this->analyze_tld(std::static_pointer_cast<Export>(tld)->statement, true);
             break;
         }
         case RULE_CLASS: {
@@ -73,9 +74,9 @@ void Module::analyze_tld(Statement *tld, Block *block, bool set_exported)
         }
         case RULE_FUNCTION: {
             // It needs to declare that function to the block.
-            Function *fun = static_cast<Function *>(tld);
+            std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(tld);
             // Set the variable to the scoped block.
-            block->set_variable(fun->name, { new Type(fun), fun, set_exported });
+            this->main_block->set_variable(fun->name, { std::make_shared<Type>(fun), NODE(fun), set_exported });
             break;
         }
         default: {
@@ -85,7 +86,7 @@ void Module::analyze_tld(Statement *tld, Block *block, bool set_exported)
     }
 }
 
-void Module::analyze_code(Expression *rule)
+void Module::analyze_code(const std::shared_ptr<Expression> &rule)
 {
     switch (rule->rule) {
         case RULE_INTEGER:
@@ -94,7 +95,7 @@ void Module::analyze_code(Expression *rule)
         case RULE_BOOLEAN: { break; }
         // case RULE_NONE: { break; }
         case RULE_LIST: {
-            List *list = static_cast<List *>(rule);
+            std::shared_ptr<List> list = std::static_pointer_cast<List>(rule);
             if (list->value.size() == 0) {
                 ADD_LOG(list, "You can't setup an empty list. You should declare a variable with it's type and leave the initializer empty");
                 exit(logger->crash());
@@ -105,16 +106,16 @@ void Module::analyze_code(Expression *rule)
                 exit(logger->crash());
             }
             for (size_t i = 1; i < list->value.size(); i++) {
-                if (!Type(list->value[i], &this->blocks).same_as(&type)) {
+                if (!Type(list->value[i], &this->blocks).same_as(type)) {
                     ADD_LOG(list, "Lists must have the same type. This list can only contain '" + type.to_string() + "' based on the first element");
                     exit(logger->crash());
                 }
             }
-            list->type = new Type(rule, &this->blocks);
+            list->type = std::make_shared<Type>(rule, &this->blocks);
             break;
         }
         case RULE_DICTIONARY: {
-            Dictionary *dict = static_cast<Dictionary *>(rule);
+            std::shared_ptr<Dictionary> dict = std::static_pointer_cast<Dictionary>(rule);
             if (dict->value.size() == 0) {
                 ADD_LOG(dict, "You can't setup an empty dictionary. You should declare a variable with it's type and leave the initializer empty");
                 exit(logger->crash());
@@ -125,20 +126,20 @@ void Module::analyze_code(Expression *rule)
                 exit(logger->crash());
             }
             for (size_t i = 1; i < dict->key_order.size(); i++) {
-                if (!Type(dict->value[dict->key_order[i]], &this->blocks).same_as(&type)) {
+                if (!Type(dict->value[dict->key_order[i]], &this->blocks).same_as(type)) {
                     ADD_LOG(dict->value[dict->key_order[i]], "Dictionaries must have the same type. This dictionary can only contain '" + type.to_string() + "' based on the first element");
                     exit(logger->crash());
                 }
             }
-            dict->type = new Type(rule, &this->blocks);
+            dict->type = std::make_shared<Type>(rule, &this->blocks);
             break;
         }
         case RULE_GROUP: {
-            this->analyze_code(static_cast<Group *>(rule)->expression);
+            this->analyze_code(std::static_pointer_cast<Group>(rule)->expression);
             break;
         }
         case RULE_CAST: {
-            Cast *cast = static_cast<Cast *>(rule);
+            std::shared_ptr<Cast> cast = std::static_pointer_cast<Cast>(rule);
             this->analyze_code(cast->expression);
             Type type = Type(cast->expression, &this->blocks);
             if (!type.cast(cast->type, &cast->cast_type)) {
@@ -148,7 +149,7 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_UNARY: {
-            Unary *unary = static_cast<Unary *>(rule);
+            std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(rule);
             this->analyze_code(unary->right);
             Type type = Type(unary->right, &this->blocks);
             if (!type.unary(unary->op, nullptr, &unary->type)) {
@@ -159,7 +160,7 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_BINARY: {
-            Binary *binary = static_cast<Binary *>(rule);
+            std::shared_ptr<Binary> binary = std::static_pointer_cast<Binary>(rule);
             this->analyze_code(binary->left);
             this->analyze_code(binary->right);
             Type left_type = Type(binary->left, &this->blocks);
@@ -173,10 +174,10 @@ void Module::analyze_code(Expression *rule)
         }
         case RULE_VARIABLE: {
             // Check if the variable has been declared.
-            Variable *var = static_cast<Variable *>(rule);
-            for (int16_t i = this->blocks.size() - 1; i >= 0; i--) {
+            std::shared_ptr<Variable> var = std::static_pointer_cast<Variable>(rule);
+            for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
                 BlockVariableType *v = this->blocks[i]->get_variable(var->name);
-                if (v) {
+                if (v) { 
                     // Variable found!
                     // Declare last use.
                     v->last_use = rule;
@@ -190,20 +191,20 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_ASSIGN: {
-            Assign *assign = static_cast<Assign *>(rule);
+            std::shared_ptr<Assign> assign = std::static_pointer_cast<Assign>(rule);
             this->analyze_code(assign->value);
             this->analyze_code(assign->target);
             // Make sure the types match.
             Type vtype = Type(assign->value, &this->blocks);
             Type ttype = Type(assign->target, &this->blocks);
-            if (!ttype.same_as(&vtype)) {
+            if (!ttype.same_as(vtype)) {
                 ADD_LOG(assign, "Assignment type missmatch. Expected '" + ttype.to_string() + "' but got '" + vtype.to_string() + "'");
                 exit(logger->crash());
             }
             break;
         }
         case RULE_LOGICAL: {
-            Logical *logical = static_cast<Logical *>(rule);
+            std::shared_ptr<Logical> logical = std::static_pointer_cast<Logical>(rule);
             this->analyze_code(logical->left);
             this->analyze_code(logical->right);
             Type left_type = Type(logical->left, &this->blocks);
@@ -219,7 +220,7 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_CALL: {
-            Call *call = static_cast<Call *>(rule);
+            std::shared_ptr<Call> call = std::static_pointer_cast<Call>(rule);
             this->analyze_code(call->target);
             Type type = Type(call->target, &this->blocks);
             // Check if it's callable.
@@ -247,7 +248,7 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_ACCESS: {
-            Access *access = static_cast<Access *>(rule);
+            std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
             this->analyze_code(access->index);
             this->analyze_code(access->target);
             Type itype = Type(access->index, &this->blocks);
@@ -281,7 +282,7 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_SLICE: {
-            Slice *slice = static_cast<Slice *>(rule);
+            std::shared_ptr<Slice> slice = std::static_pointer_cast<Slice>(rule);
             if (slice->start) {
                 this->analyze_code(slice->start);
                 Type t = Type(slice->start, &this->blocks);
@@ -316,7 +317,7 @@ void Module::analyze_code(Expression *rule)
             break;
         }
         case RULE_RANGE: {
-            Range *range = static_cast<Range *>(rule);
+            std::shared_ptr<Range> range = std::static_pointer_cast<Range>(rule);
             this->analyze_code(range->start);
             this->analyze_code(range->end);
             Type start_type = Type(range->start, &this->blocks);
@@ -340,89 +341,93 @@ void Module::analyze_code(Expression *rule)
 
 void Module::analyze_tld()
 {
-    for (Statement *tld : *this->code) this->analyze_tld(tld, &this->main_block);
+    for (std::shared_ptr<Statement> &tld : *this->code) this->analyze_tld(tld, &this->main_block);
 }
 
 void Module::analyze_code()
 {
-    this->blocks.push_back(&this->main_block);
-    for (Statement *rule : *this->code) this->analyze_code(rule);
+    this->blocks.push_back(this->main_block);
+    for (std::shared_ptr<Statement> &rule : *this->code) this->analyze_code(rule);
     this->blocks.pop_back();
 }
 
-Block Module::analyze_code(std::vector<Statement *> *code, std::vector<Declaration *> *initializers, Node *initializer_node)
+std::shared_ptr<Block> Module::analyze_code(
+    const std::vector<std::shared_ptr<Statement>> &code,
+    const std::vector<std::shared_ptr<Declaration>> &initializers,
+    const std::shared_ptr<Node> &initializer_node
+)
 {
-    Block block;
-    this->blocks.push_back(&block);
-    if (initializers) {
-        for (Declaration *argument : *initializers) {
+    std::shared_ptr block = std::make_shared<Block>();
+    this->blocks.push_back(block);
+    if (initializers.size() > 0) {
+        for (const std::shared_ptr<Declaration> &argument : initializers) {
             this->declare(argument, initializer_node);
         }
     }
     // printf("Should be only initializers.\n");
     // block.debug();
-    for (Statement *rule : *code) {
+    for (const std::shared_ptr<Statement> &rule : code) {
         this->analyze_code(rule);
     }
     this->blocks.pop_back();
     return block;
 }
 
-void Module::analyze_code(Statement *rule, bool no_declare)
+void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declare)
 {
     switch (rule->rule) {
 
         /* Top level declarations */
         case RULE_USE: { break; } // This will be recursively analyzed already...
         case RULE_EXPORT: {
-            this->analyze_code(static_cast<Export *>(rule)->statement, no_declare);
+            this->analyze_code(std::static_pointer_cast<Export>(rule)->statement, no_declare);
             break;
         }
         case RULE_CLASS: {
             break;
         }
         case RULE_FUNCTION: {
-            Function *fun = static_cast<Function *>(rule);
-            this->return_type = fun->return_type;
+            std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(rule);
             // Analyze the function parameters.
-            for (Declaration *parameter : fun->parameters) this->analyze_code(parameter, true);
+            for (std::shared_ptr<Declaration> &parameter : fun->parameters) this->analyze_code(std::static_pointer_cast<Statement>(parameter), true);
             // Check if there's a top level return on the function.
             if (fun->return_type) {
-                for (Statement *rule : fun->body) {
+                this->return_type = std::make_shared<Type>(*fun->return_type);
+                for (std::shared_ptr<Statement> &rule : fun->body) {
                     if (rule->rule == RULE_RETURN) goto continue_rule_function;
                 }
                 ADD_LOG(fun, "Expected at least 1 function top level return. Returns found inside conditionals or loops are not guaranted to happen.");
                 exit(logger->crash());
             } else {
-                for (Statement *rule : fun->body) {
+                for (std::shared_ptr<Statement> &rule : fun->body) {
                     if (rule->rule == RULE_RETURN) goto continue_rule_function;
                 }
                 // Add an ending return because the function didn't have any!
-                fun->body.push_back(new Return(fun->body.back()->file, fun->body.back()->line, fun->body.back()->column));
+                fun->body.push_back(std::make_shared<Return>(fun->body.back()->file, fun->body.back()->line, fun->body.back()->column));
             }
             continue_rule_function:
             // Analyze the function body.
-            fun->block = this->analyze_code(&fun->body, &fun->parameters);
+            fun->block = this->analyze_code(fun->body, fun->parameters);
             this->return_type = nullptr;
             break;
         }
 
         /* Normal statements */
         case RULE_PRINT: {
-            this->analyze_code(static_cast<Print *>(rule)->expression);
+            this->analyze_code(std::static_pointer_cast<Print>(rule)->expression);
             break;
         }
         case RULE_EXPRESSION_STATEMENT: {
-            this->analyze_code(static_cast<ExpressionStatement *>(rule)->expression);
+            this->analyze_code(std::static_pointer_cast<ExpressionStatement>(rule)->expression);
             break;
         }
         case RULE_DECLARATION: {
-            Declaration *dec = static_cast<Declaration *>(rule);
+            std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(rule);
             if (!dec->type) {
                 // dec->initializer MUST be defined because of how parsing works.
                 this->analyze_code(dec->initializer);
                 // Get the type of the initializer,
-                dec->type = new Type(dec->initializer, &this->blocks);
+                dec->type = std::make_shared<Type>(dec->initializer, &this->blocks);
                 if (dec->type->type == VALUE_NO_TYPE) {
                     ADD_LOG(dec->initializer, "You can't declare a variable with no-value values. Your declaration initializer contains no value");
                     exit(logger->crash());
@@ -436,7 +441,7 @@ void Module::analyze_code(Statement *rule, bool no_declare)
                 // Get the type of the initializer,
                 Type type = Type(dec->initializer, &this->blocks);
                 // Check the types to know if it can be initialized.
-                if (!dec->type->same_as(&type)) {
+                if (!dec->type->same_as(type)) {
                     ADD_LOG(dec,
                         "Incompatible types: Expected '"
                         + dec->type->to_string()
@@ -450,7 +455,7 @@ void Module::analyze_code(Statement *rule, bool no_declare)
             break;
         }
         case RULE_RETURN: {
-            Return *ret = static_cast<Return *>(rule);
+            std::shared_ptr<Return> ret = std::static_pointer_cast<Return>(rule);
             if (!ret->value) break;
             this->analyze_code(ret->value);
             if (!this->return_type) {
@@ -458,7 +463,7 @@ void Module::analyze_code(Statement *rule, bool no_declare)
                 exit(logger->crash());
             }
             Type type = Type(ret->value, &this->blocks);
-            if (!type.same_as(this->return_type)) {
+            if (!type.same_as(*this->return_type)) {
                 ADD_LOG(ret,
                     "Return type does not match with function type. Expected '"
                     + this->return_type->to_string()
@@ -471,49 +476,51 @@ void Module::analyze_code(Statement *rule, bool no_declare)
             break;
         }
         case RULE_IF: {
-            If *rif = static_cast<If *>(rule);
+            std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             this->analyze_code(rif->condition);
             Type type = Type(rif->condition, &this->blocks);
             if (type.type != VALUE_BOOL) {
                 ADD_LOG(rif->condition, "Expected a boolean in the 'if' condition. Got '" + type.to_string() + "'");
                 exit(logger->crash());
             }
-            rif->then_block = this->analyze_code(&rif->then_branch);
-            rif->else_block = this->analyze_code(&rif->else_branch);
+            rif->then_block = this->analyze_code(rif->then_branch);
+            rif->else_block = this->analyze_code(rif->else_branch);
             break;
         }
         case RULE_WHILE: {
-            While *rwhile = static_cast<While *>(rule);
+            std::shared_ptr<While> rwhile = std::static_pointer_cast<While>(rule);
             this->analyze_code(rwhile->condition);
             Type type = Type(rwhile->condition, &this->blocks);
             if (type.type != VALUE_BOOL) {
                 ADD_LOG(rwhile->condition, "Expected a boolean in the 'while' condition. Got '" + type.to_string() + "'");
                 exit(logger->crash());
             }
-            rwhile->block = this->analyze_code(&rwhile->body);
+            rwhile->block = this->analyze_code(rwhile->body);
             break;
         }
         case RULE_FOR: {
-            For *rfor = static_cast<For *>(rule);
+            std::shared_ptr<For> rfor = std::static_pointer_cast<For>(rule);
             this->analyze_code(rfor->iterator);
-            std::vector<Declaration *> decs;
+            std::vector<std::shared_ptr<Declaration>> decs;
             // Declare the value of each iteration.
-            Type *vtype = new Type(rfor->iterator, &this->blocks); // Types (they are saved on the heap since they will be saved)
+            std::shared_ptr<Type> vtype = std::make_shared<Type>(rfor->iterator, &this->blocks); // Types (they are saved on the heap since they will be saved)
             // Check iterator.
             if (vtype->type != VALUE_LIST && vtype->type != VALUE_DICT) {
                 ADD_LOG(rfor->iterator, "The 'for' iterator is not iterable. It must be either 'list' or 'dictionary' but got '" + vtype->to_string() + "'");
                 exit(logger->crash());
             }
-            Declaration vdec = Declaration(rfor->file, rfor->line, rfor->column, rfor->variable, vtype, nullptr); // Declaration can be temp since we will pas the for node for further identification.
-            decs.push_back(&vdec);
+            decs.push_back(std::make_shared<Declaration>(
+                rfor->file, rfor->line, rfor->column, rfor->variable, vtype, std::shared_ptr<Expression>())
+            );
             // Check if it uses the index and declare it if so.
             if (rfor->index != "") {
-                Type *itype = new Type(VALUE_INT); // Types (they are saved on the heap since they will be saved)
-                Declaration idec = Declaration(rfor->file, rfor->line, rfor->column, rfor->index, itype, nullptr); // Declaration can be temp since we will pas the for node for further identification.
-                decs.push_back(&idec);
+                std::shared_ptr<Type> itype = std::make_shared<Type>(VALUE_INT); // Types (they are saved on the heap since they will be saved)
+                decs.push_back(std::make_shared<Declaration>(
+                    rfor->file, rfor->line, rfor->column, rfor->index, itype, std::shared_ptr<Expression>())
+                );
             }
             // Analyze the for body.
-            rfor->block = this->analyze_code(&rfor->body, &decs, rfor);
+            rfor->block = this->analyze_code(rfor->body, decs, NODE(rfor));
             break;
         }
         default: {
@@ -523,14 +530,14 @@ void Module::analyze_code(Statement *rule, bool no_declare)
     }
 }
 
-void Module::declare(Declaration *dec, Node *node)
+void Module::declare(const std::shared_ptr<Declaration> &dec, const std::shared_ptr<Node> &node)
 {
-    Block *block = this->blocks.back();
+    std::shared_ptr<Block> block = this->blocks.back();
     // Check if the variable exists already.
     if (block->get_variable(dec->name)) {
         ADD_LOG(dec, "The variable '" + dec->name + "' is already declared in this scope.");
         exit(logger->crash());
     }
     // Declare the variable to the current scope.
-    block->set_variable(dec->name, { dec->type, node ? node : dec });
+    block->set_variable(dec->name, { dec->type, node ? node : NODE(dec) });
 }

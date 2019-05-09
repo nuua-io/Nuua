@@ -94,9 +94,9 @@ class Token
         void debug_token();
         std::string to_string();
         std::string to_type_string();
-        static void debug_token(TokenType token);
-        static void debug_tokens(std::vector<Token> &tokens);
-        static void debug_tokens(std::vector<TokenType> &tokens);
+        static void debug_token(const TokenType token);
+        static void debug_tokens(const std::vector<Token> &tokens);
+        static void debug_tokens(const std::vector<TokenType> &tokens);
 };
 
 #endif

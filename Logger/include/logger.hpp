@@ -11,6 +11,8 @@
 
 #include <string>
 #include <vector>
+#include <memory>
+#include <utility>
 
 // Defines a max line length when printing file lengths.
 #define MAX_LINE_LENGTH 500
@@ -24,14 +26,14 @@ typedef uint16_t column_t;
 class LoggerEntity {
     public:
         // Stores the file where the log comes from.
-        const std::string *file;
+        std::shared_ptr<const std::string> file;
         // Stores the line of the log.
         const line_t line;
         // Stores the column of the log.
         const column_t column;
         // Stores the message of the log.
         const std::string msg;
-        LoggerEntity(const std::string *file, const line_t line, const column_t column, const std::string &msg)
+        LoggerEntity(std::shared_ptr<const std::string> file, const line_t line, const column_t column, const std::string &msg)
             : file(file), line(line), column(column), msg(msg) {}
 };
 
@@ -43,7 +45,7 @@ class Logger
     void display_log(uint16_t index, bool red);
     public:
         // Adds a new entity to the entity stack.
-        void add_entity(const std::string *file, const line_t line, const column_t column, const std::string &msg);
+        void add_entity(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg);
         // Pops an entity from the entity stack.
         void pop_entity();
         // Crashes the program by emmiting the whole entity stack as an error.

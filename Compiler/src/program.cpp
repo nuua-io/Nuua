@@ -7,6 +7,7 @@
  * https://nuua.io
  */
 #include "../include/program.hpp"
+#include "../include/memory.hpp"
 #include "../../Logger/include/logger.hpp"
 #include "../include/value.hpp"
 #include <algorithm>
@@ -144,17 +145,17 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     { "PRINT_C", {{ OT_CONST, OT_NONE, OT_NONE }} },
 };
 
-std::string opcode_to_string(opcode_t opcode)
+std::string opcode_to_string(const opcode_t opcode)
 {
     return opcode_names[opcode].first;
 }
 
-std::vector<OpCodeType> *opcode_operands(opcode_t opcode)
+std::vector<OpCodeType> *opcode_operands(const opcode_t opcode)
 {
     return &opcode_names[opcode].second;
 }
 
-void print_opcode(opcode_t opcode)
+void print_opcode(const opcode_t opcode)
 {
     printf("%17.17s", opcode_to_string(opcode).c_str());
 }
@@ -216,4 +217,9 @@ void FrameInfo::reset()
     this->current_register = 0;
     this->free_registers.clear();
     this->protected_registers.clear();
+}
+
+Program::Program()
+{
+    this->memory = std::make_unique<Memory>();
 }

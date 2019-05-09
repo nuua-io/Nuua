@@ -16,67 +16,67 @@
 class Parser
 {
     // Stores the current parsing file.
-    const std::string *file;
+    std::shared_ptr<const std::string> file;
     // Stores a pointer to the current token beeing parsed.
     Token *current;
     // Consumes a token and returns it for futher use.
-    Token *consume(TokenType type, const char *message);
+    Token *consume(const TokenType type, const std::string &message);
     // Returns true if the token type matches the current token.
-    bool match(TokenType token);
+    bool match(const TokenType token);
     // Returns true if any of the given token types matches the current token.
-    bool match_any(std::vector<TokenType> tokens);
+    bool match_any(const std::vector<TokenType> &tokens);
     // Expressions
-    Expression *primary();
-    Expression *unary_postfix();
-    Expression *unary_prefix();
-    Expression *cast();
-    Expression *multiplication();
-    Expression *addition();
-    Expression *comparison();
-    Expression *equality();
-    Expression *logical_and();
-    Expression *logical_or();
-    Expression *range();
-    Expression *assignment();
-    Expression *expression();
+    std::shared_ptr<Expression> primary();
+    std::shared_ptr<Expression> unary_postfix();
+    std::shared_ptr<Expression> unary_prefix();
+    std::shared_ptr<Expression> cast();
+    std::shared_ptr<Expression> multiplication();
+    std::shared_ptr<Expression> addition();
+    std::shared_ptr<Expression> comparison();
+    std::shared_ptr<Expression> equality();
+    std::shared_ptr<Expression> logical_and();
+    std::shared_ptr<Expression> logical_or();
+    std::shared_ptr<Expression> range();
+    std::shared_ptr<Expression> assignment();
+    std::shared_ptr<Expression> expression();
     // Statements
-    Statement *fun_declaration();
-    Statement *use_declaration();
-    Statement *export_declaration();
-    Statement *variable_declaration();
-    Statement *print_statement();
-    Statement *return_statement();
-    Statement *if_statement();
-    Statement *while_statement();
-    Statement *for_statement();
-    Statement *expression_statement();
-    Statement *class_statement();
-    Statement *statement(bool new_line = true);
-    Statement *top_level_declaration();
-    Statement *class_body_declaration();
+    std::shared_ptr<Statement> fun_declaration();
+    std::shared_ptr<Statement> use_declaration();
+    std::shared_ptr<Statement> export_declaration();
+    std::shared_ptr<Statement> variable_declaration();
+    std::shared_ptr<Statement> print_statement();
+    std::shared_ptr<Statement> return_statement();
+    std::shared_ptr<Statement> if_statement();
+    std::shared_ptr<Statement> while_statement();
+    std::shared_ptr<Statement> for_statement();
+    std::shared_ptr<Statement> expression_statement();
+    std::shared_ptr<Statement> class_statement();
+    std::shared_ptr<Statement> statement(bool new_line = true);
+    std::shared_ptr<Statement> top_level_declaration();
+    std::shared_ptr<Statement> class_body_declaration();
     // Helpers
-    void parameters(std::vector<Declaration *> *dest);
-    std::vector<Expression *> arguments();
-    std::vector<Statement *> body();
-    std::vector<Statement *> class_body();
-    Type *type(bool optional = true);
+    void parameters(std::vector<std::shared_ptr<Declaration>> *dest);
+    std::vector<std::shared_ptr<Expression>> arguments();
+    std::vector<std::shared_ptr<Statement>> body();
+    std::vector<std::shared_ptr<Statement>> class_body();
+    std::shared_ptr<Type> type(bool optional = true);
     public:
         // Debugging functions
-        static void debug_rule(Rule rule);
-        static void debug_rule(Statement *statement);
-        static void debug_rules(std::vector<Rule> &rules);
-        static void debug_rules(std::vector<Statement *> &rules);
-        static void debug_ast(Expression *expression, uint16_t spacer = 0, bool print_spacer = true);
-        static void debug_ast(Statement *statement, uint16_t spacer = 0);
-        static void debug_ast(std::vector<Statement *> &statements, uint16_t spacer = 0);
+        static void debug_rule(const Rule rule);
+        static void debug_rule(const std::shared_ptr<Statement> &statement);
+        static void debug_rules(const std::vector<Rule> &rules);
+        static void debug_rules(const std::vector<std::shared_ptr<Statement>> &rules);
+        static void debug_ast(const std::shared_ptr<Expression> &expression, const uint16_t spacer = 0, const bool print_spacer = true);
+        static void debug_ast(const std::shared_ptr<Statement> &statement, const uint16_t spacer = 0);
+        static void debug_ast(const std::vector<std::shared_ptr<Statement>> &statements, const uint16_t spacer = 0);
         // Helper to format a path.
-        static void format_path(std::string *path, const std::string *parent = nullptr);
+        static void format_path(std::string &path, const std::shared_ptr<const std::string> &parent = std::shared_ptr<const std::string>());
         // Parses a given source code and returns the code.
-        void parse(std::vector<Statement *> *code);
+        void parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code);
         // Creates a new parser and formats the path.
         Parser(const char *file);
         // Creates a new parser with a given formatted and initialized path.
-        Parser(const std::string *file)
+        Parser(std::shared_ptr<const std::string> &file)
             : file(file) {}
 };
 

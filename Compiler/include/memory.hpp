@@ -9,24 +9,17 @@ class Memory
 {
     public:
         // This stores the opcodes and consant indexes of the code.
-        std::vector<opcode_t> *code = nullptr;
+        std::vector<opcode_t> code;
         // Stores the value constants.
         std::vector<Value> constants;
         // Stores the lines corresponding to the opcodes.
-        std::unordered_map<size_t, const std::string *> *files = nullptr;
+        std::unordered_map<size_t, std::shared_ptr<const std::string>> files;
         // Stores the lines corresponding to the opcodes.
-        std::unordered_map<size_t, const line_t> *lines = nullptr;
+        std::unordered_map<size_t, line_t> lines;
         // Stores the lines corresponding to the opcodes.
-        std::unordered_map<size_t, const column_t> *columns = nullptr;
+        std::unordered_map<size_t, column_t> columns;
         // Dumps the memory.
         void dump();
-        Memory()
-            : code(new std::vector<opcode_t>),
-              files(new std::unordered_map<size_t, const std::string *>),
-              lines(new std::unordered_map<size_t, const line_t>),
-              columns(new std::unordered_map<size_t, const column_t>)
-            {}
-        ~Memory() { delete code; delete files; delete lines; delete columns; }
 };
 
 #endif

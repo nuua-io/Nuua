@@ -14,7 +14,24 @@ const std::vector<std::string> Type::types_string = {
     "VALUE_CLASS", "VALUE_NO_TYPE"
 };
 
-Type::Type(std::string name)
+/*
+Type::Type(const Type &t)
+{
+    this->type = t.type;
+    this->inner_type = std::move(std::make_shared<Type>(*t.inner_type));
+    this->parameters = t.parameters;
+    this->class_name = t.class_name;
+}
+
+void Type::operator =(const Type &t)
+{
+    this->type = t.type;
+    this->inner_type = std::move(std::make_shared<Type>(*t.inner_type));
+    this->parameters = t.parameters;
+    this->class_name = t.class_name;
+}
+*/
+Type::Type(const std::string &name)
 {
     if (Type::value_types.find(name) != Type::value_types.end()) {
         this->type = Type::value_types.at(name);
@@ -22,6 +39,11 @@ Type::Type(std::string name)
         this->type = VALUE_CLASS;
         this->class_name = name;
     }
+}
+
+bool Type::cast(std::shared_ptr<Type> &to, CastType *dest_casttype)
+{
+    return this->cast(to.get(), dest_casttype);
 }
 
 bool Type::cast(Type *to, CastType *dest_casttype)
@@ -84,6 +106,11 @@ bool Type::cast(Type *to, CastType *dest_casttype)
     return true;
 }
 
+bool Type::unary(Token &op, const std::shared_ptr<Type> &dest_type, UnaryType *dest_unarytype)
+{
+    return this->unary(op, dest_type.get(), dest_unarytype);
+}
+
 bool Type::unary(Token &op, Type *dest_type, UnaryType *dest_unarytype)
 {
     #define DEST_TYPE(t) if (dest_type) dest_type->type = t
@@ -132,6 +159,11 @@ bool Type::unary(Token &op, Type *dest_type, UnaryType *dest_unarytype)
     return true;
 }
 
+bool Type::binary(Token &op, std::shared_ptr<Type> &t1, const std::shared_ptr<Type> &dest_type, BinaryType *dest_bintype)
+{
+    return this->binary(op, t1.get(), dest_type.get(), dest_bintype);
+}
+
 bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype)
 {
     #define DEST_TYPE(t) if (dest_type) dest_type->type = t
@@ -152,10 +184,10 @@ bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype
                 DEST_TYPE(VALUE_INT);
                 DEST_BINTYPE(BINARY_ADD_BOOL);
             } else if (this->type == VALUE_LIST) {
-                if (dest_type) this->copy_to(dest_type);
+                if (dest_type) this->copy_to(*dest_type);
                 DEST_BINTYPE(BINARY_ADD_LIST);
             } else if (this->type == VALUE_DICT) {
-                if (dest_type) this->copy_to(dest_type);
+                if (dest_type) this->copy_to(*dest_type);
                 DEST_BINTYPE(BINARY_ADD_DICT);
             } else return false;
             break;
@@ -184,10 +216,10 @@ bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype
                     DEST_TYPE(VALUE_STRING);
                     DEST_BINTYPE(BINARY_MUL_STRING_INT);
                 } else if (this->type == VALUE_INT && t1->type == VALUE_LIST) {
-                    if (dest_type) t1->copy_to(dest_type);
+                    if (dest_type) t1->copy_to(*dest_type);
                     DEST_BINTYPE(BINARY_MUL_INT_LIST);
                 } else if (this->type == VALUE_LIST && t1->type == VALUE_INT) {
-                    if (dest_type) this->copy_to(dest_type);
+                    if (dest_type) this->copy_to(*dest_type);
                     DEST_BINTYPE(BINARY_MUL_LIST_INT);
                 } else return false;
             } else if (this->type == VALUE_INT) {
@@ -204,10 +236,12 @@ bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype
         } case TOKEN_SLASH: {
             if (!this->same_as(t1)) {
                 if (this->type == VALUE_STRING && t1->type == VALUE_INT) {
-                    if (dest_type) *dest_type = Type(VALUE_LIST, new Type(VALUE_STRING)); // Possible mem leak
+                    std::shared_ptr<Type> inner_type = std::make_shared<Type>(VALUE_STRING);
+                    if (dest_type) Type(VALUE_LIST, inner_type).copy_to(*dest_type); // Possible mem leak
                     DEST_BINTYPE(BINARY_DIV_STRING_INT);
                 } else if (this->type == VALUE_LIST && t1->type == VALUE_INT) {
-                    if (dest_type) *dest_type = Type(VALUE_LIST, new Type(*this)); // Possible mem leak
+                    std::shared_ptr<Type> inner_type = std::make_shared<Type>(*this);
+                    if (dest_type) Type(VALUE_LIST, inner_type).copy_to(*dest_type); // Possible mem leak
                     DEST_BINTYPE(BINARY_DIV_LIST_INT);
                 } else return false;
             } else if (this->type == VALUE_INT) {
@@ -321,18 +355,38 @@ bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype
     return true;
 }
 
-void Type::copy_to(Type *type)
+
+void Type::copy_to(std::shared_ptr<Type> &type) const
+{
+    this->copy_to(type.get());
+}
+
+void Type::copy_to(Type &type) const
+{
+    this->copy_to(&type);
+}
+
+void Type::copy_to(Type *type) const
 {
     type->type = this->type;
     if (this->inner_type) {
-        type->inner_type = new Type; // Possible mem leak
+        type->inner_type = std::make_shared<Type>();
         this->inner_type->copy_to(type->inner_type);
     }
     type->class_name = this->class_name;
-    for (Type *t : this->parameters) {
-        type->parameters.push_back(new Type);
-        t->copy_to(type->parameters.back());
+    for (const std::shared_ptr<Type> &t : this->parameters) {
+        type->parameters.push_back(t);
     }
+}
+
+bool Type::same_as(std::shared_ptr<Type> &type)
+{
+    return this->same_as(type.get());
+}
+
+bool Type::same_as(Type &type)
+{
+    return this->same_as(&type);
 }
 
 bool Type::same_as(Type *type)
@@ -354,7 +408,7 @@ bool Type::same_as(Type *type)
     return true;
 }
 
-std::string Type::to_string()
+std::string Type::to_string() const
 {
     // Check if it's a no type.
     if (this->type == VALUE_NO_TYPE) return "<no-type>";
@@ -371,7 +425,7 @@ std::string Type::to_string()
     if (this->type == VALUE_DICT) return "{" + this->inner_type->to_string() + "}";
     if (this->type == VALUE_FUN) {
         std::string result = "(";
-        for (Type *inner : this->parameters) result += inner->to_string() + ", ";
+        for (const std::shared_ptr<Type> &inner : this->parameters) result += inner->to_string() + ", ";
         // pop the ", " of the last element
         if (this->parameters.size() > 0) { result.pop_back(); result.pop_back(); result += " "; }
         // Append the return type if needed.
@@ -394,14 +448,16 @@ void Type::println()
     printf("\n");
 }
 
-Type::Type(Function *fun)
+Type::Type(const std::shared_ptr<Function> &fun)
 {
     this->type = VALUE_FUN;
     this->inner_type = fun->return_type; // return_type will already be nullptr if it have no return type.
-    for (Statement *dec : fun->parameters) this->parameters.push_back(static_cast<Declaration *>(dec)->type);
+    for (std::shared_ptr<Declaration> &dec : fun->parameters) {
+        this->parameters.push_back(dec->type);
+    }
 }
 
-Type::Type(Expression *rule, std::vector<Block *> *blocks)
+Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::shared_ptr<Block>> *blocks)
 {
     switch (rule->rule) {
         case RULE_INTEGER: { this->type = VALUE_INT; break; }
@@ -410,47 +466,43 @@ Type::Type(Expression *rule, std::vector<Block *> *blocks)
         case RULE_BOOLEAN: { this->type = VALUE_BOOL; break; }
         case RULE_LIST: {
             this->type = VALUE_LIST;
-            List *list = static_cast<List *>(rule);
+            std::shared_ptr<List> list = std::static_pointer_cast<List>(rule);
             if (list->value.size() == 0) break; // The inner type will be nullptr.
-            this->inner_type = new Type(list->value[0], blocks);
+            this->inner_type = std::make_shared<Type>(list->value[0], blocks);
             break;
         }
         case RULE_DICTIONARY: {
             this->type = VALUE_DICT;
-            Dictionary *dict = static_cast<Dictionary *>(rule);
+            std::shared_ptr<Dictionary> dict = std::static_pointer_cast<Dictionary>(rule);
             if (dict->value.size() == 0) break; // The inner type will be nullptr.
-            this->inner_type = new Type(dict->value[dict->key_order[0]], blocks);
+            this->inner_type = std::make_shared<Type>(dict->value[dict->key_order[0]], blocks);
             break;
         }
         // case RULE_NONE: { this->type = VALUE_NONE; return; }
         case RULE_GROUP: {
-            Type(static_cast<Group *>(rule)->expression, blocks).copy_to(this);
+            Type(std::static_pointer_cast<Group>(rule)->expression, blocks).copy_to(this);
             break;
         }
         case RULE_CAST: {
-            Cast *cast = static_cast<Cast *>(rule);
-            // Check if the cast can be performed
-            // is done by the analyzer.
-            cast->type->copy_to(this);
+            std::static_pointer_cast<Cast>(rule)->type->copy_to(this);
             break;
         }
         case RULE_UNARY: {
-            Unary *u = static_cast<Unary *>(rule);
-            Type type = Type(u->right, blocks);
-            type.unary(u->op, this); // No need to check, the binary MUST be analyzed first.
+            std::shared_ptr<Unary> u = std::static_pointer_cast<Unary>(rule);
+            Type(u->right, blocks).unary(u->op, this); // No need to check, the binary MUST be analyzed first.
             break;
         }
         case RULE_BINARY: {
             // Ignore the right one, they need to be compatible and analyzed before
             // this line is executed.
-            Binary *b = static_cast<Binary *>(rule);
+            std::shared_ptr<Binary> b = std::static_pointer_cast<Binary>(rule);
             Type lt = Type(b->left, blocks);
             Type rt = Type(b->right, blocks);
             lt.binary(b->op, &rt, this); // No need to check, the binary MUST be analyzed first.
             break;
         }
         case RULE_VARIABLE: {
-            std::string var = static_cast<Variable *>(rule)->name;
+            std::string var = std::static_pointer_cast<Variable>(rule)->name;
             BlockVariableType *res = Block::get_single_variable(var, blocks);
             if (res) {
                 res->type->copy_to(this);
@@ -461,13 +513,11 @@ Type::Type(Expression *rule, std::vector<Block *> *blocks)
             break;
         }
         case RULE_ASSIGN: {
-            Type(static_cast<Assign *>(rule)->value, blocks).copy_to(this);
+            Type(std::static_pointer_cast<Assign>(rule)->value, blocks).copy_to(this);
             break;
         }
         case RULE_LOGICAL: {
-            Logical *logical = static_cast<Logical *>(rule);
-            Type type = Type(logical->left, blocks);
-            type.copy_to(this);
+            Type(std::static_pointer_cast<Logical>(rule)->left, blocks).copy_to(this);
             break;
         }
         case RULE_FUNCTION: {
@@ -475,14 +525,13 @@ Type::Type(Expression *rule, std::vector<Block *> *blocks)
             break;
         }
         case RULE_CALL: {
-            Call *call = static_cast<Call *>(rule);
-            Type t = Type(call->target, blocks);
+            Type t = Type(std::static_pointer_cast<Call>(rule)->target, blocks);
             if (t.inner_type) t.inner_type->copy_to(this); // Function return type.
             else this->type = VALUE_NO_TYPE; // The function has no return value.
             break;
         }
         case RULE_ACCESS: {
-            Access *access = static_cast<Access *>(rule);
+            std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
             Type t = Type(access->target, blocks);
             if (!t.inner_type) {
                 logger->add_entity(access->file, access->line, access->column, "The type " + t.to_string() + " has no inner type.");
@@ -492,12 +541,12 @@ Type::Type(Expression *rule, std::vector<Block *> *blocks)
             break;
         }
         case RULE_SLICE: {
-            Type(static_cast<Slice *>(rule)->target, blocks).copy_to(this);
+            Type(std::static_pointer_cast<Slice>(rule)->target, blocks).copy_to(this);
             break;
         }
         case RULE_RANGE: {
             this->type = VALUE_LIST;
-            this->inner_type = new Type(VALUE_INT);
+            this->inner_type = std::make_shared<Type>(VALUE_INT);
             break;
         }
         default: {
@@ -505,28 +554,4 @@ Type::Type(Expression *rule, std::vector<Block *> *blocks)
             exit(logger->crash());
         }
     }
-}
-
-void Type::deallocate()
-{
-    if (!this->deallocated) {
-        // Deallocate the innter type.
-        if (this->inner_type != nullptr) {
-            printf("Inner...\n");
-            this->inner_type->deallocate();
-            printf("Outer...\n");
-            // delete this->inner_type;
-            this->inner_type = nullptr;
-        }
-        // Deallocate the parameters if needed.
-        if (this->parameters.size() > 0) {
-            for (Type *t : this->parameters) {
-                t->deallocate();
-                delete t;
-                t = nullptr;
-            }
-        }
-        this->deallocated = true;
-    }
-    printf("Deallocated OK!");
 }

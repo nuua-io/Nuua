@@ -131,7 +131,7 @@ TokenType Lexer::is_identifier()
     return (Lexer::reserved_words.find(key) != Lexer::reserved_words.end()) ? Lexer::reserved_words.at(key) : TOKEN_IDENTIFIER;
 }
 
-void Lexer::read_from_file(std::string *dest, const std::string *file)
+void Lexer::read_from_file(std::unique_ptr<std::string> &dest, std::shared_ptr<const std::string> &file)
 {
     std::ifstream file_stream = std::ifstream(file->c_str());
     if (!file_stream.is_open()) {
@@ -142,9 +142,10 @@ void Lexer::read_from_file(std::string *dest, const std::string *file)
     *dest = std::string((std::istreambuf_iterator<char>(file_stream)), (std::istreambuf_iterator<char>()));
 }
 
-void Lexer::scan(std::vector<Token> *tokens)
+void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
 {
-    this->source = new std::string;
+    printf("----> Lexer\n");
+    this->source = std::make_unique<std::string>();
     this->read_from_file(this->source, this->file);
 
     this->start = this->source->c_str();
@@ -213,16 +214,12 @@ void Lexer::scan(std::vector<Token> *tokens)
     }
 
     tokens->push_back(this->make_token(TOKEN_EOF));
+    printf("----> !Lexer\n");
 }
 
-Lexer::Lexer(const std::string *file)
+Lexer::Lexer(std::shared_ptr<const std::string> &file)
 {
     this->file = file;
-}
-
-Lexer::~Lexer()
-{
-    if (this->source) delete this->source;
 }
 
 #undef ADD_TOKEN

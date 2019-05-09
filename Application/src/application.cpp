@@ -13,7 +13,9 @@
 
 void Application::string(const std::string &string)
 {
+    printf("----> Application\n");
     this->virtual_machine.interpret(string.c_str());
+    printf("----> !Application\n");
 }
 
 Application::Application(int argc, char *argv[])

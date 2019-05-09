@@ -160,14 +160,14 @@ void Token::debug_token()
     printf("%s\n", Token::token_names[this->type].c_str());
 }
 
-void Token::debug_token(TokenType token)
+void Token::debug_token(const TokenType token)
 {
     printf("%s\n", Token::token_names[token].c_str());
 }
 
-void Token::debug_tokens(std::vector<Token> &tokens)
+void Token::debug_tokens(const std::vector<Token> &tokens)
 {
-    for (Token token : tokens) {
+    for (const Token token : tokens) {
         printf("%s ", token_names[token.type].c_str());
         if (token.type == TOKEN_NEW_LINE) {
             printf("\n");
@@ -176,9 +176,9 @@ void Token::debug_tokens(std::vector<Token> &tokens)
     printf("\n");
 }
 
-void Token::debug_tokens(std::vector<TokenType> &tokens)
+void Token::debug_tokens(const std::vector<TokenType> &tokens)
 {
-    for (TokenType token : tokens) {
+    for (const TokenType token : tokens) {
         printf("%s ", token_names[token].c_str());
         if (token == TOKEN_NEW_LINE) printf("\n");
     }
