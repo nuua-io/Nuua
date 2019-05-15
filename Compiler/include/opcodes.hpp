@@ -24,7 +24,11 @@ typedef enum : uint8_t {
 
     // List releated
     OP_LPUSH, // LPUSH RX RY
+    OP_LPUSH_C, // LPUSH RX C1
     OP_LPOP, // LPOP RX
+
+    // Dictionary releated
+    // OP_DPUSH, // DPUSH RX RY RZ
 
     // Function releated
     OP_CALL, // CALL RX

@@ -153,6 +153,7 @@ class Node
         column_t column;
         Node(const Rule rule, std::shared_ptr<const std::string> &file, const line_t line, const uint32_t column)
             : rule(rule), file(file), line(line), column(column) {};
+        ~Node() { printf("Node destroyed: %s:%llu:%llu\n", file->c_str(), line, column); }
 };
 
 class Expression : public Node
@@ -294,7 +295,7 @@ class Access : public Expression
         bool integer_index = (bool) NULL; // Determines if it needs an integer or string to access.
         Access(std::shared_ptr<const std::string> &file, const line_t line, const uint32_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &index)
             : Expression({ RULE_ACCESS, file, line, column }), target(std::move(target)), index(std::move(index)) {};
-}; 
+};
 
 class Cast : public Expression
 {

@@ -29,6 +29,7 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
 
     // List releated
     { "OP_LPUSH", {{ OT_REG, OT_REG, OT_NONE }} }, // LPUSH RX RY
+    { "OP_LPUSH_C", {{ OT_REG, OT_CONST, OT_NONE }} }, // LPUSH_C RX C1
     { "OP_LPOP", {{ OT_REG, OT_NONE, OT_NONE }} }, // LPOP RX
 
     // Function releated

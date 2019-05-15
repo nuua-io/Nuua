@@ -75,7 +75,9 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                     this->add_opcodes({{ OP_POP, var->reg }});
                 }
                 // Compile the function body.
-                for (const std::shared_ptr<Statement> &n : fun->body) this->compile(n);
+                for (const std::shared_ptr<Statement> &statement : fun->body) this->compile(statement);
+                // Clear the function body (so that the elements may be freed)
+                fun->body.clear();
                 this->blocks.pop_back();
                 // Create the function value and move it to the register.
                 Value(entry, this->local.current_register).copy_to(
@@ -91,8 +93,9 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
             }
         }
     }
+    code->clear();
     this->blocks.pop_back();
-    for (const std::shared_ptr<Use> use : delay_usages) {
+    for (const std::shared_ptr<Use> &use : delay_usages) {
         // Only compile if needed.
         if (std::find(compiled_modules.begin(), compiled_modules.end(), code) == compiled_modules.end()) {
             // Register the module.
@@ -249,23 +252,22 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
             if (this->is_constant(list)) {
                 // The list can be stored in the constant pool.
                 if (load_constant) this->add_opcodes({{ OP_LOAD_C, result }});
-                // Value v = this->constant_list(list);
-                // this->add_opcodes({{ this->add_constant(v) }});
+                Value v;
+                this->constant_list(list, v);
+                this->add_opcodes({{ this->add_constant(v) }});
             } else {
                 // The list needs to be constructed from the groud up
-                printf("Creating empty list...");
-                auto a = this->add_constant(Value(list->type));
-                printf("OK!\n");
-                this->add_opcodes({{ OP_LOAD_C, result, a }});
-                printf("OK!\n");
+                this->add_opcodes({{ OP_LOAD_C, result, this->add_constant(Value(list->type)) }});
                 for (const std::shared_ptr<Expression> &e : list->value) {
-                    Parser::debug_ast(e);
-                    register_t ry = this->compile(e);
-                    printf("COMPILED LIST ITEM\n");
-                    // this->add_opcodes({{ OP_LPUSH, result, ry }});
-                    // this->local.free_register(ry);
+                    if (this->is_constant(e)) {
+                        this->add_opcodes({{ OP_LPUSH_C, result }});
+                        this->compile(e, false);
+                    } else {
+                        register_t ry = this->compile(e);
+                        this->add_opcodes({{ OP_LPUSH, result, ry }});
+                        this->local.free_register(ry);
+                    }
                 }
-                printf("OK!\n");
             }
             break;
         }
@@ -279,10 +281,16 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
         }
         case RULE_CAST: {
             std::shared_ptr<Cast> cast = std::static_pointer_cast<Cast>(rule);
+            opcode_t base = OP_CAST_INT_FLOAT;
+            register_t rx = this->compile(cast->expression);
+            this->add_opcodes({{ base + cast->cast_type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
             break;
         }
         case RULE_UNARY: {
             std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(rule);
+            opcode_t base = OP_NEG_BOOL;
+            register_t rx = this->compile(unary->right);
+            this->add_opcodes({{ base + unary->type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
             break;
         }
         case RULE_BINARY: {
