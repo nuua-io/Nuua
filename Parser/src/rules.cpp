@@ -39,7 +39,9 @@ static std::vector<std::string> RuleNames = {
     "RULE_EXPORT",
     "RULE_CLASS",
     "RULE_SLICE",
-    "RULE_RANGE"
+    "RULE_RANGE",
+    "RULE_DELETE",
+    "RULE_LENGTH"
 };
 
 void Parser::debug_rule(const Rule rule)

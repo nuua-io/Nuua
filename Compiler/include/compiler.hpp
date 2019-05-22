@@ -36,7 +36,16 @@ class Compiler
     // If const_opcode is true and the expression is a constant expression, it will move it
     // to a new register. Otherwise, it will just add the constant and the constant index.
     // suggested_register will use that register as the result.
-    register_t compile(const std::shared_ptr<Expression> &rule, const bool load_constant = true, const register_t *suggested_register = nullptr);
+    register_t compile(
+        // The expression to compile
+        const std::shared_ptr<Expression> &rule,
+        // If the load constant opcode shall be included
+        const bool load_constant = true,
+        // If a register is suggested as the output instead of a new one.
+        const register_t *suggested_register = nullptr,
+        // If the access is an assignment, the value of it is passed here.
+        const std::shared_ptr<Expression> &access_assignment_value = std::shared_ptr<Expression>()
+    );
     // Adds an opcode to the program.
     void add_opcodes(const std::vector<opcode_t> &opcodes);
     // Adds a constant to the constant pool of the current frame

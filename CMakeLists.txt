@@ -2,6 +2,11 @@
 cmake_minimum_required (VERSION 2.8)
 project (Nuua)
 
+# Set the output directory
+set (OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin)
+set (LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib)
+set (STANDARD_LIRBARY_DIR ${CMAKE_SOURCE_DIR}/Lib)
+
 # Set the default build mode to release if not set.
 if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE Release)
@@ -19,9 +24,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 # Set the output directories.
-# set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-# set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-# set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_DIR}/$<0:>)
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_DIR}/$<0:>)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}/$<0:>)
 
 # Add the subdirectories where to look.
 add_subdirectory (Logger)
@@ -33,5 +38,8 @@ add_subdirectory (Virtual-Machine)
 add_subdirectory (Application)
 
 # Setup the final executable.
-add_executable (nuua nuua.cpp)
+add_executable (nuua nuua.cpp resources/icon.rc)
 target_link_libraries (nuua Application)
+
+# Copy the standard library to the exetuable path.
+add_custom_command (TARGET nuua POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${STANDARD_LIRBARY_DIR} ${OUTPUT_DIR}/Lib)

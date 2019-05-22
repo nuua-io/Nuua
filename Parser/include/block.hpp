@@ -38,14 +38,15 @@ class BlockVariableType
 // to determine the current state of a given block.
 class Block
 {
-    // Stores the variable name and the type of it.
-    std::unordered_map<std::string, BlockVariableType> variables;
     public:
+        // Stores the variable name and the type of it.
+        std::unordered_map<std::string, BlockVariableType> variables;
         // Gets a variable from the current block or returns nullptr.
         BlockVariableType *get_variable(const std::string &name);
         // Sets a variable and returns it's reference.
         void set_variable(const std::string &name, const BlockVariableType &var);
         bool is_exported(const std::string &name);
+        bool has(const std::string &name);
         void debug();
         static BlockVariableType *get_single_variable(const std::string &name, const std::vector<std::shared_ptr<Block>> *blocks);
 };

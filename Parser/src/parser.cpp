@@ -44,7 +44,13 @@ static std::vector<std::shared_ptr<const std::string>> file_stack;
 // parsed Abstract Syntax Tree and the pointer to the
 // original long lived file name string.
 // Acts as a temporal cache to avoid re-parsing a file.
-static std::unordered_map<std::string, std::pair<std::shared_ptr<std::vector<std::shared_ptr<Statement>>>, std::shared_ptr<const std::string>>> parsed_files;
+static std::unordered_map<
+    std::string,
+    std::pair<
+        std::shared_ptr<std::vector<std::shared_ptr<Statement>>>,
+        std::shared_ptr<const std::string>
+    >
+> parsed_files;
 
 Token *Parser::consume(const TokenType type, const std::string &message)
 {
@@ -385,15 +391,22 @@ std::shared_ptr<Statement> Parser::expression_statement()
 }
 
 /*
-use_declaration -> "use" IDENTIFIER ("," IDENTIFIER)* "from" STRING;
+use_declaration -> "use" STRING
+    | "use" IDENTIFIER ("," IDENTIFIER)* "from" STRING;
 */
 std::shared_ptr<Statement> Parser::use_declaration()
 {
     std::vector<std::string> targets;
-    targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'use'")->to_string());
-    while (this->match(TOKEN_COMMA)) targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after ','")->to_string());
-    this->consume(TOKEN_FROM, "Expected 'from' after the import target");
-    std::string module = this->consume(TOKEN_STRING, "Expected an identifier after 'from'")->to_string();
+    std::string module;
+    if (CHECK(TOKEN_IDENTIFIER)) {
+        targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after 'use'")->to_string()); // The message is redundant.
+        while (this->match(TOKEN_COMMA)) targets.push_back(this->consume(TOKEN_IDENTIFIER, "Expected an identifier after ','")->to_string());
+        this->consume(TOKEN_FROM, "Expected 'from' after the import target");
+        module = this->consume(TOKEN_STRING, "Expected an identifier after 'from'")->to_string();
+    } else {
+        module = this->consume(TOKEN_STRING, "Expected an identifier or 'string' after 'use'")->to_string();
+    }
+    printf("Hey, the module: %s\n", module.c_str());
     Parser::format_path(module, this->file);
     std::shared_ptr<Use> use;
     // Parse the contents of the target.
@@ -546,7 +559,7 @@ return_statement -> "return" expression?;
 */
 std::shared_ptr<Statement> Parser::return_statement()
 {
-    if (this->match_any({{ TOKEN_NEW_LINE, TOKEN_EOF }})) {
+    if (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EOF)) {
         return NEW_NODE(Return, nullptr);
     }
     std::shared_ptr<Expression> expr = this->expression();
@@ -699,9 +712,9 @@ void Parser::parameters(std::vector<std::shared_ptr<Declaration>> *dest)
     }
 }
 
-std::vector<std::shared_ptr<Expression> > Parser::arguments()
+std::vector<std::shared_ptr<Expression>> Parser::arguments()
 {
-    std::vector<std::shared_ptr<Expression> > arguments;
+    std::vector<std::shared_ptr<Expression>> arguments;
     if (!CHECK(TOKEN_RIGHT_PAREN)) {
         do arguments.push_back(std::move(this->expression()));
         while (this->match(TOKEN_COMMA));
@@ -709,9 +722,9 @@ std::vector<std::shared_ptr<Expression> > Parser::arguments()
     return arguments;
 }
 
-std::vector<std::shared_ptr<Statement> > Parser::body()
+std::vector<std::shared_ptr<Statement>> Parser::body()
 {
-    std::vector<std::shared_ptr<Statement> > body;
+    std::vector<std::shared_ptr<Statement>> body;
     while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) {
         body.push_back(std::move(this->statement()));
     }
@@ -804,36 +817,34 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
 
 Parser::Parser(const char *file)
 {
-    printf("1\n");
     std::string source = std::string(file);
-    printf("2 %s\n", source.c_str());
     Parser::format_path(source);
-    printf("3\n");
     this->file = std::move(std::make_shared<const std::string>(std::string(source)));
-    printf("4\n");
 }
 
 void Parser::format_path(std::string &path, const std::shared_ptr<const std::string> &parent)
 {
-    printf("Path: %s, parent: %s\n", path.c_str(), parent ? parent->c_str() : "No parent");
     // Add the final .nu if needed.
-    if (path.substr(path.length() - 3) != ".nu") path.append(".nu");
-    printf("A\n");
+    if (path.length() <= 3 || path.substr(path.length() - 3) != ".nu") path.append(".nu");
     // Join the parent if needed.
-    std::filesystem::path f = "C:/";
-    printf("B\n");
-    if (parent) f = std::filesystem::path(*parent).remove_filename().string() + path;
-    else {  printf("Sup!\n"); f = path; }
-    printf("C\n");
-    /*
-    printf(
-        "Path: %s\nRelative: %ls\nAbsolute: %ls\nNoFilename: %ls\n",
-        path->c_str(),
-        f.c_str(),
-        std::filesystem::absolute(f).c_str(),
-        std::filesystem::absolute(f).remove_filename().c_str()
-    );
-    */
+    std::filesystem::path f;
+
+    // Path if local file
+    if (parent) f = std::filesystem::path(*parent).remove_filename().append(path);
+    else f = path;
+
+    // Cehck if path exists
+    if (!std::filesystem::exists(std::filesystem::absolute(f))) {
+        // Check if path exists on std lib.
+        f = std::filesystem::path(logger->executable_path).remove_filename().append("Lib").append(path);
+        printf("STD PATH IS: %s\n", f.string().c_str());
+        if (!std::filesystem::exists(std::filesystem::absolute(f))) {
+            // Well... No module exists with that name.
+            logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, "Module " + path + " not found in any path.");
+            exit(logger->crash());
+        }
+    }
+
     path = std::filesystem::absolute(f).string();
 }
 

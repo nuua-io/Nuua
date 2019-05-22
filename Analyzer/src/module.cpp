@@ -47,20 +47,29 @@ void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
             // if (blocks.find(use->module) == blocks.end()) use->block = this->analyze_tld(use->code);
             // else use->block = blocks[use->module];
             // Check if the imports are exported first.
-            for (std::string &target : use->targets) {
-                BlockVariableType *var = use->block->get_variable(target);
-                if (!var) {
-                    // Trying to import something that is not declared on that module.
-                    ADD_NULL_LOG(use->module, "Importing an unknown target. Make sure your target '" + target + "' is defined in " + *use->module);
-                    exit(logger->crash());
+            if (use->targets.size() > 0) {
+                // Import the requested exported fields.
+                for (const std::string &target : use->targets) {
+                    BlockVariableType *var = use->block->get_variable(target);
+                    if (!var) {
+                        // Trying to import something that is not declared on that module.
+                        ADD_NULL_LOG(use->module, "Importing an unknown target. Make sure your target '" + target + "' is defined in " + *use->module);
+                        exit(logger->crash());
+                    }
+                    if (!use->block->is_exported(target)) {
+                        // Trying to import something that's not exported.
+                        ADD_LOG(var->node, "Importing an unexported target. Make sure your export '" + target + "' in " + *use->module);
+                        exit(logger->crash());
+                    }
+                    // All good. Add the variable to the local block.
+                    this->main_block->set_variable(target, { var->type, var->node });
                 }
-                if (!use->block->is_exported(target)) {
-                    // Trying to import something that's not exported.
-                    ADD_LOG(var->node, "Importing an unexported target. Make sure your export '" + target + "' in " + *use->module);
-                    exit(logger->crash());
+            } else {
+                // Import all exported fields.
+                for (const auto &[name, type] : use->block->variables) {
+                    // Check if it's exported before importing.
+                    if (type.exported) this->main_block->set_variable(name, { type.type, type.node });
                 }
-                // All good. Add the variable to the local block.
-                this->main_block->set_variable(target, { var->type, var->node });
             }
             break;
         }
@@ -76,6 +85,11 @@ void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
             // It needs to declare that function to the block.
             std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(tld);
             // Set the variable to the scoped block.
+            // printf("Fun (exported: %d) -> %s\n", set_exported, fun->name.c_str());
+            if (this->main_block->has(fun->name)) {
+                ADD_LOG(fun, "'" + fun->name + "' was already declared. Function overloading is not currently implemented in this version of nuua.");
+                exit(logger->crash());
+            }
             this->main_block->set_variable(fun->name, { std::make_shared<Type>(fun), NODE(fun), set_exported });
             break;
         }
@@ -177,23 +191,25 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
             std::shared_ptr<Variable> var = std::static_pointer_cast<Variable>(rule);
             for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
                 BlockVariableType *v = this->blocks[i]->get_variable(var->name);
-                if (v) { 
+                if (v) {
                     // Variable found!
                     // Declare last use.
                     v->last_use = rule;
-                    goto rule_variable_ok;
+                    break;
+                } else if (i == 0) {
+                    ADD_LOG(var, "Undeclared variable '" + var->name + "'");
+                    exit(logger->crash());
                 }
             }
-            ADD_LOG(var, "Undeclared variable '" + var->name + "'");
-            exit(logger->crash());
-            // All ok
-            rule_variable_ok:
             break;
         }
         case RULE_ASSIGN: {
             std::shared_ptr<Assign> assign = std::static_pointer_cast<Assign>(rule);
+            // Analyze both parts.
             this->analyze_code(assign->value);
             this->analyze_code(assign->target);
+            // Set the is_access field.
+            assign->is_access = assign->target->rule == RULE_ACCESS;
             // Make sure the types match.
             Type vtype = Type(assign->value, &this->blocks);
             Type ttype = Type(assign->target, &this->blocks);
@@ -254,6 +270,16 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
             Type itype = Type(access->index, &this->blocks);
             Type ttype = Type(access->target, &this->blocks);
             switch (ttype.type) {
+                case VALUE_STRING: {
+                    // The variable is a list. The index must be an integer.
+                    if (itype.type != VALUE_INT) {
+                        ADD_LOG(access->index, "String access index must be an integer. Got '" + itype.to_string() + "'");
+                        exit(logger->crash());
+                    }
+                    // All checks passed. We may set the index type and break the switch.
+                    access->type = ACCESS_STRING;
+                    break;
+                }
                 case VALUE_LIST: {
                     // The variable is a list. The index must be an integer.
                     if (itype.type != VALUE_INT) {
@@ -261,7 +287,7 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
                         exit(logger->crash());
                     }
                     // All checks passed. We may set the index type and break the switch.
-                    access->integer_index = true;
+                    access->type = ACCESS_LIST;
                     break;
                 }
                 case VALUE_DICT: {
@@ -271,7 +297,7 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
                         exit(logger->crash());
                     }
                     // All checks passed. We may set the index type and break the switch.
-                    access->integer_index = false;
+                    access->type = ACCESS_DICT;
                     break;
                 }
                 default: {
@@ -341,7 +367,7 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
 
 void Module::analyze_tld()
 {
-    for (std::shared_ptr<Statement> &tld : *this->code) this->analyze_tld(tld, &this->main_block);
+    for (std::shared_ptr<Statement> &tld : *this->code) this->analyze_tld(tld);
 }
 
 void Module::analyze_code()
@@ -389,17 +415,17 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
         case RULE_FUNCTION: {
             std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(rule);
             // Analyze the function parameters.
-            for (std::shared_ptr<Declaration> &parameter : fun->parameters) this->analyze_code(std::static_pointer_cast<Statement>(parameter), true);
+            for (const std::shared_ptr<Declaration> &parameter : fun->parameters) this->analyze_code(std::static_pointer_cast<Statement>(parameter), true);
             // Check if there's a top level return on the function.
             if (fun->return_type) {
-                this->return_type = std::make_shared<Type>(*fun->return_type);
-                for (std::shared_ptr<Statement> &rule : fun->body) {
+                this->return_type = fun->return_type;
+                for (const std::shared_ptr<Statement> &rule : fun->body) {
                     if (rule->rule == RULE_RETURN) goto continue_rule_function;
                 }
                 ADD_LOG(fun, "Expected at least 1 function top level return. Returns found inside conditionals or loops are not guaranted to happen.");
                 exit(logger->crash());
             } else {
-                for (std::shared_ptr<Statement> &rule : fun->body) {
+                for (const std::shared_ptr<Statement> &rule : fun->body) {
                     if (rule->rule == RULE_RETURN) goto continue_rule_function;
                 }
                 // Add an ending return because the function didn't have any!
@@ -408,7 +434,7 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             continue_rule_function:
             // Analyze the function body.
             fun->block = this->analyze_code(fun->body, fun->parameters);
-            this->return_type = nullptr;
+            this->return_type.reset();
             break;
         }
 
@@ -505,10 +531,11 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             // Declare the value of each iteration.
             std::shared_ptr<Type> vtype = std::make_shared<Type>(rfor->iterator, &this->blocks); // Types (they are saved on the heap since they will be saved)
             // Check iterator.
-            if (vtype->type != VALUE_LIST && vtype->type != VALUE_DICT) {
-                ADD_LOG(rfor->iterator, "The 'for' iterator is not iterable. It must be either 'list' or 'dictionary' but got '" + vtype->to_string() + "'");
+            if (vtype->type != VALUE_LIST && vtype->type != VALUE_DICT && vtype->type != VALUE_STRING) {
+                ADD_LOG(rfor->iterator, "The 'for' iterator is not iterable. It must be either 'list', 'dictionary' or 'string' but got '" + vtype->to_string() + "'");
                 exit(logger->crash());
             }
+            rfor->type = vtype;
             decs.push_back(std::make_shared<Declaration>(
                 rfor->file, rfor->line, rfor->column, rfor->variable, vtype, std::shared_ptr<Expression>())
             );

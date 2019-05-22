@@ -41,12 +41,12 @@ Type::Type(const std::string &name)
     }
 }
 
-bool Type::cast(std::shared_ptr<Type> &to, CastType *dest_casttype)
+bool Type::cast(const std::shared_ptr<Type> &to, CastType *dest_casttype)
 {
     return this->cast(to.get(), dest_casttype);
 }
 
-bool Type::cast(Type *to, CastType *dest_casttype)
+bool Type::cast(const Type *to, CastType *dest_casttype)
 {
     #define DEST_CASTTYPE(t) if (dest_casttype) *dest_casttype = t
     switch (this->type) {
@@ -81,6 +81,7 @@ bool Type::cast(Type *to, CastType *dest_casttype)
             switch (to->type) {
                 case VALUE_BOOL: { DEST_CASTTYPE(CAST_LIST_BOOL); break; }
                 case VALUE_STRING: { DEST_CASTTYPE(CAST_LIST_STRING); break; }
+                case VALUE_INT: { DEST_CASTTYPE(CAST_LIST_INT); break; }
                 default: { return false; }
             }
             break;
@@ -89,6 +90,7 @@ bool Type::cast(Type *to, CastType *dest_casttype)
             switch (to->type) {
                 case VALUE_BOOL: { DEST_CASTTYPE(CAST_DICT_BOOL); break; }
                 case VALUE_STRING: { DEST_CASTTYPE(CAST_DICT_STRING); break; }
+                case VALUE_INT: { DEST_CASTTYPE(CAST_DICT_INT); break; }
                 default: { return false; }
             }
             break;
@@ -96,6 +98,7 @@ bool Type::cast(Type *to, CastType *dest_casttype)
         case VALUE_STRING: {
             switch (to->type) {
                 case VALUE_BOOL: { DEST_CASTTYPE(CAST_STRING_BOOL); break; }
+                case VALUE_INT: { DEST_CASTTYPE(CAST_STRING_INT); break; }
                 default: { return false; }
             }
             break;
@@ -106,12 +109,12 @@ bool Type::cast(Type *to, CastType *dest_casttype)
     return true;
 }
 
-bool Type::unary(Token &op, const std::shared_ptr<Type> &dest_type, UnaryType *dest_unarytype)
+bool Type::unary(const Token &op, const std::shared_ptr<Type> &dest_type, UnaryType *dest_unarytype)
 {
     return this->unary(op, dest_type.get(), dest_unarytype);
 }
 
-bool Type::unary(Token &op, Type *dest_type, UnaryType *dest_unarytype)
+bool Type::unary(const Token &op, Type *dest_type, UnaryType *dest_unarytype)
 {
     #define DEST_TYPE(t) if (dest_type) dest_type->type = t
     #define DEST_UNARYTYPE(t) if (dest_unarytype) *dest_unarytype = t
@@ -159,12 +162,12 @@ bool Type::unary(Token &op, Type *dest_type, UnaryType *dest_unarytype)
     return true;
 }
 
-bool Type::binary(Token &op, std::shared_ptr<Type> &t1, const std::shared_ptr<Type> &dest_type, BinaryType *dest_bintype)
+bool Type::binary(const Token &op, const std::shared_ptr<Type> &t1, const std::shared_ptr<Type> &dest_type, BinaryType *dest_bintype)
 {
     return this->binary(op, t1.get(), dest_type.get(), dest_bintype);
 }
 
-bool Type::binary(Token &op, Type *t1, Type *dest_type, BinaryType *dest_bintype)
+bool Type::binary(const Token &op, const Type *t1, Type *dest_type, BinaryType *dest_bintype)
 {
     #define DEST_TYPE(t) if (dest_type) dest_type->type = t
     #define DEST_BINTYPE(t) if (dest_bintype) *dest_bintype = t
@@ -379,17 +382,17 @@ void Type::copy_to(Type *type) const
     }
 }
 
-bool Type::same_as(std::shared_ptr<Type> &type)
+bool Type::same_as(const std::shared_ptr<Type> &type) const
 {
     return this->same_as(type.get());
 }
 
-bool Type::same_as(Type &type)
+bool Type::same_as(const Type &type) const
 {
     return this->same_as(&type);
 }
 
-bool Type::same_as(Type *type)
+bool Type::same_as(const Type *type) const
 {
     // General case.
     if (!(this->type == type->type)) return false;
@@ -437,12 +440,12 @@ std::string Type::to_string() const
     return this->class_name;
 }
 
-void Type::print()
+void Type::print() const
 {
     printf("%s", this->to_string().c_str());
 }
 
-void Type::println()
+void Type::println() const
 {
     this->print();
     printf("\n");

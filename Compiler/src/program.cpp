@@ -14,56 +14,76 @@
 
 static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
    // Others
-    { "EXIT", {{ OT_NONE, OT_NONE, OT_NONE }} }, // EXIT - - -
+    { "EXIT", {{ }} }, // EXIT - - -
 
     // Register manipulation
-    { "MOVE", {{ OT_REG, OT_REG, OT_NONE }} }, // MOVE RX RY
-    { "LOAD_C", {{ OT_REG, OT_CONST, OT_NONE }} }, // LOAD_C RX C1
-    { "LOAD_G", {{ OT_REG, OT_GLOBAL, OT_NONE }} }, // LOAD_G RX G1
-    { "SET_G", {{ OT_GLOBAL, OT_REG, OT_NONE }} }, // SET_G G1 RX
+    { "MOVE", {{ OT_REG, OT_REG }} }, // MOVE RX RY
+    { "LOAD_C", {{ OT_REG, OT_CONST }} }, // LOAD_C RX C1
+    { "LOAD_G", {{ OT_REG, OT_GLOBAL }} }, // LOAD_G RX G1
+    { "SET_G", {{ OT_GLOBAL, OT_REG }} }, // SET_G G1 RX
 
     // Stack manipulation
-    { "PUSH", {{ OT_REG, OT_NONE, OT_NONE }} }, // PUSH RX
-    { "PUSH_C", {{ OT_CONST, OT_NONE, OT_NONE }} }, // PUSH C1
-    { "POP", {{ OT_REG, OT_NONE, OT_NONE }} }, // POP RX
+    { "PUSH", {{ OT_REG }} }, // PUSH RX
+    { "PUSH_C", {{ OT_CONST }} }, // PUSH C1
+    { "POP", {{ OT_REG }} }, // POP RX
+
+    // String releated
+    { "SGET", {{ OT_REG, OT_REG, OT_REG }} }, // SGET RX RY RZ
+    { "SSET", {{ OT_REG, OT_REG, OT_REG }} }, // SSET RX RY RZ
+    { "SDELETE", {{ OT_REG, OT_REG }} }, // SDELETE RX RY
 
     // List releated
-    { "OP_LPUSH", {{ OT_REG, OT_REG, OT_NONE }} }, // LPUSH RX RY
-    { "OP_LPUSH_C", {{ OT_REG, OT_CONST, OT_NONE }} }, // LPUSH_C RX C1
-    { "OP_LPOP", {{ OT_REG, OT_NONE, OT_NONE }} }, // LPOP RX
+    { "LPUSH", {{ OT_REG, OT_REG }} }, // LPUSH RX RY
+    { "LPUSH_C", {{ OT_REG, OT_CONST }} }, // LPUSH_C RX C1
+    { "LPOP", {{ OT_REG }} }, // LPOP RX
+    { "LGET", {{ OT_REG, OT_REG, OT_REG }} }, // LGET RX RY RZ
+    { "LSET", {{ OT_REG, OT_REG, OT_REG }} }, // LSET RX RY RZ
+    { "LDELETE", {{ OT_REG, OT_REG }} }, // LDELETE RX RY
+
+    // Dictionary releated
+    { "DGET", {{ OT_REG, OT_REG, OT_REG }} }, // DGET RX RY RZ
+    { "DSET", {{ OT_REG, OT_REG, OT_REG }} }, // DSET RX RY RZ
+    { "DDELETE", {{ OT_REG, OT_REG }} }, // DDELETE RX RY
 
     // Function releated
-    { "CALL", {{ OT_REG, OT_NONE, OT_NONE }} }, // CALL RX
-    { "RETURN", {{ OT_NONE, OT_NONE, OT_NONE }} }, // RETURN
+    { "CALL", {{ OT_REG }} }, // CALL RX
+    { "RETURN", {{ }} }, // RETURN
 
     // Value casting
-    { "CAST_INT_FLOAT", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_INT_FLOAT RX RY
-    { "CAST_INT_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_INT_BOOL RX RY
-    { "CAST_INT_STRING", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_INT_STRING RX RY
-    { "CAST_FLOAT_INT", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_FLOAT_INT RX RY
-    { "CAST_FLOAT_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_FLOAT_BOOL RX RY
-    { "CAST_FLOAT_STRING", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_FLOAT_STRING RX RY
-    { "CAST_BOOL_INT", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_BOOL_INT RX RY
-    { "CAST_BOOL_FLOAT", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_BOOL_FLOAT RX RY
-    { "CAST_BOOL_STRING", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_BOOL_STRING RX RY
-    { "CAST_LIST_STRING", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_LIST_STRING RX RY
-    { "CAST_LIST_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_LIST_BOOL RX RY
-    { "CAST_DICT_STRING", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_DICT_STRING RX RY
-    { "CAST_DICT_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_DICT_BOOL RX RY
-    { "CAST_STRING_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // CAST_STRING_BOOL RX RY
+    { "CAST_INT_FLOAT", {{ OT_REG, OT_REG }} }, // CAST_INT_FLOAT RX RY
+    { "CAST_INT_BOOL", {{ OT_REG, OT_REG }} }, // CAST_INT_BOOL RX RY
+    { "CAST_INT_STRING", {{ OT_REG, OT_REG }} }, // CAST_INT_STRING RX RY
+    { "CAST_FLOAT_INT", {{ OT_REG, OT_REG }} }, // CAST_FLOAT_INT RX RY
+    { "CAST_FLOAT_BOOL", {{ OT_REG, OT_REG }} }, // CAST_FLOAT_BOOL RX RY
+    { "CAST_FLOAT_STRING", {{ OT_REG, OT_REG }} }, // CAST_FLOAT_STRING RX RY
+    { "CAST_BOOL_INT", {{ OT_REG, OT_REG }} }, // CAST_BOOL_INT RX RY
+    { "CAST_BOOL_FLOAT", {{ OT_REG, OT_REG }} }, // CAST_BOOL_FLOAT RX RY
+    { "CAST_BOOL_STRING", {{ OT_REG, OT_REG }} }, // CAST_BOOL_STRING RX RY
+    { "CAST_LIST_STRING", {{ OT_REG, OT_REG }} }, // CAST_LIST_STRING RX RY
+    { "CAST_LIST_BOOL", {{ OT_REG, OT_REG }} }, // CAST_LIST_BOOL RX RY
+    { "CAST_LIST_INT", {{ OT_REG, OT_REG }} }, // CAST_LIST_INT RX RY
+    { "CAST_DICT_STRING", {{ OT_REG, OT_REG }} }, // CAST_DICT_STRING RX RY
+    { "CAST_DICT_BOOL", {{ OT_REG, OT_REG }} }, // CAST_DICT_BOOL RX RY
+    { "CAST_DICT_INT", {{ OT_REG, OT_REG }} }, // CAST_DICT_INT RX RY
+    { "CAST_STRING_BOOL", {{ OT_REG, OT_REG }} }, // CAST_STRING_BOOL RX RY
+    { "CAST_STRING_INT", {{ OT_REG, OT_REG }} }, // CAST_STRING_INT RX RY
 
     // Negation
-    { "NEG_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // NEG_BOOL RX RY
+    { "NEG_BOOL", {{ OT_REG, OT_REG }} }, // NEG_BOOL RX RY
 
     // Minus operations
-    { "MINUS_INT", {{ OT_REG, OT_REG, OT_NONE }} }, // MINUS_INT RX RY
-    { "MINUS_FLOAT", {{ OT_REG, OT_REG, OT_NONE }} }, // MINUS_FLOAT RX RY
-    { "MINUS_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // MINUS_BOOL RX RY
+    { "MINUS_INT", {{ OT_REG, OT_REG }} }, // MINUS_INT RX RY
+    { "MINUS_FLOAT", {{ OT_REG, OT_REG }} }, // MINUS_FLOAT RX RY
+    { "MINUS_BOOL", {{ OT_REG, OT_REG }} }, // MINUS_BOOL RX RY
 
     // Plus operations
-    { "PLUS_INT", {{ OT_REG, OT_REG, OT_NONE }} }, // PLUS_INT RX RY
-    { "PLUS_FLOAT", {{ OT_REG, OT_REG, OT_NONE }} }, // PLUS_FLOAT RX RY
-    { "PLUS_BOOL", {{ OT_REG, OT_REG, OT_NONE }} }, // PLUS_BOOL RX RY
+    { "PLUS_INT", {{ OT_REG, OT_REG }} }, // PLUS_INT RX RY
+    { "PLUS_FLOAT", {{ OT_REG, OT_REG }} }, // PLUS_FLOAT RX RY
+    { "PLUS_BOOL", {{ OT_REG, OT_REG }} }, // PLUS_BOOL RX RY
+
+    // Extra binary but unary
+    { "INC", {{ OT_REG }} }, // INC RX
+    { "DEC", {{ OT_REG }} }, // DEC RX
 
     // Addition
     { "ADD_INT", {{ OT_REG, OT_REG, OT_REG }} }, // ADD_INT RX RY RZ
@@ -133,17 +153,29 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     { "LTE_STRING", {{ OT_REG, OT_REG, OT_REG }} }, // LTE_STRING RX RY RZ
     { "LTE_BOOL", {{ OT_REG, OT_REG, OT_REG }} }, // LTE_BOOL RX RY RZ
 
+    // Logical operations
+    { "OR", {{ OT_REG, OT_REG, OT_REG }} }, // OR RX RY RZ
+    { "AND", {{ OT_REG, OT_REG, OT_REG }} }, // AND RX RY RZ
+
     // Control flow (All relative jumps)
-    { "FJUMP", {{ OT_LITERAL, OT_NONE, OT_NONE }} }, // FJUMP A
-    { "BJUMP", {{ OT_LITERAL, OT_NONE, OT_NONE }} }, // BJUMP A
-    { "CFJUMP", {{ OT_LITERAL, OT_REG, OT_NONE }} }, // FJUMP A RX
-    { "CBJUMP", {{ OT_LITERAL, OT_REG, OT_NONE }} }, // BJUMP A RX
-    { "CFNJUMP", {{ OT_LITERAL, OT_REG, OT_NONE }} }, // FNJUMP A RX
-    { "CBNJUMP", {{ OT_LITERAL, OT_REG, OT_NONE }} }, // BNJUMP A RX
+    { "FJUMP", {{ OT_LITERAL }} }, // FJUMP A
+    { "BJUMP", {{ OT_LITERAL }} }, // BJUMP A
+    { "CFJUMP", {{ OT_LITERAL, OT_REG }} }, // FJUMP A RX
+    { "CBJUMP", {{ OT_LITERAL, OT_REG }} }, // BJUMP A RX
+    { "CFNJUMP", {{ OT_LITERAL, OT_REG }} }, // FNJUMP A RX
+    { "CBNJUMP", {{ OT_LITERAL, OT_REG }} }, // BNJUMP A RX
+
+    // Slice and range
+    { "SSLICE", {{ OT_REG, OT_REG, OT_REG, OT_REG, OT_REG }} }, // SSLICE RX RY R1 R2 R3 (dest, target, start, end, step)
+    { "SSLICEE", {{ OT_REG, OT_REG, OT_REG, OT_REG }} }, // SSLICE RX RY R1 R2 (dest, target, start, step)
+    { "LSLICE", {{ OT_REG, OT_REG, OT_REG, OT_REG, OT_REG }} }, // LSLICE RX RY PR PR R3 (dest, target, start, end, step)
+    { "LSLICEE", {{ OT_REG, OT_REG, OT_REG, OT_REG }} }, // LSLICEE RX RY R1 R2 (dest, target, start, step)
+    { "RANGEE", {{ OT_REG, OT_REG, OT_REG }} }, // RANGEE RX R1 R2 (dest, start, end)
+    { "RANGEI", {{ OT_REG, OT_REG, OT_REG }} }, // RANGEI RX R1 R2 (dest, start, end)
 
     // Utilities
-    { "PRINT", {{ OT_REG, OT_NONE, OT_NONE }} }, // PRINT RX
-    { "PRINT_C", {{ OT_CONST, OT_NONE, OT_NONE }} },
+    { "PRINT", {{ OT_REG }} }, // PRINT RX
+    { "PRINT_C", {{ OT_CONST }} },
 };
 
 std::string opcode_to_string(const opcode_t opcode)

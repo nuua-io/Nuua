@@ -20,7 +20,7 @@ class ValueFunction;
 // Base value class representing a nuua value.
 class Value
 {
-    void build_from_type(Type *type);
+    void build_from_type(const Type *type);
     public:
         // The type of the value.
         Type type;
@@ -45,27 +45,27 @@ class Value
         // a diferent value to be stored. They pretty much speak by themselves.
         // Integer (int) value.
         Value() : type({ VALUE_INT }), value_int(0) {}
-        Value(int64_t a)
+        Value(const int64_t a)
             : type({ VALUE_INT }), value_int(a) {}
         // Float value (double in C/C++).
-        Value(double a)
+        Value(const double a)
             : type({ VALUE_FLOAT }), value_float(a) {}
         // Boolean value.
-        Value(bool a)
+        Value(const bool a)
             : type({ VALUE_BOOL }), value_bool(a) {}
         // String value.
-        Value(std::string &a)
+        Value(const std::string &a)
             : type({ VALUE_STRING }), value_string(std::make_unique<std::string>(a)) {}
         // List value.
-        Value(std::vector<Value> &a, std::shared_ptr<Type> &inner_type)
+        Value(const std::vector<Value> &a, const std::shared_ptr<Type> &inner_type)
             : type({ VALUE_LIST, inner_type }), value_list(std::make_unique<std::vector<Value>>(a)) {}
         // The following two constructors are basically defined in the value.cpp since
         // They make use of a forward declared constructor.
-        Value(std::unordered_map<std::string, Value> &a, std::vector<std::string> &b, std::shared_ptr<Type> &inner_type);
-        Value(size_t index, registers_size_t registers);
+        Value(const std::unordered_map<std::string, Value> &a, const std::vector<std::string> &b, const std::shared_ptr<Type> &inner_type);
+        Value(const size_t index, const registers_size_t registers);
         // Create default initialized value, given the type.
-        Value(std::shared_ptr<Type> &type);
-        Value(Type &type);
+        Value(const std::shared_ptr<Type> &type);
+        Value(const Type &type);
         Value(const Value &value);
         ~Value() {}
         // Copies the current value to the destnation.

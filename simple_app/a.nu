@@ -1,0 +1,3 @@
+export fun b() {
+    return
+}

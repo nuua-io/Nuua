@@ -8,16 +8,13 @@ void Memory::dump()
         opcode_t opcode = this->code[i];
         // Print the opcode
         print_opcode(opcode);
-        // Get the opcode operands
-        std::vector<OpCodeType> *operands = opcode_operands(opcode);
         // Print the opcode operands
-        for (uint8_t k = 0; k < 3 && operands->at(k) != OT_NONE; k++) {
-            switch (operands->at(k)) {
-                case OT_REG: { printf(" R%04llu", this->code[++i]); break; }
-                case OT_CONST: { printf(" C%04llu", this->code[++i]); break; }
-                case OT_GLOBAL: { printf(" G%04llu", this->code[++i]); break; }
-                case OT_LITERAL: { printf(" %05llu", this->code[++i]); break; }
-                case OT_NONE: { /* Never happens */ }
+        for (const OpCodeType &ot : *opcode_operands(opcode)) {
+            switch (ot) {
+                case OT_REG: { printf(" R-%05llu", this->code[++i]); break; }
+                case OT_CONST: { printf(" C-%05llu", this->code[++i]); break; }
+                case OT_GLOBAL: { printf(" G-%05llu", this->code[++i]); break; }
+                case OT_LITERAL: { printf(" L-%05llu", this->code[++i]); break; }
             }
         }
         // Print a new line.

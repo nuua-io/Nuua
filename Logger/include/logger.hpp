@@ -44,6 +44,8 @@ class Logger
     std::vector<LoggerEntity> entities;
     void display_log(uint16_t index, bool red);
     public:
+        // Stores the executable path.
+        std::string executable_path;
         // Adds a new entity to the entity stack.
         void add_entity(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg);
         // Pops an entity from the entity stack.

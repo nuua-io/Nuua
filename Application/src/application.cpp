@@ -20,6 +20,12 @@ void Application::string(const std::string &string)
 
 Application::Application(int argc, char *argv[])
 {
+    if (argc < 1) {
+        exit(logger->crash());
+    }
+    // Set the executable_path.
+    logger->executable_path = argv[0];
+    // Fire the application
     switch (argc) {
         case 2: { this->application_type = APPLICATION_FILE; this->file_name = std::string(argv[1]); break; }
         default: {

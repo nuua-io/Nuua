@@ -28,6 +28,10 @@ void Compiler::compile(const char *file)
     this->program->main_frame.registers_size = this->global.current_register;
     this->program->main_frame.allocate_registers();
 
+    // Add the initial function call.
+    // const auto [variable, is_global] = this->get_variable("main");
+    // this->add_opcodes({{ OP_CALL, variable->reg }});
+
     // Compile the code.
     this->compile_module(code, block);
 
@@ -184,7 +188,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                     this->compile(dec->initializer, false);
                 } else this->compile(dec->initializer, true, &rx);
             } else {
-                this->add_opcodes({{ OP_LOAD_C, rx, this->add_constant(Value(dec->type)) }});
+                this->add_opcodes({{ OP_LOAD_C, rx, this->add_constant({ dec->type }) }});
             }
             break;
         }
@@ -205,14 +209,97 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         }
         case RULE_IF: {
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
+            size_t initial_index = this->program->memory->code.size() - 1;
+            register_t rx = this->compile(rif->condition);
+            this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
+            // Save the jump index
+            size_t jump_index = this->program->memory->code.size() - 2; // The 0 on the opcode above.
+            // Compile the if then branch.
+            for (const std::shared_ptr<Statement> &stmt : rif->then_branch) this->compile(stmt);
+            if (rif->else_branch.size() > 0) {
+                // Add a jump to the then branch to avoid going to else.
+                this->add_opcodes({{ OP_FJUMP, 0 }});
+                size_t then_jump = this->program->memory->code.size() - 1;
+                // Change the initial jump index to here.
+                this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index);
+                for (const std::shared_ptr<Statement> &stmt : rif->else_branch) this->compile(stmt);
+                this->program->memory->code[then_jump] = (this->program->memory->code.size() - 1) - (then_jump);
+            } else this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index);
             break;
         }
         case RULE_WHILE: {
             std::shared_ptr<While> rwhile = std::static_pointer_cast<While>(rule);
+            // Save the initial point.
+            size_t initial_index = this->program->memory->code.size() - 1;
+            // Compile the condition.
+            register_t rx = this->compile(rwhile->condition);
+            // Perform the jump if nessesary.
+            this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
+            this->local.free_register(rx);
+            // Get the jump index for further modification.
+            size_t jump_index = this->program->memory->code.size() - 2;
+            // Compile the while body.
+            for (const std::shared_ptr<Statement> &stmt : rwhile->body) this->compile(stmt);
+            // Set the jump back up.
+            size_t jb = (this->program->memory->code.size() + 1) - initial_index;
+            this->add_opcodes({{ OP_BJUMP, jb }});
+            // Modify the branch jump.
+            this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
             break;
         }
         case RULE_FOR: {
             std::shared_ptr<For> rfor = std::static_pointer_cast<For>(rule);
+            // Save the initial point.
+            size_t initial_index = this->program->memory->code.size() - 1;
+            // Setup the for condition.
+            register_t rc = this->compile(rfor->iterator);
+            // Set the for block.
+            this->blocks.push_back(rfor->block);
+            // Store the length of the iterator.
+            register_t r1 = this->local.get_register();
+            switch (rfor->type->type) {
+                case VALUE_STRING: { this->add_opcodes({{ OP_CAST_STRING_INT, r1, rc }}); break; }
+                case VALUE_LIST: { this->add_opcodes({{ OP_CAST_LIST_INT, r1, rc }}); break; }
+                case VALUE_DICT: { this->add_opcodes({{ OP_CAST_DICT_INT, r1, rc }}); break; }
+                default: { ADD_LOG(rfor->iterator, "Invalid iterator type to compile: '" + rfor->type->to_string() + "'"); exit(logger->crash()); }
+            }
+            this->local.free_register(rc);
+            // Loop variable.
+            register_t re = this->local.get_register(true);
+            this->get_variable(rfor->variable).first->reg = re;
+            // Current index.
+            register_t ri = this->local.get_register(true);
+            if (rfor->index != "") this->get_variable(rfor->index).first->reg = ri;
+            // Set the initial index.
+            this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ 0LL }) }});
+            // Add the loop condition.
+            register_t rx = this->local.get_register(); // Loop condition.
+            this->add_opcodes({{ OP_LT_INT, rx, ri, r1 }});
+            // Perform the jump if nessesary.
+            this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
+            // Get the jump index for further modification.
+            size_t jump_index = this->program->memory->code.size() - 2;
+            // Set the loop variable/s.
+            switch (rfor->type->type) {
+                case VALUE_STRING: { this->add_opcodes({{ OP_SGET, re, rc, ri }}); break; }
+                case VALUE_LIST: { this->add_opcodes({{ OP_LGET, re, rc, ri }}); break; }
+                case VALUE_DICT: { this->add_opcodes({{ OP_DGET, re, rc, ri }}); break; }
+                default: { ADD_LOG(rfor->iterator, "Invalid iterator type to compile: '" + rfor->type->to_string() + "'"); exit(logger->crash()); }
+            }
+            // Compile the while body.
+            for (const std::shared_ptr<Statement> &stmt : rfor->body) this->compile(stmt);
+            // Increment the current index.
+            this->add_opcodes({{ OP_INC, ri }});
+            // Set the jump back up.
+            size_t jb = (this->program->memory->code.size() + 1) - initial_index;
+            this->add_opcodes({{ OP_BJUMP, jb }});
+            // Modify the branch jump.
+            this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
+            // Remove the for block.
+            this->blocks.pop_back();
+            // Remove the variables used.
+            this->local.free_register(ri, true);
+            this->local.free_register(re, true);
             break;
         }
         default: {
@@ -222,8 +309,12 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
     }
 }
 
-register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool load_constant, const register_t *suggested_register)
-{
+register_t Compiler::compile(
+    const std::shared_ptr<Expression> &rule,
+    const bool load_constant,
+    const register_t *suggested_register,
+    const std::shared_ptr<Expression> &access_assignment_value
+) {
     register_t result = 0;
     switch (rule->rule) {
         case RULE_INTEGER: {
@@ -252,12 +343,12 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
             if (this->is_constant(list)) {
                 // The list can be stored in the constant pool.
                 if (load_constant) this->add_opcodes({{ OP_LOAD_C, result }});
-                Value v;
+                Value v = Value(list->type);
                 this->constant_list(list, v);
                 this->add_opcodes({{ this->add_constant(v) }});
             } else {
                 // The list needs to be constructed from the groud up
-                this->add_opcodes({{ OP_LOAD_C, result, this->add_constant(Value(list->type)) }});
+                this->add_opcodes({{ OP_LOAD_C, result, this->add_constant({ list->type }) }});
                 for (const std::shared_ptr<Expression> &e : list->value) {
                     if (this->is_constant(e)) {
                         this->add_opcodes({{ OP_LPUSH_C, result }});
@@ -273,10 +364,32 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
         }
         case RULE_DICTIONARY: {
             std::shared_ptr<Dictionary> dict = std::static_pointer_cast<Dictionary>(rule);
+            result = suggested_register ? *suggested_register : this->local.get_register();
+            if (this->is_constant(dict)) {
+                // The list can be stored in the constant pool.
+                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result }});
+                Value v;
+                this->constant_dict(dict, v);
+                this->add_opcodes({{ this->add_constant(v) }});
+            } else {
+                // The list needs to be constructed from the groud up
+                this->add_opcodes({{ OP_LOAD_C, result, this->add_constant({ dict->type }) }});
+                for (const auto &[key, value] : dict->value) {
+                    size_t key_reg = this->add_constant({ key });
+                    if (this->is_constant(value)) {
+                        this->add_opcodes({{ OP_DSET, result, key_reg }});
+                        this->compile(value, false);
+                    } else {
+                        register_t ry = this->compile(value);
+                        this->add_opcodes({{ OP_DSET, result, key_reg, ry }});
+                        this->local.free_register(ry);
+                    }
+                }
+            }
             break;
         }
         case RULE_GROUP: {
-            this->compile(std::static_pointer_cast<Group>(rule)->expression, suggested_register);
+            result = this->compile(std::static_pointer_cast<Group>(rule)->expression, suggested_register);
             break;
         }
         case RULE_CAST: {
@@ -284,6 +397,7 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
             opcode_t base = OP_CAST_INT_FLOAT;
             register_t rx = this->compile(cast->expression);
             this->add_opcodes({{ base + cast->cast_type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
+            this->local.free_register(rx);
             break;
         }
         case RULE_UNARY: {
@@ -291,6 +405,7 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
             opcode_t base = OP_NEG_BOOL;
             register_t rx = this->compile(unary->right);
             this->add_opcodes({{ base + unary->type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
+            this->local.free_register(rx);
             break;
         }
         case RULE_BINARY: {
@@ -299,39 +414,160 @@ register_t Compiler::compile(const std::shared_ptr<Expression> &rule, const bool
             register_t ry = this->compile(binary->left);
             register_t rz = this->compile(binary->right);
             this->add_opcodes({{ base + binary->type, result = suggested_register ? *suggested_register : this->local.get_register(), ry, rz }});
+            this->local.free_register(ry);
+            this->local.free_register(rz);
             break;
         }
         case RULE_VARIABLE: {
-            std::pair<BlockVariableType *, bool> var = this->get_variable(std::static_pointer_cast<Variable>(rule)->name);
-            if (var.second) {
+            // std::pair<BlockVariableType *, bool> var = this->get_variable(std::static_pointer_cast<Variable>(rule)->name);
+            const auto [variable, is_global] = this->get_variable(std::static_pointer_cast<Variable>(rule)->name);
+            if (is_global) {
                 // The variable is global, and needs to be loaded first.
                 result = suggested_register ? *suggested_register : this->local.get_register();
-                this->add_opcodes({{ OP_LOAD_G, result, var.first->reg }});
-            } else result = var.first->reg;
+                this->add_opcodes({{ OP_LOAD_G, result, variable->reg }});
+            } else result = variable->reg;
             break;
         }
         case RULE_ASSIGN: {
             std::shared_ptr<Assign> assign = std::static_pointer_cast<Assign>(rule);
+            // Compile the value of the assignment
+            if (assign->is_access) {
+                result = this->compile(assign->target, true, nullptr, assign->value);
+            } else {
+                result = this->compile(assign->value);
+                // Compile the target.
+                register_t target = this->compile(assign->target);
+                // Check if it's a global variable.
+                if (assign->target->rule == RULE_VARIABLE) {
+                    // Check if the assignment is to a global variable
+                    const auto [variable, is_global] = this->get_variable(std::static_pointer_cast<Variable>(assign->target)->name);
+                    if (is_global) {
+                        // Assign it to it.
+                        this->add_opcodes({{ OP_SET_G, target /* variable->reg */ , result }});
+                        goto analyzer_assign_finished;
+                    }
+                }
+                this->add_opcodes({{ OP_MOVE, target, result }});
+                analyzer_assign_finished:
+                this->local.free_register(target);
+            }
             break;
         }
         case RULE_LOGICAL: {
             std::shared_ptr<Logical> logical = std::static_pointer_cast<Logical>(rule);
+            result = suggested_register ? *suggested_register : this->local.get_register();
+            register_t ry = this->compile(logical->left);
+            register_t rz = this->compile(logical->right);
+            switch (logical->op.type) {
+                case TOKEN_OR: {
+                    this->add_opcodes({{ OP_OR, result, ry, rz }});
+                    break;
+                }
+                case TOKEN_AND: {
+                    this->add_opcodes({{ OP_AND, result, ry, rz }});
+                    break;
+                }
+            }
+            this->local.free_register(ry);
+            this->local.free_register(rz);
             break;
         }
         case RULE_CALL: {
             std::shared_ptr<Call> call = std::static_pointer_cast<Call>(rule);
+            register_t target = this->compile(call->target);
+            // Push the function arguments.
+            for (const std::shared_ptr<Expression> &arg : call->arguments) {
+                if (this->is_constant(arg)) {
+                    this->add_opcodes({{ OP_PUSH_C }});
+                    this->compile(arg, false);
+                } else {
+                    register_t rx = this->compile(arg);
+                    this->add_opcodes({{ OP_PUSH, rx }});
+                    this->local.free_register(rx);
+                }
+            }
+            this->add_opcodes({{ OP_CALL, target }});
+            this->local.free_register(target);
+            //! Needs to pop from the stack to get the return value
             break;
         }
         case RULE_ACCESS: {
             std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
+            register_t target = this->compile(access->target);
+            register_t index = this->compile(access->index);
+            if (access_assignment_value) {
+                // The value needs to be compiled.
+                result = this->compile(access_assignment_value);
+                switch (access->type) {
+                    case ACCESS_STRING: {
+                        this->add_opcodes({{ OP_SSET, target, index, result }});
+                        break;
+                    }
+                    case ACCESS_LIST: {
+                        this->add_opcodes({{ OP_LSET, target, index, result }});
+                        break;
+                    }
+                    case ACCESS_DICT: {
+                        this->add_opcodes({{ OP_DSET, target, index, result }});
+                        break;
+                    }
+                }
+            } else {
+                switch (access->type) {
+                    case ACCESS_STRING: {
+                        this->add_opcodes({{ OP_SGET, result = suggested_register ? *suggested_register : this->local.get_register(), target, index }});
+                        break;
+                    }
+                    case ACCESS_LIST: {
+                        this->add_opcodes({{ OP_LGET, result = suggested_register ? *suggested_register : this->local.get_register(), target, index }});
+                        break;
+                    }
+                    case ACCESS_DICT: {
+                        this->add_opcodes({{ OP_DGET, result = suggested_register ? *suggested_register : this->local.get_register(), target, index }});
+                        break;
+                    }
+                }
+            }
+            this->local.free_register(target);
+            this->local.free_register(index);
             break;
         }
         case RULE_SLICE: {
             std::shared_ptr<Slice> slice = std::static_pointer_cast<Slice>(rule);
+            register_t r1 = slice->start ? this->compile(slice->start) : this->add_constant({ 0LL });
+            register_t r2 = slice->end ? this->compile(slice->end) : 0;
+            register_t r3 = slice->step ? this->compile(slice->step) : this->add_constant({ 1LL });
+            register_t rx = this->compile(slice->target);
+            if (slice->end) {
+                this->add_opcodes({{
+                    slice->is_list ? OP_LSLICE : OP_SSLICE,
+                    result = suggested_register ? *suggested_register : this->local.get_register(),
+                    rx, r1, r2, r3
+                }});
+            } else {
+                this->add_opcodes({{
+                slice->is_list ? OP_LSLICEE : OP_SSLICEE,
+                result = suggested_register ? *suggested_register : this->local.get_register(),
+                rx, r1, r3
+            }});
+            }
+            this->local.free_register(r1);
+            this->local.free_register(r2);
+            this->local.free_register(r3);
+            this->local.free_register(rx);
             break;
         }
         case RULE_RANGE: {
             std::shared_ptr<Range> range = std::static_pointer_cast<Range>(rule);
+            register_t r1 = this->compile(range->start);
+            register_t r2 = this->compile(range->end);
+            this->add_opcodes({{
+                range->inclusive ? OP_RANGEI : OP_RANGEE,
+                result = suggested_register ? *suggested_register : this->local.get_register(),
+                r1, r2
+            }});
+            this->local.free_register(r1);
+            this->local.free_register(r2);
             break;
         }
         default: {
@@ -347,8 +583,10 @@ std::pair<BlockVariableType *, bool> Compiler::get_variable(const std::string &n
     for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
         BlockVariableType *var = this->blocks[i]->get_variable(name);
         if (var) return { var, i == 0 };
+        else if (i == 0) return { nullptr, false };
     }
-    return { nullptr, false };
+
+    return { nullptr, false }; // Compiler warning... Totally useless.
 }
 
 void Compiler::add_opcodes(const std::vector<opcode_t> &opcodes)
@@ -358,9 +596,7 @@ void Compiler::add_opcodes(const std::vector<opcode_t> &opcodes)
 
 size_t Compiler::add_constant(const Value &value)
 {
-    printf("Adding constant: %s\n", value.type.to_string().c_str());
     this->program->memory->constants.push_back(std::move(value));
-    printf("Constant added.\n");
     return this->program->memory->constants.size() - 1;
 }
 
@@ -368,12 +604,13 @@ void Compiler::constant_list(const std::shared_ptr<List> &list, Value &dest)
 {
     for (const std::shared_ptr<Expression> &value : list->value) {
         switch (value->rule) {
-            case RULE_INTEGER: { dest.value_list->push_back({ std::static_pointer_cast<Integer>(value)->value }); break; }
+            // case RULE_INTEGER: { dest.value_list->push_back({ std::static_pointer_cast<Integer>(value)->value }); break; }
+            case RULE_INTEGER: { dest.value_list->push_back({ 10LL }); break; }
             case RULE_FLOAT: { dest.value_list->push_back({ std::static_pointer_cast<Float>(value)->value }); break; }
             case RULE_BOOLEAN: { dest.value_list->push_back({ std::static_pointer_cast<Boolean>(value)->value }); break; }
             case RULE_STRING:  { dest.value_list->push_back({ std::static_pointer_cast<String>(value)->value }); break; }
             case RULE_LIST: {
-                Value v;
+                Value v = Value(std::static_pointer_cast<List>(value)->type);
                 this->constant_list(std::static_pointer_cast<List>(value), v);
                 dest.value_list->push_back(std::move(v));
                 break;
@@ -401,7 +638,7 @@ void Compiler::constant_dict(const std::shared_ptr<Dictionary> &dict, Value &des
             case RULE_BOOLEAN: { dest.value_dict->insert(key, { std::static_pointer_cast<Boolean>(value)->value }); break; }
             case RULE_STRING:  { dest.value_dict->insert(key, { std::static_pointer_cast<String>(value)->value }); break; }
             case RULE_LIST: {
-                Value v;
+                Value v = Value(std::static_pointer_cast<List>(value)->type);
                 this->constant_list(std::static_pointer_cast<List>(value), v);
                 dest.value_dict->insert(key, std::move(v));
                 break;

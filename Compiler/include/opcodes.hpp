@@ -22,13 +22,23 @@ typedef enum : uint8_t {
     OP_PUSH_C, // PUSH C1
     OP_POP, // POP RX
 
+    // String releated
+    OP_SGET, // SGET RX RY RZ
+    OP_SSET, // SSET RX RY RZ
+    OP_SDELETE, // SDELETE RX RY
+
     // List releated
     OP_LPUSH, // LPUSH RX RY
     OP_LPUSH_C, // LPUSH RX C1
     OP_LPOP, // LPOP RX
+    OP_LGET, // LGET RX RY RZ
+    OP_LSET, // LSET RX RY RZ
+    OP_LDELETE, // LDELETE RX RY
 
     // Dictionary releated
-    // OP_DPUSH, // DPUSH RX RY RZ
+    OP_DGET, // DGET RX RY RZ
+    OP_DSET, // DSET RX RY RZ
+    OP_DDELETE, // DDELETE RX RY
 
     // Function releated
     OP_CALL, // CALL RX
@@ -48,9 +58,12 @@ typedef enum : uint8_t {
     OP_CAST_BOOL_STRING, // CAST_BOOL_STRING RX RY
     OP_CAST_LIST_STRING, // CAST_LIST_STRING RX RY
     OP_CAST_LIST_BOOL, // CAST_LIST_BOOL RX RY
+    OP_CAST_LIST_INT, // CAST_LIST_INT RX RY
     OP_CAST_DICT_STRING, // CAST_DICT_STRING RX RY
     OP_CAST_DICT_BOOL, // CAST_DICT_BOOL RX RY
+    OP_CAST_DICT_INT, // CAST_DICT_INT RX RY
     OP_CAST_STRING_BOOL, // CAST_STRING_BOOL RX RY
+    OP_CAST_STRING_INT, // CAST_STRING_INT RX RY
 
     /* Unary Operations */
 
@@ -64,6 +77,10 @@ typedef enum : uint8_t {
     OP_PLUS_INT, // PLUS_INT RX RY
     OP_PLUS_FLOAT, // PLUS_FLOAT RX RY
     OP_PLUS_BOOL, // PLUS_BOOL RX RY
+
+    /* Extra binary but unary */
+    OP_INC, // INC RX
+    OP_DEC, // DEC RX
 
     /* Binary Operations */
 
@@ -126,6 +143,10 @@ typedef enum : uint8_t {
     OP_LTE_STRING, // LTE_STRING RX RY RZ
     OP_LTE_BOOL, // LTE_BOOL RX RY RZ
 
+    // Logical operations
+    OP_OR, // OR RX RY RZ
+    OP_AND, // AND RX RY RZ
+
     // Control flow (All relative jumps)
     OP_FJUMP, // FJUMP A
     OP_BJUMP, // BJUMP A
@@ -133,6 +154,14 @@ typedef enum : uint8_t {
     OP_CBJUMP, // BJUMP A RX
     OP_CFNJUMP, // FNJUMP A RX
     OP_CBNJUMP, // BNJUMP A RX
+
+    // Slice and range
+    OP_SSLICE, // SSLICE RX RY R1 R2 R3 (dest, target, start, end, step)
+    OP_SSLICEE, // SSLICEE RX RY R1 R2 (dest, target, start, step)
+    OP_LSLICE, // LSLICE RX RY R1 R2 R3 (dest, target, start, end, step)
+    OP_LSLICEE, // LSLICEE RX RY R1 R2 (dest, target, start, step)
+    OP_RANGEE, // RANGEE RX R1 R2 (dest, start, end)
+    OP_RANGEI, // RANGEI RX R1 R2 (dest, start, end)
 
     // Utilities
     OP_PRINT, // PRINT RX

@@ -123,12 +123,14 @@ int Logger::crash()
 
 void Logger::display_log(uint16_t index, bool red)
 {
-    printf(
-        "\n > %s, line: %u, column: %u\n\n",
-        this->entities[index].file->c_str(),
-        this->entities[index].line,
-        this->entities[index].column
-    );
+    if (this->entities[index].file) {
+        printf(
+            "\n > %s, line: %u, column: %u\n\n",
+            this->entities[index].file->c_str(),
+            this->entities[index].line,
+            this->entities[index].column
+        );
+    }
     print_msg(this->entities[index].msg, red);
     if (this->entities[index].line != 0 && this->entities[index].column != 0) {
         print_file_line(

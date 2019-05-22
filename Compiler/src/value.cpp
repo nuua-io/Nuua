@@ -12,18 +12,18 @@
 // #include <cmath>
 // #include <iostream>
 
-Value::Value(std::unordered_map<std::string, Value> &a, std::vector<std::string> &b, std::shared_ptr<Type> &inner_type)
+Value::Value(const std::unordered_map<std::string, Value> &a, const std::vector<std::string> &b, const std::shared_ptr<Type> &inner_type)
     : type({ VALUE_DICT, inner_type }), value_dict(std::make_unique<ValueDictionary>(a, b)) {}
 
-Value::Value(size_t index, registers_size_t registers)
+Value::Value(const size_t index, const registers_size_t registers)
     : type({ VALUE_FUN }), value_fun(std::make_unique<ValueFunction>(index, registers)) {}
 
-Value::Value(std::shared_ptr<Type> &type)
+Value::Value(const std::shared_ptr<Type> &type)
 {
     this->build_from_type(type.get());
 }
 
-Value::Value(Type &type)
+Value::Value(const Type &type)
 {
     this->build_from_type(&type);
 }
@@ -45,7 +45,7 @@ Value::Value(const Value &value)
     }
 }
 
-void Value::build_from_type(Type *type)
+void Value::build_from_type(const Type *type)
 {
     type->copy_to(this->type);
     switch (type->type) {
