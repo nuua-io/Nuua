@@ -1,101 +1,574 @@
 #include "../include/virtual_machine.hpp"
-#include "../../Compiler/include/compiler.hpp"
+#include "../../Compiler/include/value.hpp"
 #include "../../Logger/include/logger.hpp"
+#include <math.h>
 
-#define INST (this->program_counter)
-#define AS_LITERAL(op) (INST->op)
-#define AS_REGISTER(op) (this->top_frame->registers + INST->op)
-#define AS_CONSTANT(op) (&this->program.memory.constants[INST->op])
+#define BASE_PC (&this->program->memory->code.front())
+#define END_PC (&this->program->memory->code.back())
+#define PC (this->program_counter)
+#define PC_AT(at) (PC + at)
+#define GLOBAL(at) (this->program->main_frame.registers + *PC_AT(at))
+#define LITERAL(at) (*PC_AT(at))
+#define REGISTER(at) (this->active_frame->registers + *PC_AT(at))
+#define CONSTANT(at) (this->program->memory->constants.data() + *PC_AT(at))
+#define INC_PC(num) (PC += num)
+#define PUSH(value_ptr) (value_ptr->copy_to(this->top_stack++))
+#define POP(value_ptr) (--this->top_stack)->copy_to(value_ptr)
+#define CRASH(msg) logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, msg); exit(logger->crash())
 
 void VirtualMachine::run()
 {
-    for (uint64_t instruction; ; this->program_counter++) {
-        // printf("=> %s (%i)\n", opcode_to_string(instruction).c_str(), instruction);
-        switch (this->program_counter->instruction) {
-            // Others
+    for (;;) {
+        // printf("=> %llu (%llu)\n", PC, *PC);
+        switch (*PC) {
             case OP_EXIT: { return; }
-            /*
+            case OP_MOVE: { REGISTER(2)->copy_to(REGISTER(1)); INC_PC(3); break; }
+            case OP_LOAD_C: { CONSTANT(2)->copy_to(REGISTER(1)); INC_PC(3); break; }
+            case OP_LOAD_G: { GLOBAL(2)->copy_to(REGISTER(1)); INC_PC(3); break; }
+            case OP_SET_G: { REGISTER(2)->copy_to(GLOBAL(1)); INC_PC(3); break; }
+            case OP_PUSH: { PUSH(REGISTER(1)); INC_PC(2); break; }
+            case OP_PUSH_C: { PUSH(CONSTANT(1)); INC_PC(2); break; }
+            case OP_POP: { POP(REGISTER(1)); INC_PC(2); break; }
+            case OP_SGET: {
+                REGISTER(2)->type.copy_to(REGISTER(1)->type);
+                nint_t index = GETV(REGISTER(3)->value, nint_t);
+                const nstring_t &str = GETV(REGISTER(2)->value, nstring_t);
+                if (index > str.length() || index < 0) {
+                    CRASH("Index out of bounds. The index at this point of execution must be between [0, " + std::to_string(str.length()) + "]");
+                }
+                REGISTER(1)->value = std::to_string(str[index]);
+                INC_PC(4);
+                break;
+            }
+            case OP_SSET: {
+                break;
+            }
+            case OP_SDELETE: { break; }
+            case OP_LPUSH: {
+                GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>)->push_back(*REGISTER(2));
+                INC_PC(3);
+                break;
+            }
+            case OP_LPUSH_C: {
+                GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>)->push_back(*CONSTANT(2));
+                INC_PC(3);
+                break;
+            }
+            case OP_LPOP: { break; }
+            case OP_LGET: {
+                REGISTER(2)->type.inner_type->copy_to(REGISTER(1)->type);
+                nint_t index = GETV(REGISTER(3)->value, nint_t);
+                const std::shared_ptr<nlist_t> &list = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>);
+                if (index > list->size() || index < 0) {
+                    CRASH("Index out of bounds. The index at this point of execution must be between [0, " + std::to_string(list->size()) + "]");
+                }
+                (*list)[index].copy_to(REGISTER(1));
+                INC_PC(4);
+                break;
+            }
+            case OP_LSET: { break; }
+            case OP_LDELETE: {  break; }
 
-            // Register manipulation
-            case OP_MOVE_RR: { AS_REGISTER(op2)->copy_to(AS_REGISTER(op1)); break; }
-            case OP_MOVE_RC: { AS_CONSTANT(op2)->copy_to(AS_REGISTER(op1)); break; }
-
-            // Addition
-            case OP_ADD_RR: { Value::op_add(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_ADD_RC: { Value::op_add(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_ADD_CR: { Value::op_add(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_ADD_CC: { Value::op_add(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Substraction
-            case OP_SUB_RR: { Value::op_sub(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_SUB_RC: { Value::op_sub(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_SUB_CR: { Value::op_sub(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_SUB_CC: { Value::op_sub(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Multiplication
-            case OP_MUL_RR: { Value::op_mul(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_MUL_RC: { Value::op_mul(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_MUL_CR: { Value::op_mul(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_MUL_CC: { Value::op_mul(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Division
-            case OP_DIV_RR: { Value::op_div(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_DIV_RC: { Value::op_div(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_DIV_CR: { Value::op_div(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_DIV_CC: { Value::op_div(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Equality
-            case OP_EQ_RR: { Value::op_eq(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_EQ_RC: { Value::op_eq(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_EQ_CR: { Value::op_eq(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_EQ_CC: { Value::op_eq(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // No equality
-            case OP_NEQ_RR: { Value::op_neq(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_NEQ_RC: { Value::op_neq(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_NEQ_CR: { Value::op_neq(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_NEQ_CC: { Value::op_neq(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Higher than
-            case OP_HT_RR: { Value::op_ht(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_HT_RC: { Value::op_ht(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_HT_CR: { Value::op_ht(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_HT_CC: { Value::op_ht(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Higher than or equal
-            case OP_HTE_RR: { Value::op_hte(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_HTE_RC: { Value::op_hte(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_HTE_CR: { Value::op_hte(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_HTE_CC: { Value::op_hte(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Lower than
-            case OP_LT_RR: { Value::op_lt(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_LT_RC: { Value::op_lt(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_LT_CR: { Value::op_lt(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_LT_CC: { Value::op_lt(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Lower than or equal
-            case OP_LTE_RR: { Value::op_lte(AS_REGISTER(op1), AS_REGISTER(op2), AS_REGISTER(op3)); break; }
-            case OP_LTE_RC: { Value::op_lte(AS_REGISTER(op1), AS_REGISTER(op2), AS_CONSTANT(op3)); break; }
-            case OP_LTE_CR: { Value::op_lte(AS_REGISTER(op1), AS_CONSTANT(op2), AS_REGISTER(op3)); break; }
-            case OP_LTE_CC: { Value::op_lte(AS_REGISTER(op1), AS_CONSTANT(op2), AS_CONSTANT(op3)); break; }
-
-            // Control flow (All relative jumps)
-            case OP_FJUMP: { this->program_counter += AS_LITERAL(op1) - 1; break; }
-            case OP_BJUMP: { this->program_counter -= AS_LITERAL(op1) + 1; break; }
-            case OP_FJUMP_R: { if (AS_REGISTER(op2)->to_bool()) this->program_counter += AS_LITERAL(op1) - 1; break; }
-            case OP_BJUMP_R: { if (AS_REGISTER(op2)->to_bool()) this->program_counter -= AS_LITERAL(op1) + 1; break; }
-            case OP_FJUMP_C: { if (AS_CONSTANT(op2)->to_bool()) this->program_counter += AS_LITERAL(op1) - 1; break; }
-            case OP_BJUMP_C: { if (AS_CONSTANT(op2)->to_bool()) this->program_counter -= AS_LITERAL(op1) + 1; break; }
-            case OP_FNJUMP_R: { if (!AS_REGISTER(op2)->to_bool()) this->program_counter += AS_LITERAL(op1) - 1; break; }
-            case OP_BNJUMP_R: { if (!AS_REGISTER(op2)->to_bool()) this->program_counter -= AS_LITERAL(op1) + 1; break; }
-            case OP_FNJUMP_C: { if (!AS_CONSTANT(op2)->to_bool()) this->program_counter += AS_LITERAL(op1) - 1; break; }
-            case OP_BNJUMP_C: { if (!AS_CONSTANT(op2)->to_bool()) this->program_counter -= AS_LITERAL(op1) + 1; break; }
-
-            // Utilities
-            case OP_PRINT_R: { AS_REGISTER(op1)->println(); break; }
-            case OP_PRINT_C: { AS_CONSTANT(op1)->println(); break; }
-            */
+            // Dictionary releated
+            case OP_DGET: {
+                break;
+            }
+            case OP_DSET: {
+                break;
+            }
+            case OP_DDELETE: {
+                break;
+            }
+            case OP_CALL: {
+                // Set the new frame and allocate it's registers.
+                (++this->active_frame)->setup(GETV(REGISTER(1)->value, nfun_t).registers, PC + 2);
+                // Change the program counter.
+                PC = BASE_PC + GETV(REGISTER(1)->value, nfun_t).index;
+                break;
+            }
+            case OP_RETURN: {
+                // Drop the frame and reset the PC position.
+                // The allocate_registers drops the old registers if needed.
+                PC = (this->active_frame--)->return_address;
+                break;
+            }
+            case OP_CAST_INT_FLOAT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                REGISTER(1)->value = static_cast<nfloat_t>(GETV(REGISTER(2)->value, nint_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_INT_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = static_cast<nbool_t>(GETV(REGISTER(2)->value, nint_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_INT_STRING: {
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = REGISTER(2)->to_string();
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_FLOAT_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nfloat_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_FLOAT_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = static_cast<nbool_t>(GETV(REGISTER(2)->value, nfloat_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_FLOAT_STRING: {
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = REGISTER(2)->to_string();
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_BOOL_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_BOOL_FLOAT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                REGISTER(1)->value = static_cast<nfloat_t>(GETV(REGISTER(2)->value, nbool_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_BOOL_STRING: {
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = REGISTER(2)->to_string();
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_LIST_STRING: {
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = REGISTER(2)->to_string();
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_LIST_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>)->size() != 0;
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_LIST_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>)->size());
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_DICT_STRING: {
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = REGISTER(2)->to_string();
+                INC_PC(3);
+                break;
+            }
+            case OP_CAST_DICT_BOOL: {
+                break;
+            }
+            case OP_CAST_DICT_INT: {
+                break;
+            }
+            case OP_CAST_STRING_BOOL: {
+                break;
+            }
+            case OP_CAST_STRING_INT: {
+                break;
+            }
+            case OP_NEG_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = !static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_MINUS_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = -GETV(REGISTER(2)->value, nint_t);
+                INC_PC(3);
+                break;
+            }
+            case OP_MINUS_FLOAT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                REGISTER(1)->value = -GETV(REGISTER(2)->value, nfloat_t);
+                INC_PC(3);
+                break;
+            }
+            case OP_MINUS_BOOL: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = -static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_PLUS_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = +GETV(REGISTER(2)->value, nint_t);
+                INC_PC(3);
+                break;
+            }
+            case OP_PLUS_FLOAT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                REGISTER(1)->value = +GETV(REGISTER(2)->value, nfloat_t);
+                INC_PC(3);
+                break;
+            }
+            case OP_PLUS_BOOL: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = +static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t));
+                INC_PC(3);
+                break;
+            }
+            case OP_IINC: { ++GETV(REGISTER(1)->value, nint_t); INC_PC(2); break; }
+            case OP_IDEC: { ++GETV(REGISTER(1)->value, nint_t); INC_PC(2); break; }
+            case OP_ADD_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) + GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_ADD_FLOAT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) + GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_ADD_STRING: {
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t) + GETV(REGISTER(3)->value, nstring_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_ADD_BOOL: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t) + GETV(REGISTER(3)->value, nbool_t));
+                INC_PC(4);
+                break;
+            }
+            case OP_ADD_LIST: {
+                break;
+            }
+            case OP_ADD_DICT: {
+                break;
+            }
+            case OP_SUB_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) - GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_SUB_FLOAT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) - GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_SUB_BOOL: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t) * GETV(REGISTER(3)->value, nbool_t));
+                INC_PC(4);
+                break;
+            }
+            case OP_MUL_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nint_t) * GETV(REGISTER(3)->value, nint_t));
+                INC_PC(4);
+                break;
+            }
+            case OP_MUL_FLOAT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                REGISTER(1)->value = static_cast<nfloat_t>(GETV(REGISTER(2)->value, nfloat_t) * GETV(REGISTER(3)->value, nfloat_t));
+                INC_PC(4);
+                break;
+            }
+            case OP_MUL_BOOL: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t) * GETV(REGISTER(3)->value, nbool_t));
+                INC_PC(4);
+                break;
+            }
+            case OP_MUL_INT_STRING: {
+                break;
+            }
+            case OP_MUL_STRING_INT: {
+                break;
+            }
+            case OP_MUL_INT_LIST: {
+                break;
+            }
+            case OP_MUL_LIST_INT: {
+                break;
+            }
+            case OP_DIV_INT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                nint_t divident = GETV(REGISTER(2)->value, nint_t);
+                nint_t divisor = GETV(REGISTER(3)->value, nint_t);
+				if (divisor == 0) { CRASH("Division by 0: " + std::to_string(divident) + " / " + std::to_string(divisor)); }
+                REGISTER(1)->value = static_cast<nfloat_t>(divident / divisor);
+                INC_PC(4);
+                break;
+            }
+            case OP_DIV_FLOAT: {
+                REGISTER(1)->retype(VALUE_FLOAT);
+                nfloat_t divident = GETV(REGISTER(2)->value, nfloat_t);
+                nfloat_t divisor = GETV(REGISTER(3)->value, nfloat_t);
+				if (divisor == 0) { CRASH("Division by 0 -> " + std::to_string(divident) + " / " + std::to_string(divisor)); }
+                REGISTER(1)->value = static_cast<nfloat_t>(divident / divisor);
+                INC_PC(4);
+                break;
+            }
+            case OP_DIV_STRING_INT: {
+                break;
+            }
+            case OP_DIV_LIST_INT: {
+                break;
+            }
+            case OP_EQ_INT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) == GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_EQ_FLOAT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) == GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_EQ_STRING: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t).compare(GETV(REGISTER(3)->value, nstring_t)) == 0;
+                INC_PC(4);
+                break;
+            }
+            case OP_EQ_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) == GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_EQ_LIST: {
+                break;
+            }
+            case OP_EQ_DICT: {
+                break;
+            }
+            case OP_NEQ_INT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) != GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_NEQ_FLOAT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) != GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_NEQ_STRING: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t).compare(GETV(REGISTER(3)->value, nstring_t)) != 0;
+                INC_PC(4);
+                break;
+            }
+            case OP_NEQ_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) != GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_NEQ_LIST: {
+                break;
+            }
+            case OP_NEQ_DICT: {
+                break;
+            }
+            case OP_HT_INT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) > GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HT_FLOAT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) > GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HT_STRING: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t) > GETV(REGISTER(3)->value, nstring_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HT_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) > GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HTE_INT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) >= GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HTE_FLOAT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) >= GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HTE_STRING: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t) >= GETV(REGISTER(3)->value, nstring_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_HTE_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) >= GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LT_INT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) < GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LT_FLOAT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) < GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LT_STRING: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t) < GETV(REGISTER(3)->value, nstring_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LT_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) < GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            // Lower than or equal to
+            case OP_LTE_INT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) <= GETV(REGISTER(3)->value, nint_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LTE_FLOAT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nfloat_t) <= GETV(REGISTER(3)->value, nfloat_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LTE_STRING: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t) <= GETV(REGISTER(3)->value, nstring_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_LTE_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) <= GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_OR: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) || GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_AND: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nbool_t) && GETV(REGISTER(3)->value, nbool_t);
+                INC_PC(4);
+                break;
+            }
+            case OP_FJUMP: { PC += LITERAL(1); break; }
+            case OP_BJUMP: { PC -= LITERAL(1); break; }
+            case OP_CFJUMP: {
+                if (GETV(REGISTER(2)->value, nbool_t)) { PC += LITERAL(1); break; }
+                INC_PC(3);
+                break;
+            }
+            case OP_CBJUMP: {
+                if (GETV(REGISTER(2)->value, nbool_t)) { PC -= LITERAL(1); break; }
+                INC_PC(3);
+                break;
+            }
+            case OP_CFNJUMP: {
+                if (!GETV(REGISTER(2)->value, nbool_t)) { PC += LITERAL(1); break; }
+                INC_PC(3);
+                break;
+            }
+            case OP_CBNJUMP: {
+                if (!GETV(REGISTER(2)->value, nbool_t)) { PC -= LITERAL(1); break; }
+                INC_PC(3);
+                break;
+            }
+            case OP_SSLICE: {
+                REGISTER(1)->retype(VALUE_STRING);
+                /*
+                const nstring_t &target = GETV(REGISTER(2)->value, nstring_t);
+                const nint_t k = GETV(REGISTER(5)->value, nint_t); // The step index.
+                printf("*\n");
+                if (k == 0) { CRASH("The 'step' in a slice can't be 0."); }
+                printf("*\n");
+                nint_t i = GETV(REGISTER(2)->value, nint_t); // The start index.
+                if (k > 0 && i > target.length()) i = target.length();
+                else if (k < 0 && i > target.length()) i = target.length() - 1;
+                nint_t j = GETV(REGISTER(4)->value, nint_t); // The end index.
+                if (k > 0 && j > target.length()) j = target.length();
+                else if (k < 0 && j > target.length()) j = target.length() - 1;
+                */
+                std::string str;
+                // for (size_t n = 0; (i + n * k) < j; ++n) str += (*target)[i + n * k];
+                REGISTER(1)->value = str;
+                INC_PC(6);
+                break;
+            }
+            case OP_SSLICEE: {
+                break;
+            }
+            case OP_LSLICE: {
+                break;
+            }
+            case OP_LSLICEE: {
+                break;
+            }
+            case OP_RANGEE: {
+                REGISTER(1)->retype(VALUE_LIST, std::make_shared<Type>(VALUE_INT));
+                REGISTER(1)->value = std::make_shared<nlist_t>();
+                for (int64_t i = GETV(REGISTER(2)->value, nint_t); i < GETV(REGISTER(3)->value, nint_t); i++) {
+                    GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>)->push_back({ i });
+                }
+                INC_PC(4);
+                break;
+            }
+            case OP_RANGEI: {
+                REGISTER(1)->retype(VALUE_LIST, std::make_shared<Type>(VALUE_INT));
+                REGISTER(1)->value = std::make_shared<nlist_t>();
+                for (int64_t i = GETV(REGISTER(2)->value, nint_t); i <= GETV(REGISTER(3)->value, nint_t); i++) {
+                    GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>)->push_back({ i });
+                }
+                INC_PC(4);
+                break;
+            }
+            case OP_PRINT: { printf("%s\n", REGISTER(1)->to_string().c_str()); INC_PC(2); break; }
+            case OP_PRINT_C: { printf("%s\n", CONSTANT(1)->to_string().c_str()); INC_PC(2); break; }
         }
     }
 }
@@ -105,16 +578,15 @@ void VirtualMachine::interpret(const char *file)
     printf("----> Virtual Machine\n");
     // Compile the code.
     Compiler compiler = Compiler(this->program);
-    compiler.compile(file);
-    // Allocate the main frame registers.
-    // this->frames[0].allocate_registers(this->program.main_registers);
-    *this->top_frame = this->program->main_frame;
-    // Set the first opcode
-    // this->program_counter = (Instruction *) &this->program.memory.code[0];
+    register_t main = compiler.compile(file);
+    // Call the main function.
+    const ValueFunction &calle = std::get<ValueFunction>((this->program->main_frame.registers + main)->value);
+    // Set the new frame and allocate it's registers.
+    (++this->active_frame)->setup(calle.registers, END_PC);
+    // Change the program counter.
+    PC = BASE_PC + calle.index;
     // Run the compiled code.
-    // this->run();
-    // Clear the main frame registers
-    this->top_frame->free_registers();
+    this->run();
     printf("----> !Virtual Machine\n");
 }
 
@@ -123,12 +595,4 @@ void VirtualMachine::reset()
 
 }
 
-VirtualMachine::VirtualMachine()
-{
-    this->program = std::make_shared<Program>();
-}
-
-#undef INST
-#undef AS_LITERAL
-#undef AS_REGISTER
-#undef AS_CONSTANT
+#undef PC

@@ -183,23 +183,23 @@ std::shared_ptr<Expression> Parser::unary_postfix()
         Token op = PREVIOUS();
         switch (op.type) {
             case TOKEN_LEFT_SQUARE: {
-                std::shared_ptr<Expression> start = nullptr;
-                std::shared_ptr<Expression> end = nullptr;
-                std::shared_ptr<Expression> step = nullptr;
+                std::shared_ptr<Expression> start = std::shared_ptr<Expression>();
+                std::shared_ptr<Expression> end = std::shared_ptr<Expression>();
+                std::shared_ptr<Expression> step = std::shared_ptr<Expression>();
                 if (this->match(TOKEN_COLON)) goto parser_is_slice1;
                 start = this->expression();
                 if (this->match(TOKEN_COLON)) {
-                    // It's a Slice, not an access
+                    // It's a Slice, not an access and the start index is already calculated.
                     parser_is_slice1:
                     if (this->match(TOKEN_RIGHT_SQUARE)) goto parser_finish_slice;
-                    if (this->match(TOKEN_COLON)) goto parser_is_slice2;
+                    if (this->match(TOKEN_COLON)) goto parser_get_slice_step;
                     end = this->expression();
-                    if (this->match(TOKEN_COLON)) goto parser_is_slice3;
-                    parser_is_slice2:
+                    if (this->match(TOKEN_RIGHT_SQUARE)) goto parser_finish_slice;
+                    this->consume(TOKEN_COLON, "Expected ':' or ']' after slice end index");
+                    parser_get_slice_step:
                     if (this->match(TOKEN_RIGHT_SQUARE)) goto parser_finish_slice;
                     step = this->expression();
-                    parser_is_slice3:
-                    this->consume(TOKEN_RIGHT_SQUARE, "Expected ']' after the slice access");
+                    this->consume(TOKEN_RIGHT_SQUARE, "Expected ']' after a slice step");
                     parser_finish_slice:
                     result = NEW_NODE(Slice, result, start, end, step);
                     break;
@@ -725,7 +725,12 @@ std::vector<std::shared_ptr<Expression>> Parser::arguments()
 std::vector<std::shared_ptr<Statement>> Parser::body()
 {
     std::vector<std::shared_ptr<Statement>> body;
-    while (!IS_AT_END() && !CHECK(TOKEN_RIGHT_BRACE)) {
+    while (!IS_AT_END()) {
+        // Remove blank lines.
+        while (this->match(TOKEN_NEW_LINE));
+        // Check if the body ended.
+        if (CHECK(TOKEN_RIGHT_BRACE)) break;
+        // Push a new statement into the body.
         body.push_back(std::move(this->statement()));
     }
     return body;
@@ -803,8 +808,8 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
     Lexer lexer = Lexer(this->file);
     // Scan the tokens.
     lexer.scan(tokens);
-    // Token::debug_tokens(*tokens);
-    this->current = &tokens->at(0);
+    Token::debug_tokens(*tokens);
+    this->current = &tokens->front();
     while (!IS_AT_END()) code->push_back(std::move(this->top_level_declaration()));
     // Check the code size to avoid empty files.
     if (code->size() == 0) {

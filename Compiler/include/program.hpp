@@ -28,17 +28,17 @@ class Frame
         // Stores the registers.
         Value *registers = nullptr;
         // Stores the registers size.
-        registers_size_t registers_size;
+        registers_size_t registers_size = 0;
         // Stores the return address to get back to the original program counter.
         opcode_t *return_address = nullptr;
         // Stores the frame caller (the function)
-        Value *caller = nullptr;
+        // Value *caller = nullptr;
         // Allocates the space to store the registers.
-        void allocate_registers();
+        void allocate_registers(registers_size_t size);
         // Frees the allocated register space.
         void free_registers();
-        Frame(registers_size_t registers_size = 0)
-            : registers_size(registers_size) {}
+        // Setup the frame.
+        void setup(registers_size_t size, opcode_t *return_address);
 };
 
 // This class is used to represent the frame information during compilation

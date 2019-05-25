@@ -18,7 +18,7 @@ class Parser
     // Stores the current parsing file.
     std::shared_ptr<const std::string> file;
     // Stores a pointer to the current token beeing parsed.
-    Token *current;
+    Token *current = nullptr;
     // Consumes a token and returns it for futher use.
     Token *consume(const TokenType type, const std::string &message);
     // Returns true if the token type matches the current token.

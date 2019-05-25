@@ -62,18 +62,18 @@ class Compiler
     std::shared_ptr<const std::string> current_file;
     void set_file(const std::shared_ptr<const std::string> &file);
     // Sets a line flag at the current code location.
-    line_t current_line;
+    line_t current_line = 0;
     void set_line(const line_t line);
     // Sets a column flag at the current code location.
-    column_t current_column;
+    column_t current_column = 0;
     void set_column(const column_t column);
     // Get a variable from the block stack and
     // return a pair containing the variable and a boolean
     // to indicate if it's global or not.
     std::pair<BlockVariableType *, bool> get_variable(const std::string &name);
     public:
-        // Compile an input source and returns the result program.
-        void compile(const char *file);
+        // Compile an input source and returns the main global register.
+        register_t compile(const char *file);
         Compiler(const std::shared_ptr<Program> &program)
             : program(program) { }
 };

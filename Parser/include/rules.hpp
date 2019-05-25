@@ -275,7 +275,7 @@ class Assign : public Expression
     public:
         std::shared_ptr<Expression> target;
         std::shared_ptr<Expression> value;
-        bool is_access;
+        bool is_access = false;
         Assign(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &value)
             : Expression({ RULE_ASSIGN, file, line, column }), target(std::move(target)), value(std::move(value)) {};
 };
@@ -304,7 +304,7 @@ class Access : public Expression
     public:
         std::shared_ptr<Expression> target;
         std::shared_ptr<Expression> index;
-        AccessType type;
+        AccessType type = (AccessType) NULL;
         Access(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &index)
             : Expression({ RULE_ACCESS, file, line, column }), target(std::move(target)), index(std::move(index)) {};
 };

@@ -325,6 +325,7 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
                     exit(logger->crash());
                 }
             }
+            printf("SLICE ANALYZER STEP: %d", (bool) slice->step);
             if (slice->step) {
                 this->analyze_code(slice->step);
                 Type t = Type(slice->step, &this->blocks);
@@ -541,6 +542,7 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             );
             // Check if it uses the index and declare it if so.
             if (rfor->index != "") {
+                printf("ADDING INDEX TO FOR\n");
                 std::shared_ptr<Type> itype = std::make_shared<Type>(VALUE_INT); // Types (they are saved on the heap since they will be saved)
                 decs.push_back(std::make_shared<Declaration>(
                     rfor->file, rfor->line, rfor->column, rfor->index, itype, std::shared_ptr<Expression>())

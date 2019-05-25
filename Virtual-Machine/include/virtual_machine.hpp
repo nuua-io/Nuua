@@ -9,28 +9,25 @@
 #ifndef VIRTUAL_MACHINE_HPP
 #define VIRTUAL_MACHINE_HPP
 
-#include "../../Compiler/include/program.hpp"
+#include "../../Compiler/include/compiler.hpp"
 
 #define MAX_FRAMES 1024
-#define MEMORY_SIZE 1024
-
-typedef struct {
-    uint64_t instruction; // Instruction to execute
-    uint64_t op1; // First operant
-    uint64_t op2; // Second operant
-    uint64_t op3; // Third operant
-} Instruction;
+#define STACK_SIZE 1024
 
 class VirtualMachine
 {
     // Stores the program to be executed.
-    std::shared_ptr<Program> program;
+    std::shared_ptr<Program> program = std::make_shared<Program>();
     // Virtual machine program counter.
-    Instruction *program_counter = nullptr;
+    opcode_t *program_counter;
+    // Stores the virtual machine stack (used to push function arguments / get return values)
+    Value stack[STACK_SIZE];
+    // Indicates the top of the stack.
+    Value *top_stack = this->stack;
     // Stores the current frame stack.
     Frame frames[MAX_FRAMES];
     // Indicates the top level frame.
-    Frame *top_frame = this->frames;
+    Frame *active_frame = this->frames - 1; // It performs a pre-increment when a call is done.
     // Runs the virtual machine.
     void run();
     public:
@@ -38,7 +35,6 @@ class VirtualMachine
         void interpret(const char *file);
         // Resets the virtual machine program memories.
         void reset();
-        VirtualMachine();
 };
 
 #endif

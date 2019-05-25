@@ -15,7 +15,7 @@
 
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))
 
-void Compiler::compile(const char *file)
+register_t Compiler::compile(const char *file)
 {
     printf("----> Compiler\n");
     Analyzer analyzer = Analyzer(file);
@@ -25,22 +25,18 @@ void Compiler::compile(const char *file)
     // Register the TLDs.
     this->register_tld(code, block);
     // Allocate the main registers.
-    this->program->main_frame.registers_size = this->global.current_register;
-    this->program->main_frame.allocate_registers();
+    this->program->main_frame.allocate_registers(this->global.current_register);
 
     // Add the initial function call.
-    // const auto [variable, is_global] = this->get_variable("main");
-    // this->add_opcodes({{ OP_CALL, variable->reg }});
-
+    // this->add_opcodes({{ OP_GCALL, block->get_variable("main")->reg }});
     // Compile the code.
     this->compile_module(code, block);
-
     // Add the exit opcode.
     this->add_opcodes({{ OP_EXIT }});
-
+    // Dump the program opcodes to the stdout.
     this->program->memory->dump();
-
     printf("----> !Compiler\n");
+    return block->get_variable("main")->reg;
 }
 
 void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block)
@@ -221,16 +217,16 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 this->add_opcodes({{ OP_FJUMP, 0 }});
                 size_t then_jump = this->program->memory->code.size() - 1;
                 // Change the initial jump index to here.
-                this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index);
+                this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
                 for (const std::shared_ptr<Statement> &stmt : rif->else_branch) this->compile(stmt);
-                this->program->memory->code[then_jump] = (this->program->memory->code.size() - 1) - (then_jump);
-            } else this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index);
+                this->program->memory->code[then_jump] = this->program->memory->code.size() - (then_jump - 1);
+            } else this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
             break;
         }
         case RULE_WHILE: {
             std::shared_ptr<While> rwhile = std::static_pointer_cast<While>(rule);
             // Save the initial point.
-            size_t initial_index = this->program->memory->code.size() - 1;
+            size_t initial_index = this->program->memory->code.size();
             // Compile the condition.
             register_t rx = this->compile(rwhile->condition);
             // Perform the jump if nessesary.
@@ -241,16 +237,20 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Compile the while body.
             for (const std::shared_ptr<Statement> &stmt : rwhile->body) this->compile(stmt);
             // Set the jump back up.
-            size_t jb = (this->program->memory->code.size() + 1) - initial_index;
+            size_t jb = this->program->memory->code.size() - initial_index;
             this->add_opcodes({{ OP_BJUMP, jb }});
             // Modify the branch jump.
-            this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
+            this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
             break;
         }
         case RULE_FOR: {
             std::shared_ptr<For> rfor = std::static_pointer_cast<For>(rule);
+            // Current index.
+            register_t ri = this->local.get_register(true);
+            // Set the initial index.
+            this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ 0LL }) }});
             // Save the initial point.
-            size_t initial_index = this->program->memory->code.size() - 1;
+            size_t initial_index = this->program->memory->code.size();
             // Setup the for condition.
             register_t rc = this->compile(rfor->iterator);
             // Set the for block.
@@ -263,15 +263,11 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 case VALUE_DICT: { this->add_opcodes({{ OP_CAST_DICT_INT, r1, rc }}); break; }
                 default: { ADD_LOG(rfor->iterator, "Invalid iterator type to compile: '" + rfor->type->to_string() + "'"); exit(logger->crash()); }
             }
-            this->local.free_register(rc);
             // Loop variable.
             register_t re = this->local.get_register(true);
+            // Set the used registers in the block.
             this->get_variable(rfor->variable).first->reg = re;
-            // Current index.
-            register_t ri = this->local.get_register(true);
             if (rfor->index != "") this->get_variable(rfor->index).first->reg = ri;
-            // Set the initial index.
-            this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ 0LL }) }});
             // Add the loop condition.
             register_t rx = this->local.get_register(); // Loop condition.
             this->add_opcodes({{ OP_LT_INT, rx, ri, r1 }});
@@ -289,17 +285,18 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Compile the while body.
             for (const std::shared_ptr<Statement> &stmt : rfor->body) this->compile(stmt);
             // Increment the current index.
-            this->add_opcodes({{ OP_INC, ri }});
+            this->add_opcodes({{ OP_IINC, ri }});
             // Set the jump back up.
-            size_t jb = (this->program->memory->code.size() + 1) - initial_index;
+            size_t jb = this->program->memory->code.size() - initial_index;
+            printf("%d - %d = %d\n", this->program->memory->code.size(), initial_index, jb);
             this->add_opcodes({{ OP_BJUMP, jb }});
             // Modify the branch jump.
-            this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
-            // Remove the for block.
-            this->blocks.pop_back();
+            // this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
+            this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
             // Remove the variables used.
             this->local.free_register(ri, true);
             this->local.free_register(re, true);
+            this->local.free_register(rc);
             break;
         }
         default: {
@@ -534,9 +531,19 @@ register_t Compiler::compile(
         }
         case RULE_SLICE: {
             std::shared_ptr<Slice> slice = std::static_pointer_cast<Slice>(rule);
-            register_t r1 = slice->start ? this->compile(slice->start) : this->add_constant({ 0LL });
+            register_t r1;
+            if (slice->start) r1 = this->compile(slice->start);
+            else {
+                r1 = this->local.get_register();
+                this->add_opcodes({ OP_LOAD_C, r1, this->add_constant({ 0LL }) });
+            }
             register_t r2 = slice->end ? this->compile(slice->end) : 0;
-            register_t r3 = slice->step ? this->compile(slice->step) : this->add_constant({ 1LL });
+            register_t r3;
+            if (slice->step) r3 = this->compile(slice->step);
+            else {
+                r3 = this->local.get_register();
+                this->add_opcodes({ OP_LOAD_C, r3, this->add_constant({ 1LL }) });
+            }
             register_t rx = this->compile(slice->target);
             if (slice->end) {
                 this->add_opcodes({{
@@ -604,21 +611,20 @@ void Compiler::constant_list(const std::shared_ptr<List> &list, Value &dest)
 {
     for (const std::shared_ptr<Expression> &value : list->value) {
         switch (value->rule) {
-            // case RULE_INTEGER: { dest.value_list->push_back({ std::static_pointer_cast<Integer>(value)->value }); break; }
-            case RULE_INTEGER: { dest.value_list->push_back({ 10LL }); break; }
-            case RULE_FLOAT: { dest.value_list->push_back({ std::static_pointer_cast<Float>(value)->value }); break; }
-            case RULE_BOOLEAN: { dest.value_list->push_back({ std::static_pointer_cast<Boolean>(value)->value }); break; }
-            case RULE_STRING:  { dest.value_list->push_back({ std::static_pointer_cast<String>(value)->value }); break; }
+            case RULE_INTEGER: { std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back({ std::static_pointer_cast<Integer>(value)->value }); break; }
+            case RULE_FLOAT: { std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back({ std::static_pointer_cast<Float>(value)->value }); break; }
+            case RULE_BOOLEAN: { std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back({ std::static_pointer_cast<Boolean>(value)->value }); break; }
+            case RULE_STRING:  { std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back({ std::static_pointer_cast<String>(value)->value }); break; }
             case RULE_LIST: {
                 Value v = Value(std::static_pointer_cast<List>(value)->type);
                 this->constant_list(std::static_pointer_cast<List>(value), v);
-                dest.value_list->push_back(std::move(v));
+                std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back(std::move(v));
                 break;
             }
             case RULE_DICTIONARY: {
                 Value v;
                 this->constant_dict(std::static_pointer_cast<Dictionary>(value), v);
-                dest.value_list->push_back(std::move(v));
+                std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back(std::move(v));
                 break;
             }
             default: {
@@ -633,20 +639,20 @@ void Compiler::constant_dict(const std::shared_ptr<Dictionary> &dict, Value &des
 {
     for (const auto &[key, value] : dict->value) {
         switch (value->rule) {
-            case RULE_INTEGER: { dest.value_dict->insert(key, { std::static_pointer_cast<Integer>(value)->value }); break; }
-            case RULE_FLOAT: { dest.value_dict->insert(key, { std::static_pointer_cast<Float>(value)->value }); break; }
-            case RULE_BOOLEAN: { dest.value_dict->insert(key, { std::static_pointer_cast<Boolean>(value)->value }); break; }
-            case RULE_STRING:  { dest.value_dict->insert(key, { std::static_pointer_cast<String>(value)->value }); break; }
+            case RULE_INTEGER: { std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, { std::static_pointer_cast<Integer>(value)->value }); break; }
+            case RULE_FLOAT: { std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, { std::static_pointer_cast<Float>(value)->value }); break; }
+            case RULE_BOOLEAN: { std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, { std::static_pointer_cast<Boolean>(value)->value }); break; }
+            case RULE_STRING:  { std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, { std::static_pointer_cast<String>(value)->value }); break; }
             case RULE_LIST: {
                 Value v = Value(std::static_pointer_cast<List>(value)->type);
                 this->constant_list(std::static_pointer_cast<List>(value), v);
-                dest.value_dict->insert(key, std::move(v));
+                std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, std::move(v));
                 break;
             }
             case RULE_DICTIONARY: {
                 Value v;
                 this->constant_dict(std::static_pointer_cast<Dictionary>(value), v);
-                dest.value_dict->insert(key, std::move(v));
+                std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, std::move(v));
                 break;
             }
             default: {

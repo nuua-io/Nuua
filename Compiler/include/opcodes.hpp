@@ -42,6 +42,7 @@ typedef enum : uint8_t {
 
     // Function releated
     OP_CALL, // CALL RX
+    // OP_GCALL, // GCALL G1
     OP_RETURN, // RETUR
 
     /* Casting Operations */
@@ -79,8 +80,8 @@ typedef enum : uint8_t {
     OP_PLUS_BOOL, // PLUS_BOOL RX RY
 
     /* Extra binary but unary */
-    OP_INC, // INC RX
-    OP_DEC, // DEC RX
+    OP_IINC, // INC RX
+    OP_IDEC, // DEC RX
 
     /* Binary Operations */
 

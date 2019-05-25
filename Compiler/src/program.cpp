@@ -47,6 +47,7 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
 
     // Function releated
     { "CALL", {{ OT_REG }} }, // CALL RX
+    // { "GCALL", {{ OT_GLOBAL }} }, // CALL G1
     { "RETURN", {{ }} }, // RETURN
 
     // Value casting
@@ -82,8 +83,8 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     { "PLUS_BOOL", {{ OT_REG, OT_REG }} }, // PLUS_BOOL RX RY
 
     // Extra binary but unary
-    { "INC", {{ OT_REG }} }, // INC RX
-    { "DEC", {{ OT_REG }} }, // DEC RX
+    { "IINC", {{ OT_REG }} }, // IINC RX
+    { "IDEC", {{ OT_REG }} }, // IDEC RX
 
     // Addition
     { "ADD_INT", {{ OT_REG, OT_REG, OT_REG }} }, // ADD_INT RX RY RZ
@@ -193,11 +194,15 @@ void print_opcode(const opcode_t opcode)
     printf("%17.17s", opcode_to_string(opcode).c_str());
 }
 
-void Frame::allocate_registers()
+void Frame::allocate_registers(registers_size_t size)
 {
-    if (this->registers_size > 0 && this->registers == nullptr) {
-        this->registers = new Value[this->registers_size];
+    // Reallocate the space if needed.
+    if (size > 0 && (size > this->registers_size || size < this->registers_size)) {
+        this->free_registers();
+        this->registers = new Value[size];
     }
+    // Set the new frame size.
+    this->registers_size = size;
 }
 
 void Frame::free_registers()
@@ -208,6 +213,13 @@ void Frame::free_registers()
     }
 }
 
+void Frame::setup(registers_size_t size, opcode_t *return_address)
+{
+    // Allocate the registers.
+    this->allocate_registers(size);
+    // Set the return address.
+    this->return_address = return_address;
+}
 
 register_t FrameInfo::get_register(bool protect)
 {

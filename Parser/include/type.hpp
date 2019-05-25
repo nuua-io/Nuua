@@ -48,7 +48,7 @@ class Type
         Type(const std::shared_ptr<Expression> &rule, const std::vector<std::shared_ptr<Block>> *blocks);
         // Create a function type given the function itself.
         Type(const std::shared_ptr<Function> &fun);
-        // ~Type() {}
+        // ~Type() { this->deallocate(); }
         // Returns true if the cast can be performed and stored the dest cast type to the pointer.
         bool cast(const std::shared_ptr<Type> &to, CastType *dest_casttype = nullptr);
         bool cast(const Type *to, CastType *dest_casttype = nullptr);
