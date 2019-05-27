@@ -1,7 +1,9 @@
+fun hello(): string {
+    return "Hello World"
+}
+
 fun main() {
-    i: int = 0
-    while i < 100 => i = i + 1
-    print i
+    print hello()
     // print "jklhasduh287asfjnd"[2:5]
     // print "jklhasduh287asfjnd"[2:5]
     // print "jklhasduh287asfjnd"[2:50000]

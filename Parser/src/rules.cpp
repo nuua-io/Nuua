@@ -28,6 +28,7 @@ static std::vector<std::string> RuleNames = {
     "RULE_ASSIGN",
     "RULE_LOGICAL",
     "RULE_FUNCTION",
+    "RULE_FUNCTIONVALUE",
     "RULE_CALL",
     "RULE_ACCESS",
     "RULE_RETURN",
@@ -181,7 +182,7 @@ void Parser::debug_ast(const std::shared_ptr<Statement> &statement, const uint16
             break;
         }
         case RULE_FUNCTION: {
-            std::shared_ptr<Function> function= std::static_pointer_cast<Function>(statement);
+            std::shared_ptr<FunctionValue> function = std::static_pointer_cast<Function>(statement)->value;
             printf("Function[%s: %s]\n", function->name.c_str(), function->return_type ? function->return_type->to_string().c_str() : "<no-return>");
             Parser::debug_ast(function->body, spacer + 1);
             break;

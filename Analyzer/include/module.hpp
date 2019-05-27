@@ -26,7 +26,7 @@ class Module
     // Analyzes the statement.
     void analyze_code(const std::shared_ptr<Statement> &rule, bool no_declare = false);
     // Analyzes the expression.
-    void analyze_code(const std::shared_ptr<Expression> &rule);
+    void analyze_code(const std::shared_ptr<Expression> &rule, const bool allowed_noreturn_call = false);
     // Analyzes the block.
     std::shared_ptr<Block> analyze_code(
         const std::vector<std::shared_ptr<Statement>> &code,

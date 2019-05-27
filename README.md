@@ -18,10 +18,10 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 - ~~Re-write the syntax~~ :white_check_mark:
 - ~~Better error reporting~~ :white_check_mark:
 - ~~Implement modules (imports)~~ :white_check_mark:
-- Implement functions :construction:
+- ~~Implement functions~~ :white_check_mark:
 - Implement classes :construction:
 - Implement function overloading (?)
-- NUSL (Nuua Standard Library)
+- NUSL (Nuua Standard Library) :construction:
 - NUPAC (Nuua Package Manager)
 - Optimizations
 - **Initial Release**

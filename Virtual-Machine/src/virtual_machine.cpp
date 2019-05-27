@@ -80,10 +80,11 @@ void VirtualMachine::run()
                 break;
             }
             case OP_CALL: {
+                const nfun_t &r = GETV(REGISTER(1)->value, nfun_t);
                 // Set the new frame and allocate it's registers.
-                (++this->active_frame)->setup(GETV(REGISTER(1)->value, nfun_t).registers, PC + 2);
+                (++this->active_frame)->setup(r.registers, PC + 2);
                 // Change the program counter.
-                PC = BASE_PC + GETV(REGISTER(1)->value, nfun_t).index;
+                PC = BASE_PC + r.index;
                 break;
             }
             case OP_RETURN: {

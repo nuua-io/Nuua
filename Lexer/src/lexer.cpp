@@ -184,7 +184,11 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
             }
             case ':': { ADD_TOKEN(TOKEN_COLON); break; }
             case '|': { ADD_TOKEN(TOKEN_STICK); break; }
-            case '!': { ADD_TOKEN(TOKEN_BANG); break; }
+            case '!': {
+                if (this->match('=')) { ADD_TOKEN(TOKEN_BANG_EQUAL); break; }
+                ADD_TOKEN(TOKEN_BANG);
+                break;
+            }
             case '-': {
                 if (this->match('>')) { ADD_TOKEN(TOKEN_RIGHT_ARROW); break; }
                 ADD_TOKEN(TOKEN_MINUS); break;

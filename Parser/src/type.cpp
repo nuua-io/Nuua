@@ -454,8 +454,8 @@ void Type::println() const
 Type::Type(const std::shared_ptr<Function> &fun)
 {
     this->type = VALUE_FUN;
-    this->inner_type = fun->return_type; // return_type will already be nullptr if it have no return type.
-    for (std::shared_ptr<Declaration> &dec : fun->parameters) {
+    this->inner_type = fun->value->return_type; // return_type will already be nullptr if it have no return type.
+    for (const std::shared_ptr<Declaration> &dec : fun->value->parameters) {
         this->parameters.push_back(dec->type);
     }
 }
@@ -523,8 +523,13 @@ Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::share
             Type(std::static_pointer_cast<Logical>(rule)->left, blocks).copy_to(this);
             break;
         }
-        case RULE_FUNCTION: {
+        case RULE_FUNCTIONVALUE: {
+            std::shared_ptr<FunctionValue> fun = std::static_pointer_cast<FunctionValue>(rule);
             this->type = VALUE_FUN;
+            this->inner_type = fun->return_type; // return_type will already be nullptr if it have no return type.
+            for (const std::shared_ptr<Declaration> &dec : fun->parameters) {
+                this->parameters.push_back(dec->type);
+            }
             break;
         }
         case RULE_CALL: {

@@ -60,7 +60,8 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                 break;
             }
             case RULE_FUNCTION: {
-                std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(node);
+                std::shared_ptr<Function> f = std::static_pointer_cast<Function>(node);
+                const std::shared_ptr<FunctionValue> &fun = f->value;
                 // Get the entry point of the function.
                 size_t entry = this->program->memory->code.size();
                 // Push the function block.
@@ -80,7 +81,7 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                 fun->body.clear();
                 this->blocks.pop_back();
                 // Create the function value and move it to the register.
-                Value(entry, this->local.current_register).copy_to(
+                Value(entry, this->local.current_register, Type(f)).copy_to(
                     this->program->main_frame.registers + block->get_variable(fun->name)->reg
                 );
                 // Reset the local frame info.
@@ -126,7 +127,7 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
                 break;
             }
             case RULE_FUNCTION: {
-                std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(tld);
+                std::shared_ptr<FunctionValue> fun = std::static_pointer_cast<Function>(tld)->value;
                 BlockVariableType *var = block->get_variable(fun->name);
                 var->reg = this->global.get_register(true);
                 break;
@@ -485,7 +486,10 @@ register_t Compiler::compile(
             }
             this->add_opcodes({{ OP_CALL, target }});
             this->local.free_register(target);
-            //! Needs to pop from the stack to get the return value
+            if (call->has_return) {
+                // Pop the return value from the stack into the return register.
+                this->add_opcodes({{ OP_POP, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            }
             break;
         }
         case RULE_ACCESS: {

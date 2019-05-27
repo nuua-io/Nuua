@@ -83,14 +83,15 @@ void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
         }
         case RULE_FUNCTION: {
             // It needs to declare that function to the block.
-            std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(tld);
+            const std::shared_ptr<Function> f = std::static_pointer_cast<Function>(tld);
+            const std::shared_ptr<FunctionValue> &fun = f->value;
             // Set the variable to the scoped block.
             // printf("Fun (exported: %d) -> %s\n", set_exported, fun->name.c_str());
             if (this->main_block->has(fun->name)) {
                 ADD_LOG(fun, "'" + fun->name + "' was already declared. Function overloading is not currently implemented in this version of nuua.");
                 exit(logger->crash());
             }
-            this->main_block->set_variable(fun->name, { std::make_shared<Type>(fun), NODE(fun), set_exported });
+            this->main_block->set_variable(fun->name, { std::make_shared<Type>(f), NODE(fun), set_exported });
             break;
         }
         default: {
@@ -100,7 +101,7 @@ void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
     }
 }
 
-void Module::analyze_code(const std::shared_ptr<Expression> &rule)
+void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool allowed_noreturn_call)
 {
     switch (rule->rule) {
         case RULE_INTEGER:
@@ -114,11 +115,8 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
                 ADD_LOG(list, "You can't setup an empty list. You should declare a variable with it's type and leave the initializer empty");
                 exit(logger->crash());
             }
+            this->analyze_code(list->value[0]);
             Type type = Type(list->value[0], &this->blocks);
-            if (type.type == VALUE_NO_TYPE) {
-                ADD_LOG(list, "You can't setup a list with no-value values. Your list item/s contains no value");
-                exit(logger->crash());
-            }
             for (size_t i = 1; i < list->value.size(); i++) {
                 if (!Type(list->value[i], &this->blocks).same_as(type)) {
                     ADD_LOG(list, "Lists must have the same type. This list can only contain '" + type.to_string() + "' based on the first element");
@@ -134,11 +132,8 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
                 ADD_LOG(dict, "You can't setup an empty dictionary. You should declare a variable with it's type and leave the initializer empty");
                 exit(logger->crash());
             }
+            this->analyze_code(dict->value[dict->key_order[0]]);
             Type type = Type(dict->value[dict->key_order[0]], &this->blocks);
-            if (type.type == VALUE_NO_TYPE) {
-                ADD_LOG(dict, "You can't setup a dictionary with no-value values. Your dictionary value/s contains no value");
-                exit(logger->crash());
-            }
             for (size_t i = 1; i < dict->key_order.size(); i++) {
                 if (!Type(dict->value[dict->key_order[i]], &this->blocks).same_as(type)) {
                     ADD_LOG(dict->value[dict->key_order[i]], "Dictionaries must have the same type. This dictionary can only contain '" + type.to_string() + "' based on the first element");
@@ -243,6 +238,14 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule)
             if (type.type != VALUE_FUN) {
                 ADD_LOG(call, "The call target is not callable. Got '" + type.to_string() + "'");
                 exit(EXIT_FAILURE);
+            }
+            // Assign the has_return prop in the call.
+            call->has_return = static_cast<bool>(type.inner_type); // If the inner type if set it means there's a return value.
+            // Check if this call is allowed.
+            if (!call->has_return && !allowed_noreturn_call) {
+                // This call is not allowed.
+                ADD_LOG(call, "Calling a function with no return value is only allowed as a block statement, it can't be used as an expression.");
+                exit(logger->crash());
             }
             // Check the arguments' type.
             for (size_t i = 0; i < call->arguments.size(); i++) {
@@ -414,7 +417,7 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             break;
         }
         case RULE_FUNCTION: {
-            std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(rule);
+            std::shared_ptr<FunctionValue> fun = std::static_pointer_cast<Function>(rule)->value;
             // Analyze the function parameters.
             for (const std::shared_ptr<Declaration> &parameter : fun->parameters) this->analyze_code(std::static_pointer_cast<Statement>(parameter), true);
             // Check if there's a top level return on the function.
@@ -445,7 +448,7 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             break;
         }
         case RULE_EXPRESSION_STATEMENT: {
-            this->analyze_code(std::static_pointer_cast<ExpressionStatement>(rule)->expression);
+            this->analyze_code(std::static_pointer_cast<ExpressionStatement>(rule)->expression, true);
             break;
         }
         case RULE_DECLARATION: {
@@ -455,10 +458,6 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
                 this->analyze_code(dec->initializer);
                 // Get the type of the initializer,
                 dec->type = std::make_shared<Type>(dec->initializer, &this->blocks);
-                if (dec->type->type == VALUE_NO_TYPE) {
-                    ADD_LOG(dec->initializer, "You can't declare a variable with no-value values. Your declaration initializer contains no value");
-                    exit(logger->crash());
-                }
                 if (!no_declare) this->declare(dec);
                 break;
             }

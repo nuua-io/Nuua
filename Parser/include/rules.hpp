@@ -39,6 +39,7 @@ typedef enum : uint8_t {
     RULE_ASSIGN,
     RULE_LOGICAL,
     RULE_FUNCTION,
+    RULE_FUNCTIONVALUE,
     RULE_CALL,
     RULE_ACCESS,
     RULE_RETURN,
@@ -295,6 +296,7 @@ class Call : public Expression
     public:
         std::shared_ptr<Expression> target;
         std::vector<std::shared_ptr<Expression>> arguments;
+        bool has_return; // Determines if the call target returns a value or not.
         Call(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::vector<std::shared_ptr<Expression>> &arguments)
             : Expression({ RULE_CALL, file, line, column }), target(std::move(target)), arguments(arguments) {};
 };
@@ -362,12 +364,19 @@ class Delete : public Expression
             : Expression({ RULE_DELETE, file, line, column }), target(std::move(target)) {}
 };
 
-class Length : public Expression
+// Forward declare
+class Declaration;
+
+class FunctionValue : public Expression
 {
     public:
-        std::shared_ptr<Expression> target;
-        Length(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target)
-            : Expression({ RULE_LENGTH, file, line, column }), target(std::move(target)) {}
+        std::string name;
+        std::vector<std::shared_ptr<Declaration>> parameters;
+        std::shared_ptr<Type> return_type;
+        std::vector<std::shared_ptr<Statement>> body;
+        std::shared_ptr<Block> block;
+        FunctionValue(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::vector<std::shared_ptr<Declaration>> &parameters, std::shared_ptr<Type> &return_type, const std::vector<std::shared_ptr<Statement>> &body)
+            : Expression({ RULE_FUNCTION, file, line, column }), name(name), parameters(parameters), return_type(std::move(return_type)), body(body) {}
 };
 
 /* Statements */
@@ -442,13 +451,9 @@ class For : public Statement
 class Function : public Statement
 {
     public:
-        std::string name;
-        std::vector<std::shared_ptr<Declaration>> parameters;
-        std::shared_ptr<Type> return_type;
-        std::vector<std::shared_ptr<Statement>> body;
-        std::shared_ptr<Block> block;
-        Function(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::vector<std::shared_ptr<Declaration>> &parameters, std::shared_ptr<Type> &return_type, const std::vector<std::shared_ptr<Statement>> &body)
-            : Statement({ RULE_FUNCTION, file, line, column }), name(name), parameters(parameters), return_type(std::move(return_type)), body(body) {}
+        std::shared_ptr<FunctionValue> value;
+        Function(const std::shared_ptr<FunctionValue> &value)
+            : Statement({ RULE_FUNCTION, value->file, value->line, value->column }), value(value) {}
 };
 
 class Use : public Statement

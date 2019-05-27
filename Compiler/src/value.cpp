@@ -15,8 +15,8 @@
 Value::Value(const std::unordered_map<std::string, Value> &a, const std::vector<std::string> &b, const std::shared_ptr<Type> &inner_type)
     : type({ VALUE_DICT, inner_type }), value(std::make_shared<ndict_t>(a, b)) {}
 
-Value::Value(const size_t index, const registers_size_t registers)
-    : type({ VALUE_FUN }), value(nfun_t(index, registers)) {}
+Value::Value(const size_t index, const registers_size_t registers, const Type &type)
+    : type(type), value(nfun_t(index, registers)) {}
 
 Value::Value(const std::shared_ptr<Type> &type)
 {
@@ -107,7 +107,7 @@ std::string Value::to_string() const
         case VALUE_BOOL: { r = GETV(this->value, nbool_t) ? "true" : "false"; break; }
         case VALUE_STRING: { r = GETV(this->value, nstring_t); break; }
         case VALUE_LIST: {
-            const std::shared_ptr<nlist_t> list = GETV(this->value, std::shared_ptr<nlist_t>);
+            const std::shared_ptr<nlist_t> &list = GETV(this->value, std::shared_ptr<nlist_t>);
             r += "[";
             if (list->size() > 0) {
                 for (const Value &el : *list) {
@@ -119,7 +119,7 @@ std::string Value::to_string() const
             break;
         }
         case VALUE_DICT: {
-            const std::shared_ptr<ndict_t> dict = GETV(this->value, std::shared_ptr<ndict_t>);
+            const std::shared_ptr<ndict_t> &dict = GETV(this->value, std::shared_ptr<ndict_t>);
             r += "{";
             if (dict->values.size() > 0) {
                 for (const auto &[key, value] : dict->values) {
@@ -130,7 +130,11 @@ std::string Value::to_string() const
             r += "}";
             break;
         }
-        case VALUE_FUN: { r += std::to_string(reinterpret_cast<uintptr_t>(&GETV(this->value, nfun_t))); break; }
+        case VALUE_FUN: {
+            // const nfun_t &fun = GETV(this->value, nfun_t);
+            r += this->type.to_string();
+            break;
+        }
         default: { break; }
     }
     return r;

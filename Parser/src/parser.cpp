@@ -464,7 +464,7 @@ std::shared_ptr<Statement> Parser::fun_declaration()
         ADD_LOG("Unknown token found after function. Expected '->', '=>' or '{'.");
         exit(logger->crash());
     }
-    return NEW_NODE(Function, name, parameters, return_type, body);
+    return std::make_shared<Function>(NEW_NODE(FunctionValue, name, parameters, return_type, body));
 }
 
 /*
