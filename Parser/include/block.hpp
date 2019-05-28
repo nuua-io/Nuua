@@ -33,6 +33,19 @@ class BlockVariableType
             : type(type), node(node), exported(exported) { }
 };
 
+// Forward declare
+class Block;
+
+class BlockClassType
+{
+    public:
+        std::shared_ptr<Block> block;
+        bool exported = false;
+        BlockClassType() {}
+        BlockClassType(const std::shared_ptr<Block> &block, const bool exported = false)
+            : block(block), exported(exported) {}
+};
+
 // The block class represents a block
 // of nuua code. It is used by the analizer
 // to determine the current state of a given block.
@@ -41,12 +54,18 @@ class Block
     public:
         // Stores the variable name and the type of it.
         std::unordered_map<std::string, BlockVariableType> variables;
+        // Stores the custom types of the block.
+        std::unordered_map<std::string, BlockClassType> classes;
         // Gets a variable from the current block or returns nullptr.
         BlockVariableType *get_variable(const std::string &name);
+        BlockClassType *get_class(const std::string &name);
         // Sets a variable and returns it's reference.
         void set_variable(const std::string &name, const BlockVariableType &var);
+        void set_class(const std::string &name, const BlockClassType &c);
         bool is_exported(const std::string &name);
+        bool is_exported_class(const std::string &name);
         bool has(const std::string &name);
+        bool has_class(const std::string &name);
         void debug();
         static BlockVariableType *get_single_variable(const std::string &name, const std::vector<std::shared_ptr<Block>> *blocks);
 };

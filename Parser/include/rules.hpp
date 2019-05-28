@@ -53,7 +53,8 @@ typedef enum : uint8_t {
     RULE_SLICE,
     RULE_RANGE,
     RULE_DELETE,
-    RULE_LENGTH,
+    RULE_OBJECT,
+    RULE_PROPERTY
 } Rule;
 
 typedef enum : uint8_t {
@@ -379,6 +380,24 @@ class FunctionValue : public Expression
             : Expression({ RULE_FUNCTION, file, line, column }), name(name), parameters(parameters), return_type(std::move(return_type)), body(body) {}
 };
 
+class Object : public Expression
+{
+    public:
+        std::string name;
+        std::unordered_map<std::string, std::shared_ptr<Expression>> arguments;
+        Object(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::unordered_map<std::string, std::shared_ptr<Expression>> &arguments)
+            : Expression({ RULE_OBJECT, file, line, column }), name(name), arguments(arguments) {}
+};
+
+class Property : public Expression
+{
+    public:
+        std::shared_ptr<Expression> object;
+        std::string name;
+        Property(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &object, const std::string &name)
+            : Expression({ RULE_PROPERTY, file, line, column }), object(object), name(name) {}
+};
+
 /* Statements */
 class Print : public Statement
 {
@@ -480,6 +499,7 @@ class Class : public Statement
     public:
         std::string name;
         std::vector<std::shared_ptr<Statement>> body;
+        std::shared_ptr<Block> block;
         Class(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::vector<std::shared_ptr<Statement>> &body)
             : Statement({ RULE_CLASS, file, line, column }), name(name), body(body) {}
 };

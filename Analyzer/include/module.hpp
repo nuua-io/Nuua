@@ -20,7 +20,10 @@ class Module
     // Analyzes the TLDs given a list of top level delcarations.
     void analyze_tld();
     // Analyzes the given top level declaration.
-    void analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported = false);
+    void analyze_tld(const std::shared_ptr<Statement> &tld, const bool set_exported = false);
+    // Analyzes the class top level declarations.
+    // void analyze_class_tld(const std::shared_ptr<Class> &c);
+    void analyze_class_tld(const std::shared_ptr<Statement> &tld, const std::shared_ptr<Block> &block);
     // Analyzes the code.
     void analyze_code();
     // Analyzes the statement.
@@ -35,6 +38,8 @@ class Module
     );
     // Declares a variable to the most top level block.
     void declare(const std::shared_ptr<Declaration> &dec, const std::shared_ptr<Node> &node = std::shared_ptr<Node>());
+    // Check if the given module have all the classes defined.
+    bool check_classes(const std::vector<std::string> &classes, const std::shared_ptr<Node> &fail_at);
     public:
         // Stores the main block of that module.
         std::shared_ptr<Block> main_block = std::make_shared<Block>();

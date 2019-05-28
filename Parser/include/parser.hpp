@@ -56,6 +56,7 @@ class Parser
     std::shared_ptr<Statement> class_body_declaration();
     // Helpers
     void parameters(std::vector<std::shared_ptr<Declaration>> *dest);
+    void object_arguments(std::unordered_map<std::string, std::shared_ptr<Expression>> &arguments);
     std::vector<std::shared_ptr<Expression>> arguments();
     std::vector<std::shared_ptr<Statement>> body();
     std::vector<std::shared_ptr<Statement>> class_body();

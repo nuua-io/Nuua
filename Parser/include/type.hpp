@@ -12,7 +12,7 @@
 typedef enum : uint8_t {
     VALUE_INT, VALUE_FLOAT, VALUE_BOOL,
     VALUE_STRING, VALUE_LIST, VALUE_DICT, VALUE_FUN,
-    VALUE_CLASS, VALUE_NO_TYPE
+    VALUE_OBJECT, VALUE_NO_TYPE
 } ValueType;
 
 class Type
@@ -27,8 +27,10 @@ class Type
         ValueType type;
         // Stores the inner type if needed (used as return type for functions).
         std::shared_ptr<Type> inner_type;
-        // Class name
+        // Class name.
         std::string class_name;
+        // Class node.
+        // std::shared_ptr<Block> class_block;
         // Store the parameters of a function type.
         std::vector<std::shared_ptr<Type>> parameters;
         // Copy constructor
@@ -42,7 +44,7 @@ class Type
         Type(const ValueType type, const std::shared_ptr<Type> &inner_type)
             : type(type), inner_type(inner_type) {}
         // Create a type given a string representation of it.
-        Type(const std::string &name);
+        Type(const std::string &name, const std::shared_ptr<Block> &class_block = std::shared_ptr<Block>());
         // Create a type given an expression and a
         // list of code blocks to know the variable values.
         Type(const std::shared_ptr<Expression> &rule, const std::vector<std::shared_ptr<Block>> *blocks);
@@ -69,6 +71,8 @@ class Type
         // Recursive function that also checks inner types.
         bool same_as(const std::shared_ptr<Type> &type) const;
         bool same_as(const Type &type) const;
+        // Returns the names of all the classes used in this type.
+        std::vector<std::string> classes_used() const;
         // Prints the type as a string.
         void print() const ;
         // Prints the type as a string with a new line.

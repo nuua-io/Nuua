@@ -16,7 +16,7 @@ std::shared_ptr<Block> Analyzer::analyze(std::shared_ptr<std::vector<std::shared
     auto p = Parser(this->file);
     printf("Middle\n");
     p.parse(destination);
-    // Parser::debug_ast(*destination);
+    Parser::debug_ast(*destination);
     // Create the main module
     Module m = Module(destination->front()->file);
     // Analyze the module

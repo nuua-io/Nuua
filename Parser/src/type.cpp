@@ -11,7 +11,7 @@ const std::unordered_map<std::string, ValueType> Type::value_types = {
 const std::vector<std::string> Type::types_string = {
     "VALUE_INT", "VALUE_FLOAT", "VALUE_BOOL",
     "VALUE_STRING", "VALUE_LIST", "VALUE_DICT", "VALUE_FUN",
-    "VALUE_CLASS", "VALUE_NO_TYPE"
+    "VALUE_OBJECT", "VALUE_NO_TYPE"
 };
 
 /*
@@ -31,13 +31,14 @@ void Type::operator =(const Type &t)
     this->class_name = t.class_name;
 }
 */
-Type::Type(const std::string &name)
+Type::Type(const std::string &name, const std::shared_ptr<Block> &class_block)
 {
     if (Type::value_types.find(name) != Type::value_types.end()) {
         this->type = Type::value_types.at(name);
     } else {
-        this->type = VALUE_CLASS;
+        this->type = VALUE_OBJECT;
         this->class_name = name;
+        // if (class_block) this->class_block = class_block;
     }
 }
 
@@ -398,12 +399,12 @@ bool Type::same_as(const Type *type) const
     if (!(this->type == type->type)) return false;
 
     // For classes.
-    if (this->type == VALUE_CLASS) {
+    if (this->type == VALUE_OBJECT) {
         return this->class_name == type->class_name;
     }
 
     // Recursive check for inner types.
-    else if (this->inner_type != nullptr) {
+    else if (this->inner_type) {
         return this->inner_type->same_as(type->inner_type);
     }
 
@@ -557,9 +558,30 @@ Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::share
             this->inner_type = std::make_shared<Type>(VALUE_INT);
             break;
         }
+        case RULE_OBJECT: {
+            this->type = VALUE_OBJECT;
+            this->class_name = std::static_pointer_cast<Object>(rule)->name;
+            break;
+        }
         default: {
             logger->add_entity(rule->file, rule->line, rule->column, "Invalid expression to get the type of.");
             exit(logger->crash());
         }
     }
+}
+
+std::vector<std::string> Type::classes_used() const
+{
+    std::vector<std::string> result;
+    switch (this->type) {
+        case VALUE_OBJECT: { result.push_back(this->class_name); break; }
+        case VALUE_LIST:
+        case VALUE_DICT: {
+            // Get the classes used by the inner type.
+            std::vector<std::string> r = this->inner_type->classes_used();
+            // Appends the results here.
+            result.insert(result.end(), r.begin(), r.end());
+        }
+    }
+    return result;
 }

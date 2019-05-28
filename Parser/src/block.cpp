@@ -52,3 +52,29 @@ void Block::debug()
     }
     printf("\n");
 }
+
+BlockClassType *Block::get_class(const std::string &name)
+{
+    return this->classes.find(name) == this->classes.end()
+        ? nullptr
+        : &this->classes[name];
+}
+
+void Block::set_class(const std::string &name, const BlockClassType &c)
+{
+    this->classes[name] = std::move(c);
+}
+
+bool Block::is_exported_class(const std::string &name)
+{
+    if (BlockClassType *var = this->get_class(name)) {
+        return var->exported;
+    }
+
+    return false;
+}
+
+bool Block::has_class(const std::string &name)
+{
+    return static_cast<bool>(this->get_class(name));
+}

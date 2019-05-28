@@ -56,7 +56,6 @@ typedef enum : uint8_t {
     TOKEN_FOR, // for
     TOKEN_IF, // if
     // TOKEN_SUPER,
-    TOKEN_SELF, // self
     TOKEN_EOF, // \0
     TOKEN_PERCENT, // %
     TOKEN_LEFT_SQUARE, // [

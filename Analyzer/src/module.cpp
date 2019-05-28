@@ -33,7 +33,7 @@ std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_p
     return this->main_block;
 }
 
-void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
+void Module::analyze_tld(const std::shared_ptr<Statement> &tld, const bool set_exported)
 {
     // List of analyzed files to avoid unesseary work.
     switch (tld->rule) {
@@ -79,6 +79,13 @@ void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
             break;
         }
         case RULE_CLASS: {
+            const std::shared_ptr<Class> c = std::static_pointer_cast<Class>(tld);
+            // Create the class block.
+            c->block = std::make_shared<Block>();
+            // Define that class type.
+            this->main_block->set_class(c->name, c->block);
+            // Analyze the class body tld.
+            for (const std::shared_ptr<Statement> &tld : c->body) this->analyze_class_tld(tld, c->block);
             break;
         }
         case RULE_FUNCTION: {
@@ -96,6 +103,51 @@ void Module::analyze_tld(std::shared_ptr<Statement> &tld, bool set_exported)
         }
         default: {
             ADD_LOG(tld, "Invalid TLD rule to analyze");
+            exit(logger->crash());
+        }
+    }
+}
+
+void Module::analyze_class_tld(const std::shared_ptr<Statement> &tld, const std::shared_ptr<Block> &block)
+{
+    switch (tld->rule) {
+        case RULE_DECLARATION: {
+            std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(tld);
+            if (dec->initializer) {
+                // A variable in a class can only be declared by type. No initializers allowed.
+                ADD_LOG(dec, "Declarations in class members do not allow initializors.");
+                exit(logger->crash());
+            }
+            if (!dec->type) {
+                // A variable in a class can only be declared by type. No initializers allowed.
+                ADD_LOG(dec, "Declarations in class members require an explicit type.");
+                exit(logger->crash());
+            }
+            if (block->has(dec->name)) {
+                ADD_LOG(dec, "The variable '" + dec->name + "' is already declared in this scope.");
+                exit(logger->crash());
+            }
+            // Check if the type is correct.
+            this->check_classes(dec->type->classes_used(), NODE(dec));
+            // Set the variable to the class block.
+            block->set_variable(dec->name, { dec->type, NODE(dec) });
+            break;
+        }
+        case RULE_FUNCTION: {
+            // It needs to declare that function to the block.
+            const std::shared_ptr<Function> f = std::static_pointer_cast<Function>(tld);
+            const std::shared_ptr<FunctionValue> &fun = f->value;
+            // Set the variable to the scoped block.
+            // printf("Fun (exported: %d) -> %s\n", set_exported, fun->name.c_str());
+            if (block->has(fun->name)) {
+                ADD_LOG(fun, "'" + fun->name + "' was already declared. Function overloading is not currently implemented in this version of nuua.");
+                exit(logger->crash());
+            }
+            block->set_variable(fun->name, { std::make_shared<Type>(f), NODE(fun) });
+            break;
+        }
+        default: {
+            ADD_LOG(tld, "Invalid class top level declaration to analyze");
             exit(logger->crash());
         }
     }
@@ -141,6 +193,29 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
                 }
             }
             dict->type = std::make_shared<Type>(rule, &this->blocks);
+            break;
+        }
+        case RULE_OBJECT: {
+            std::shared_ptr<Object> object = std::static_pointer_cast<Object>(rule);
+            this->check_classes({{ object->name }}, NODE(object));
+            // Get the class block.
+            const std::shared_ptr<Block> &block = this->main_block->get_class(object->name)->block;
+            // Check the arguments to initialize the class.
+            for (const auto &[key, arg] : object->arguments) {
+                BlockVariableType *var;
+                if (!(var = block->get_variable(key))) {
+                    ADD_LOG(arg, "The class '" + object->name + "' does not have a '" + key + "' field.");
+                    exit(logger->crash());
+                }
+                // Analyze the argument.
+                this->analyze_code(arg);
+                // Check if the types match.
+                Type t = Type(arg, &this->blocks);
+                if (!var->type->same_as(t)) {
+                    ADD_LOG(arg, "Type missmatch. Expected '" + var->type->to_string() + "' but got '" + t.to_string() + "'");
+                    exit(logger->crash());
+                }
+            }
             break;
         }
         case RULE_GROUP: {
@@ -248,6 +323,16 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
                 exit(logger->crash());
             }
             // Check the arguments' type.
+            if (call->arguments.size() != type.parameters.size()) {
+                ADD_LOG(
+                    call,
+                    "Function arguments does not match with the definition. Expected "
+                    + std::to_string(type.parameters.size())
+                    + " arguments, but got "
+                    + std::to_string(call->arguments.size())
+                );
+                exit(logger->crash());
+            }
             for (size_t i = 0; i < call->arguments.size(); i++) {
                 this->analyze_code(call->arguments[i]);
                 Type arg = Type(call->arguments[i], &this->blocks);
@@ -458,9 +543,12 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
                 this->analyze_code(dec->initializer);
                 // Get the type of the initializer,
                 dec->type = std::make_shared<Type>(dec->initializer, &this->blocks);
+                // Check if the type is correct.
+                check_classes(dec->type->classes_used(), NODE(dec));
                 if (!no_declare) this->declare(dec);
                 break;
             }
+            check_classes(dec->type->classes_used(), NODE(dec));
             if (!no_declare) this->declare(dec);
             if (dec->initializer) {
                 this->analyze_code(dec->initializer);
@@ -562,10 +650,22 @@ void Module::declare(const std::shared_ptr<Declaration> &dec, const std::shared_
 {
     std::shared_ptr<Block> block = this->blocks.back();
     // Check if the variable exists already.
-    if (block->get_variable(dec->name)) {
+    if (block->has(dec->name)) {
         ADD_LOG(dec, "The variable '" + dec->name + "' is already declared in this scope.");
         exit(logger->crash());
     }
     // Declare the variable to the current scope.
     block->set_variable(dec->name, { dec->type, node ? node : NODE(dec) });
+}
+
+bool Module::check_classes(const std::vector<std::string> &classes, const std::shared_ptr<Node> &fail_at)
+{
+    for (const std::string &c : classes) {
+        // Check if that class is defined here.
+        if (!this->main_block->has_class(c)) {
+            // The class is not defined in this module.
+            ADD_LOG(fail_at, "The declaration type is an undefined class type. Make sure to import all the necessary classes using 'use'.");
+            exit(logger->crash());
+        }
+    }
 }

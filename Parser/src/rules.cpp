@@ -42,7 +42,8 @@ static std::vector<std::string> RuleNames = {
     "RULE_SLICE",
     "RULE_RANGE",
     "RULE_DELETE",
-    "RULE_LENGTH"
+    "RULE_OBJECT",
+    "RULE_PROPERTY"
 };
 
 void Parser::debug_rule(const Rule rule)
@@ -73,7 +74,7 @@ static void print_spaces(uint16_t ammount)
 void Parser::debug_ast(const std::shared_ptr<Expression> &expression, const uint16_t spacer, const bool print_spacer)
 {
     if (print_spacer) print_spaces(spacer);
-    if (!expression) { printf("-\n"); return; };
+    if (!expression) { printf("[No expression provided]\n"); return; };
     switch (expression->rule) {
         case RULE_INTEGER: { printf("Integer\n"); break; }
         case RULE_UNSIGNED: { printf("Unsigned\n"); break; }
@@ -93,7 +94,7 @@ void Parser::debug_ast(const std::shared_ptr<Expression> &expression, const uint
         */
         case RULE_BINARY: {
             std::shared_ptr<Binary> binary = std::static_pointer_cast<Binary>(expression);
-            printf("Binary[%s]\n", binary->op.to_string().c_str());
+            printf("Binary[%s]\n", binary->op.to_type_string().c_str());
             Parser::debug_ast(binary->left, spacer + 1);
             Parser::debug_ast(binary->right, spacer + 1);
             break;
@@ -157,6 +158,22 @@ void Parser::debug_ast(const std::shared_ptr<Expression> &expression, const uint
             Parser::debug_ast(range->end, spacer + 1);
             break;
         }
+        case RULE_OBJECT: {
+            std::shared_ptr<Object> object = std::static_pointer_cast<Object>(expression);
+            printf("Object[%s]\n", object->name.c_str());
+            for (const auto &[key, value] : object->arguments) {
+                print_spaces(spacer + 1);
+                printf("%s:\n", key.c_str());
+                Parser::debug_ast(value, spacer + 2);
+            }
+            break;
+        }
+        case RULE_PROPERTY: {
+            std::shared_ptr<Property> prop = std::static_pointer_cast<Property>(expression);
+            printf("Property[%s]\n", prop->name.c_str());
+            Parser::debug_ast(prop->object, spacer + 1);
+            break;
+        }
         default: { break; }
     }
 }
@@ -177,7 +194,7 @@ void Parser::debug_ast(const std::shared_ptr<Statement> &statement, const uint16
         }
         case RULE_DECLARATION: {
             std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(statement);
-            printf("Declaration[%s: %s]\n", dec->name.c_str(), dec->type->to_string().c_str());
+            printf("Declaration[%s: %s]\n", dec->name.c_str(), dec->type ? dec->type->to_string().c_str() : "<from-initializer>");
             Parser::debug_ast(dec->initializer, spacer + 1);
             break;
         }

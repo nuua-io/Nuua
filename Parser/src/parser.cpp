@@ -90,6 +90,7 @@ primary -> "false"
     | IDENTIFIER
     | LIST
     | DICTIONARY
+    | OBJECT
     | "(" expression ")"
 */
 std::shared_ptr<Expression> Parser::primary()
@@ -99,7 +100,18 @@ std::shared_ptr<Expression> Parser::primary()
     if (this->match(TOKEN_INTEGER)) return NEW_NODE(Integer, std::stoll(PREVIOUS().to_string()));
     if (this->match(TOKEN_FLOAT)) return NEW_NODE(Float, std::stof(PREVIOUS().to_string()));
     if (this->match(TOKEN_STRING)) return NEW_NODE(String, PREVIOUS().to_string());
-    if (this->match(TOKEN_IDENTIFIER)) return NEW_NODE(Variable, PREVIOUS().to_string());
+    if (this->match(TOKEN_IDENTIFIER)) {
+        const std::string name = PREVIOUS().to_string();
+        // It can be an object.
+        if (this->match(TOKEN_LEFT_BRACE)) {
+            // It's an object.
+            std::unordered_map<std::string, std::shared_ptr<Expression>> arguments;
+            this->object_arguments(arguments);
+            this->consume(TOKEN_RIGHT_BRACE, "Expected '}' at the end of the object creation.");
+            return NEW_NODE(Object, name, arguments);
+        }
+        return NEW_NODE(Variable, name);
+    }
     if (this->match(TOKEN_LEFT_SQUARE)) {
         std::vector<std::shared_ptr<Expression> > values;
         if (this->match(TOKEN_RIGHT_SQUARE)) return NEW_NODE(List, values);
@@ -172,14 +184,18 @@ std::shared_ptr<Expression> Parser::primary()
 }
 
 /*
-unary_postfix -> primary ("[" expression "]" | slice | "(" arguments? ")")*;
+unary_postfix -> primary unary_p*;
+unary_p -> "[" expression "]"
+    | slice
+    | "(" arguments? ")"
+    | '.' IDENTIFIER;
 slice -> "[" expression? ":" expression? (":" expression?)? "]"
 arguments -> expression ("," expression)*;
 */
 std::shared_ptr<Expression> Parser::unary_postfix()
 {
     std::shared_ptr<Expression> result = this->primary();
-    while (this->match_any({{ TOKEN_LEFT_SQUARE, TOKEN_LEFT_PAREN }})) {
+    while (this->match_any({{ TOKEN_LEFT_SQUARE, TOKEN_LEFT_PAREN, TOKEN_DOT }})) {
         Token op = PREVIOUS();
         switch (op.type) {
             case TOKEN_LEFT_SQUARE: {
@@ -209,9 +225,14 @@ std::shared_ptr<Expression> Parser::unary_postfix()
                 break;
             }
             case TOKEN_LEFT_PAREN: {
-                std::vector<std::shared_ptr<Expression> > arguments = this->arguments();
-                this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after function arguments");
+                std::vector<std::shared_ptr<Expression>> arguments = this->arguments();
+                this->consume(TOKEN_RIGHT_PAREN, "Expected ')' after function arguments.");
                 result = NEW_NODE(Call, result, arguments);
+                break;
+            }
+            case TOKEN_DOT: {
+                std::string prop = this->consume(TOKEN_IDENTIFIER, "Expected an identifier after '.' in an access to an object property.")->to_string();
+                result = NEW_NODE(Property, result, prop);
                 break;
             }
             default: {
@@ -378,6 +399,10 @@ std::shared_ptr<Statement> Parser::variable_declaration()
     std::shared_ptr<Type> type = this->type();
     std::shared_ptr<Expression> initializer;
     if (this->match(TOKEN_EQUAL)) initializer = this->expression();
+    if (!type && !initializer) {
+        ADD_LOG("A variable without type and initializer can't be declared. At least one is expected.");
+        exit(logger->crash());
+    }
     return NEW_NODE(Declaration, variable, type, initializer);
 }
 
@@ -671,6 +696,7 @@ std::shared_ptr<Statement> Parser::top_level_declaration()
 
 std::shared_ptr<Statement> Parser::class_body_declaration()
 {
+    printf("Parsing class body.\n");
     std::shared_ptr<Statement> result = nullptr;
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
@@ -681,6 +707,7 @@ std::shared_ptr<Statement> Parser::class_body_declaration()
 
     if (CHECK(TOKEN_IDENTIFIER) && LOOKAHEAD(1).type == TOKEN_COLON) {
         ADD_LOG("Parsing variable declaration");
+        result = this->variable_declaration();
     } else if (this->match(TOKEN_FUN)) {
         ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
@@ -707,7 +734,24 @@ void Parser::parameters(std::vector<std::shared_ptr<Declaration>> *dest)
                 ADD_LOG_PAR(parameter->line, parameter->column, "Invalid argument when defining the function. Expected a variable declaration.");
                 exit(logger->crash());
             }
-            dest->push_back(std::move(std::static_pointer_cast<Declaration>(parameter)));
+            // Disallow parameter initializors.
+            std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(parameter);
+            if (dec->initializer) {
+                ADD_LOG_PAR(dec->initializer->line, dec->initializer->column, "Function parameters are not allowed to have initializers.");
+                exit(logger->crash());
+            }
+            dest->push_back(std::move(dec));
+        } while (this->match(TOKEN_COMMA));
+    }
+}
+
+void Parser::object_arguments(std::unordered_map<std::string, std::shared_ptr<Expression>> &arguments)
+{
+    if (!CHECK(TOKEN_RIGHT_BRACE)) {
+        do {
+            std::string key = this->consume(TOKEN_IDENTIFIER, "Expected an identifier to set the object argument")->to_string();
+            this->consume(TOKEN_COLON, "Expected ':' after the argument identifier");
+            arguments[key] = std::move(this->expression());
         } while (this->match(TOKEN_COMMA));
     }
 }
@@ -789,7 +833,7 @@ std::shared_ptr<Type> Parser::type(bool optional)
         // Other types (native + custom).
         std::string type = this->consume(TOKEN_IDENTIFIER, "Expected an identifier as a type.")->to_string();
         return std::make_shared<Type>(type);
-    } else if (optional && (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL))) return nullptr;
+    } else if (optional && (CHECK(TOKEN_NEW_LINE) || CHECK(TOKEN_EQUAL))) return std::shared_ptr<Type>();
 
     ADD_LOG("Unknown type token expected.");
     exit(logger->crash());
@@ -808,7 +852,7 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
     Lexer lexer = Lexer(this->file);
     // Scan the tokens.
     lexer.scan(tokens);
-    Token::debug_tokens(*tokens);
+    // Token::debug_tokens(*tokens);
     this->current = &tokens->front();
     while (!IS_AT_END()) code->push_back(std::move(this->top_level_declaration()));
     // Check the code size to avoid empty files.
