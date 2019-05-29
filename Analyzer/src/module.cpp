@@ -519,7 +519,11 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
                     if (rule->rule == RULE_RETURN) goto continue_rule_function;
                 }
                 // Add an ending return because the function didn't have any!
-                fun->body.push_back(std::make_shared<Return>(fun->body.back()->file, fun->body.back()->line, fun->body.back()->column));
+                if (fun->body.size() == 0) {
+                    fun->body.push_back(std::make_shared<Return>(fun->file, fun->line, fun->column));
+                } else {
+                    fun->body.push_back(std::make_shared<Return>(fun->body.back()->file, fun->body.back()->line, fun->body.back()->column));
+                }
             }
             continue_rule_function:
             // Analyze the function body.
