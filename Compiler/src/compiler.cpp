@@ -211,15 +211,23 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             // Save the jump index
             size_t jump_index = this->program->memory->code.size() - 2; // The 0 on the opcode above.
+            // Set the then block.
+            this->blocks.push_back(rif->then_block);
             // Compile the if then branch.
             for (const std::shared_ptr<Statement> &stmt : rif->then_branch) this->compile(stmt);
+            // Remove the then block.
+            this->blocks.pop_back();
             if (rif->else_branch.size() > 0) {
                 // Add a jump to the then branch to avoid going to else.
                 this->add_opcodes({{ OP_FJUMP, 0 }});
                 size_t then_jump = this->program->memory->code.size() - 1;
                 // Change the initial jump index to here.
                 this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
+                // Set the else block.
+                this->blocks.push_back(rif->else_block);
                 for (const std::shared_ptr<Statement> &stmt : rif->else_branch) this->compile(stmt);
+                // Remove the else block.
+                this->blocks.pop_back();
                 this->program->memory->code[then_jump] = this->program->memory->code.size() - (then_jump - 1);
             } else this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
             break;
@@ -235,6 +243,8 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->local.free_register(rx);
             // Get the jump index for further modification.
             size_t jump_index = this->program->memory->code.size() - 2;
+            // Set the while block.
+            this->blocks.push_back(rwhile->block);
             // Compile the while body.
             for (const std::shared_ptr<Statement> &stmt : rwhile->body) this->compile(stmt);
             // Set the jump back up.
@@ -242,6 +252,8 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->add_opcodes({{ OP_BJUMP, jb }});
             // Modify the branch jump.
             this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
+            // Pop the for block.
+            this->blocks.pop_back();
             break;
         }
         case RULE_FOR: {
@@ -298,6 +310,8 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->local.free_register(ri, true);
             this->local.free_register(re, true);
             this->local.free_register(rc);
+            // Pop the for block.
+            this->blocks.pop_back();
             break;
         }
         default: {

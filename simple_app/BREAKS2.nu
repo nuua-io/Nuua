@@ -1,3 +1,12 @@
+fun b(): string {
+    return "OK"
+}
+
 fun main() {
-    print "helloerik"[1:5:2]
+    a: int = 10
+    if (a == 10) {
+        b: int = 20
+        print a
+        print b
+    }
 }

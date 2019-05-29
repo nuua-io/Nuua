@@ -1,7 +1,8 @@
 fun main() {
-    items: [int] = [1, 2, 3, 4, 5]
-    for number in items {
-        print number
+    a: int = 10
+    if (a == 10) {
+        c: int = 20
+        print a
+        print c
     }
-    // 10
 }

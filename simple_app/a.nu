@@ -1,3 +1,3 @@
-export fun b() {
-    return
+export fun b(): string {
+    return "hello"
 }

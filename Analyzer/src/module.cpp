@@ -474,16 +474,17 @@ std::shared_ptr<Block> Module::analyze_code(
 {
     std::shared_ptr block = std::make_shared<Block>();
     this->blocks.push_back(block);
+    // printf("SET BLOCK TO: %p\n", this->blocks.back().get());
     if (initializers.size() > 0) {
         for (const std::shared_ptr<Declaration> &argument : initializers) {
             this->declare(argument, initializer_node);
         }
     }
-    // printf("Should be only initializers.\n");
     // block.debug();
     for (const std::shared_ptr<Statement> &rule : code) {
         this->analyze_code(rule);
     }
+    // printf("BLOCK DONE!\n");
     this->blocks.pop_back();
     return block;
 }
@@ -654,6 +655,7 @@ void Module::declare(const std::shared_ptr<Declaration> &dec, const std::shared_
         ADD_LOG(dec, "The variable '" + dec->name + "' is already declared in this scope.");
         exit(logger->crash());
     }
+    // printf("Declared %s on block %p\n", dec->name.c_str(), block.get());
     // Declare the variable to the current scope.
     block->set_variable(dec->name, { dec->type, node ? node : NODE(dec) });
 }

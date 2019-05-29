@@ -1,3 +1,5 @@
+use b from "a"
+
 class Person {
     ages: int
     fun getAge(): string {
@@ -6,23 +8,17 @@ class Person {
     }
 }
 
-fun hello(): string {
-    return "Hello World"
-}
-
-fun h1(): string {
-    return "H1"
-}
-
-fun h2(): int {
-    return 10
-}
-
 fun main() {
     // erik: Person = Person{}
     // erik.show_age() as string
-    f: (-> string)
-    print f()
+    a: int = 10
+    b: int = 20
+    if (a == 10) {
+        b: int = 30
+        print b
+    }
+    print a
+    print b
     // print "jklhasduh287asfjnd"[2:5]
     // print "jklhasduh287asfjnd"[2:5]
     // print "jklhasduh287asfjnd"[2:50000]
