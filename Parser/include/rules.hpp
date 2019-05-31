@@ -172,14 +172,14 @@ class Node
 class Expression : public Node
 {
     public:
-        Expression(const Node &node)
+        explicit Expression(const Node &node)
             : Node(node) {};
 };
 
 class Statement : public Node
 {
     public:
-        Statement(const Node &node)
+        explicit Statement(const Node &node)
             : Node(node) {};
 };
 
@@ -249,8 +249,8 @@ class Unary : public Expression
         Token op;
         std::shared_ptr<Expression> right;
         UnaryType type = (UnaryType) NULL; // Determines what type of unary operation will be performed, no need to store a whole Type.
-        Unary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, Token op, const std::shared_ptr<Expression> &r)
-            : Expression({ RULE_UNARY, file, line, column }), op(op), right(std::move(r)) {};
+        Unary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const Token &o, const std::shared_ptr<Expression> &r)
+            : Expression({ RULE_UNARY, file, line, column }), op(o), right(std::move(r)) {};
 };
 
 class Binary : public Expression
@@ -260,8 +260,8 @@ class Binary : public Expression
         Token op;
         std::shared_ptr<Expression> right;
         BinaryType type = (BinaryType) NULL; // Determines what type of binary operation will be performed.
-        Binary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &l, Token op, const std::shared_ptr<Expression> &r)
-            : Expression({ RULE_BINARY, file, line, column }), left(std::move(l)), op(op), right(std::move(r)) {};
+        Binary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &l, const Token &o, const std::shared_ptr<Expression> &r)
+            : Expression({ RULE_BINARY, file, line, column }), left(std::move(l)), op(o), right(std::move(r)) {};
 };
 
 class Variable : public Expression
@@ -288,8 +288,8 @@ class Logical : public Expression
         std::shared_ptr<Expression> left;
         Token op;
         std::shared_ptr<Expression> right;
-        Logical(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &l, Token op, const std::shared_ptr<Expression> &r)
-            : Expression({ RULE_LOGICAL, file, line, column }), left(std::move(l)),  op(op), right(std::move(r)) {};
+        Logical(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &l, const Token &o, const std::shared_ptr<Expression> &r)
+            : Expression({ RULE_LOGICAL, file, line, column }), left(std::move(l)),  op(o), right(std::move(r)) {};
 };
 
 class Call : public Expression

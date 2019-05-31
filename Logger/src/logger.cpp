@@ -40,6 +40,7 @@ static int red_printf(const char *format, ...)
         strcat(fmt, format);
         strcat(fmt, "\x1b[0m");
         done = vfprintf(stderr, fmt, arg);
+        free(fmt);
     #endif
 
     va_end(arg);
@@ -79,7 +80,7 @@ static void print_msg(const std::string &msg, bool red)
 {
     printf("   ");
     size_t current_char = 0, current_col = 0;
-    while (current_char <= msg.length()) {
+    while (current_char < msg.length()) {
         if (current_col > MAX_LINE_CHARS && msg[current_char] == ' ') {
             printf("\n   ");
             ++current_char;
