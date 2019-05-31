@@ -26,7 +26,7 @@ class Frame
 {
     public:
         // Stores the registers.
-        Value *registers = nullptr;
+        std::unique_ptr<Value[]> registers;
         // Stores the registers size.
         registers_size_t registers_size = 0;
         // Stores the return address to get back to the original program counter.
@@ -36,7 +36,7 @@ class Frame
         // Allocates the space to store the registers.
         void allocate_registers(registers_size_t size);
         // Frees the allocated register space.
-        void free_registers();
+        // void free_registers();
         // Setup the frame.
         void setup(registers_size_t size, opcode_t *return_address);
 };

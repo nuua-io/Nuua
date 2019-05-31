@@ -36,6 +36,7 @@ typedef enum : uint8_t {
     OP_LDELETE, // LDELETE RX RY
 
     // Dictionary releated
+    OP_DKEY, // DKEY RX RY RZ
     OP_DGET, // DGET RX RY RZ
     OP_DSET, // DSET RX RY RZ
     OP_DDELETE, // DDELETE RX RY

@@ -297,7 +297,7 @@ class Call : public Expression
     public:
         std::shared_ptr<Expression> target;
         std::vector<std::shared_ptr<Expression>> arguments;
-        bool has_return; // Determines if the call target returns a value or not.
+        bool has_return = false; // Determines if the call target returns a value or not.
         Call(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::vector<std::shared_ptr<Expression>> &arguments)
             : Expression({ RULE_CALL, file, line, column }), target(std::move(target)), arguments(arguments) {};
 };
@@ -342,7 +342,7 @@ class Slice : public Expression
         std::shared_ptr<Expression> start;
         std::shared_ptr<Expression> end;
         std::shared_ptr<Expression> step;
-        bool is_list = (bool) NULL; // Determines if it's a list or a string, used by Analyzer.
+        bool is_list = false; // Determines if it's a list or a string, used by Analyzer.
         Slice(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &start, const std::shared_ptr<Expression> &end, const std::shared_ptr<Expression> &step)
             : Expression({ RULE_SLICE, file, line, column }), target(std::move(target)), start(std::move(start)), end(std::move(end)), step(std::move(step)) {}
 };
@@ -353,7 +353,7 @@ class Range : public Expression
         std::shared_ptr<Expression> start;
         std::shared_ptr<Expression> end;
         bool inclusive;
-        Range(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &start, const std::shared_ptr<Expression> &end, bool inclusive)
+        Range(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &start, const std::shared_ptr<Expression> &end, const bool inclusive)
             : Expression({ RULE_RANGE, file, line, column }), start(std::move(start)), end(std::move(end)), inclusive(inclusive) {}
 };
 

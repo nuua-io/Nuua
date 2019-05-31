@@ -15,6 +15,7 @@
 #define TOK_LENGTH() ((int) (this->current - this->start))
 #define IS_AT_END() (*this->current == '\0')
 #define NEXT() (*(this->current++))
+#define SKIP() NEXT(); this->start = this->current;
 #define PEEK() (*this->current)
 #define PEEK_ON(offset) (*(this->current + (offset)))
 #define IS_DIGIT(character) ((character) >= '0' && (character) <= '9')
@@ -157,8 +158,18 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
             case ' ': { this->start = this->current; ++this->column; break; }
             case '\r': { break; }
             case '\t': { ++this->column; break; }
-            case '\n': { ++this->line; ADD_TOKEN(TOKEN_NEW_LINE); this->column = 1; break; }
-            case '#': { while (PEEK() != '\n' && !IS_AT_END()) NEXT(); break; }
+            case '\n': {
+                ++this->line;
+                ADD_TOKEN(TOKEN_NEW_LINE);
+                // Remove subsequent '\n'
+                while (!IS_AT_END() && PEEK() == '\n') {
+                    SKIP();
+                    ++this->line;
+                }
+                this->column = 1;
+                break;
+            }
+            // case '#': { while (PEEK() != '\n' && !IS_AT_END()) NEXT(); break; }
             case '(': { ADD_TOKEN(TOKEN_LEFT_PAREN); break; }
             case ')': { ADD_TOKEN(TOKEN_RIGHT_PAREN); break; }
             case '{': { ADD_TOKEN(TOKEN_LEFT_BRACE); break; }
@@ -194,7 +205,7 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
             }
             case '+': { ADD_TOKEN(TOKEN_PLUS); break; }
             case '/': {
-                if (this->match('/')) { while (PEEK() != '\n' && !IS_AT_END()) { NEXT(); this->start = this->current; } break; }
+                if (this->match('/')) { while (PEEK() != '\n' && !IS_AT_END()) { SKIP(); } SKIP(); break; }
                 ADD_TOKEN(TOKEN_SLASH); break;
             }
             case '*': { ADD_TOKEN(TOKEN_STAR); break; }
@@ -229,6 +240,7 @@ Lexer::Lexer(std::shared_ptr<const std::string> &file)
 #undef TOK_LENGTH
 #undef IS_AT_END
 #undef NEXT
+#undef SKIP
 #undef PEEK
 #undef PEEK_ON
 #undef IS_DIGIT

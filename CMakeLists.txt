@@ -1,6 +1,9 @@
 # Required project information.
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.9)
 project (Nuua)
+
+# IPO support
+include (CheckIPOSupported)
 
 # Set the output directory
 set (OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin)
@@ -15,6 +18,12 @@ endif ()
 # Set the C++ standard to use.
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enable interprocedural optimizations
+check_ipo_supported (RESULT ipo_supported)
+if (ipo_supported)
+    set (CMAKE_INTERPROCEDURAL_OPTIMIZATION true)
+endif ()
 
 # Set the C++ general flags and flags for debug and release.
 if (CMAKE_COMPILER_IS_GNUCXX)

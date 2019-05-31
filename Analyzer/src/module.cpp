@@ -575,12 +575,15 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
         }
         case RULE_RETURN: {
             std::shared_ptr<Return> ret = std::static_pointer_cast<Return>(rule);
-            if (!ret->value) break;
-            this->analyze_code(ret->value);
-            if (!this->return_type) {
-                ADD_LOG(ret, "Non-situational return. There is no return type expected.");
+            if (!ret->value && !this->return_type) break;
+            else if (ret->value && !this->return_type) {
+                ADD_LOG(ret, "Return with value. There is no return type expected.");
+                exit(logger->crash());
+            } else if (!ret->value && this->return_type) {
+                ADD_LOG(ret, "Return without value. There is a return type expected.");
                 exit(logger->crash());
             }
+            this->analyze_code(ret->value);
             Type type = Type(ret->value, &this->blocks);
             if (!type.same_as(*this->return_type)) {
                 ADD_LOG(ret,
@@ -630,12 +633,12 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             }
             rfor->type = vtype;
             decs.push_back(std::make_shared<Declaration>(
-                rfor->file, rfor->line, rfor->column, rfor->variable, vtype, std::shared_ptr<Expression>())
+                rfor->file, rfor->line, rfor->column, rfor->variable,
+                vtype->type == VALUE_STRING ? vtype : vtype->inner_type, std::shared_ptr<Expression>())
             );
             // Check if it uses the index and declare it if so.
             if (rfor->index != "") {
-                printf("ADDING INDEX TO FOR\n");
-                std::shared_ptr<Type> itype = std::make_shared<Type>(VALUE_INT); // Types (they are saved on the heap since they will be saved)
+                std::shared_ptr<Type> itype = std::make_shared<Type>(vtype->type == VALUE_DICT ? VALUE_STRING : VALUE_INT); // Types (they are saved on the heap since they will be saved)
                 decs.push_back(std::make_shared<Declaration>(
                     rfor->file, rfor->line, rfor->column, rfor->index, itype, std::shared_ptr<Expression>())
                 );

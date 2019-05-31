@@ -7,9 +7,9 @@
 #define END_PC (&this->program->memory->code.back())
 #define PC (this->program_counter)
 #define PC_AT(at) (PC + at)
-#define GLOBAL(at) (this->program->main_frame.registers + *PC_AT(at))
+#define GLOBAL(at) (this->program->main_frame.registers.get() + *PC_AT(at))
 #define LITERAL(at) (*PC_AT(at))
-#define REGISTER(at) (this->active_frame->registers + *PC_AT(at))
+#define REGISTER(at) (this->active_frame->registers.get() + *PC_AT(at))
 #define CONSTANT(at) (this->program->memory->constants.data() + *PC_AT(at))
 #define INC_PC(num) (PC += num)
 #define PUSH(value_ptr) (value_ptr->copy_to(this->top_stack++))
@@ -18,6 +18,7 @@
 
 void VirtualMachine::run()
 {
+    static uint64_t frame;
     for (;;) {
         // printf("=> %llu (%llu)\n", PC, *PC);
         switch (*PC) {
@@ -31,16 +32,24 @@ void VirtualMachine::run()
             case OP_POP: { POP(REGISTER(1)); INC_PC(2); break; }
             case OP_SGET: {
                 REGISTER(2)->type.copy_to(REGISTER(1)->type);
-                nint_t index = GETV(REGISTER(3)->value, nint_t);
+                const nint_t &index = GETV(REGISTER(3)->value, nint_t);
                 const nstring_t &str = GETV(REGISTER(2)->value, nstring_t);
                 if (index > str.length() || index < 0) {
-                    CRASH("Index out of bounds. The index at this point of execution must be between [0, " + std::to_string(str.length()) + "]");
+                    CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(str.length()) + "]");
                 }
-                REGISTER(1)->value = std::to_string(str[index]);
+                REGISTER(1)->value = std::string(1, str[index]);
                 INC_PC(4);
                 break;
             }
             case OP_SSET: {
+                nstring_t &target = GETV(REGISTER(1)->value, nstring_t);
+                const nint_t &index = GETV(REGISTER(2)->value, nint_t);
+                const nstring_t &value = GETV(REGISTER(3)->value, nstring_t);
+                if (index > target.length() || index < 0) {
+                    CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(target.length()) + "]");
+                }
+                target[index] = value[0];
+                INC_PC(4);
                 break;
             }
             case OP_SDELETE: { break; }
@@ -60,17 +69,38 @@ void VirtualMachine::run()
                 nint_t index = GETV(REGISTER(3)->value, nint_t);
                 const std::shared_ptr<nlist_t> &list = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>);
                 if (index > list->size() || index < 0) {
-                    CRASH("Index out of bounds. The index at this point of execution must be between [0, " + std::to_string(list->size()) + "]");
+                    CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(list->size()) + "]");
                 }
                 (*list)[index].copy_to(REGISTER(1));
                 INC_PC(4);
                 break;
             }
-            case OP_LSET: { break; }
+            case OP_LSET: {
+                const std::shared_ptr<nlist_t> &list = GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>);
+                const nint_t &index = GETV(REGISTER(2)->value, nint_t);
+                if (index > list->size() || index < 0) {
+                    CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(list->size()) + "]");
+                }
+                REGISTER(3)->copy_to(&list->at(index));
+                INC_PC(4);
+                break;
+            }
             case OP_LDELETE: {  break; }
-
-            // Dictionary releated
+            case OP_DKEY: {
+                const std::shared_ptr<ndict_t> &d = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>);
+                const nint_t &index = GETV(REGISTER(3)->value, nint_t);
+                REGISTER(1)->retype(VALUE_STRING);
+                REGISTER(1)->value = d->key_order[index];
+                INC_PC(4);
+                break;
+            }
             case OP_DGET: {
+                const std::shared_ptr<ndict_t> &d = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>);
+                const nstring_t &key = GETV(REGISTER(3)->value, nstring_t);
+                REGISTER(2)->type.inner_type->copy_to(REGISTER(1)->type);
+                // REGISTER(1)->value = d.values.at(key);
+                d->values.at(key).copy_to(REGISTER(1));
+                INC_PC(4);
                 break;
             }
             case OP_DSET: {
@@ -85,12 +115,14 @@ void VirtualMachine::run()
                 (++this->active_frame)->setup(r.registers, PC + 2);
                 // Change the program counter.
                 PC = BASE_PC + r.index;
+                // printf("Frame: %llu\n", ++frame);
                 break;
             }
             case OP_RETURN: {
                 // Drop the frame and reset the PC position.
                 // The allocate_registers drops the old registers if needed.
                 PC = (this->active_frame--)->return_address;
+                --frame;
                 break;
             }
             case OP_CAST_INT_FLOAT: {
@@ -155,7 +187,7 @@ void VirtualMachine::run()
             }
             case OP_CAST_LIST_BOOL: {
                 REGISTER(1)->retype(VALUE_BOOL);
-                REGISTER(1)->value = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>)->size() != 0;
+                REGISTER(1)->value = static_cast<nbool_t>(GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>)->size() != 0);
                 INC_PC(3);
                 break;
             }
@@ -172,20 +204,32 @@ void VirtualMachine::run()
                 break;
             }
             case OP_CAST_DICT_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>)->values.size() != 0;
+                INC_PC(3);
                 break;
             }
             case OP_CAST_DICT_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>)->values.size());
+                INC_PC(3);
                 break;
             }
             case OP_CAST_STRING_BOOL: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = GETV(REGISTER(2)->value, nstring_t).length() != 0;
+                INC_PC(3);
                 break;
             }
             case OP_CAST_STRING_INT: {
+                REGISTER(1)->retype(VALUE_INT);
+                REGISTER(1)->value = static_cast<nint_t>(GETV(REGISTER(2)->value, nstring_t).length());
+                INC_PC(3);
                 break;
             }
             case OP_NEG_BOOL: {
                 REGISTER(1)->retype(VALUE_BOOL);
-                REGISTER(1)->value = !static_cast<nint_t>(GETV(REGISTER(2)->value, nbool_t));
+                REGISTER(1)->value = !GETV(REGISTER(2)->value, nbool_t);
                 INC_PC(3);
                 break;
             }
@@ -581,7 +625,7 @@ void VirtualMachine::interpret(const char *file)
     Compiler compiler = Compiler(this->program);
     register_t main = compiler.compile(file);
     // Call the main function.
-    const ValueFunction &calle = std::get<ValueFunction>((this->program->main_frame.registers + main)->value);
+    const ValueFunction &calle = std::get<ValueFunction>((this->program->main_frame.registers.get() + main)->value);
     // Set the new frame and allocate it's registers.
     (++this->active_frame)->setup(calle.registers, END_PC);
     // Change the program counter.

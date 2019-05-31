@@ -14,7 +14,9 @@
 #define CURRENT() (*(this->current))
 #define PREVIOUS() (*(this->current - 1))
 #define CHECK(token) (this->current->type == token)
+#define CHECK_AT(token, n) ((this->current + n)->type == token)
 #define NEXT() (this->current++)
+#define ADVANCE(n) (this->current += n)
 #define IS_AT_END() (CHECK(TOKEN_EOF))
 #define LOOKAHEAD(n) (*(this->current + n))
 #define LINE() (this->current->line)
@@ -103,8 +105,9 @@ std::shared_ptr<Expression> Parser::primary()
     if (this->match(TOKEN_IDENTIFIER)) {
         const std::string name = PREVIOUS().to_string();
         // It can be an object.
-        if (this->match(TOKEN_LEFT_BRACE)) {
+        if (this->match(TOKEN_BANG)) {
             // It's an object.
+            this->consume(TOKEN_LEFT_BRACE, "Expected '{' at the start of the object creation.");
             std::unordered_map<std::string, std::shared_ptr<Expression>> arguments;
             this->object_arguments(arguments);
             this->consume(TOKEN_RIGHT_BRACE, "Expected '}' at the end of the object creation.");
@@ -362,8 +365,9 @@ std::shared_ptr<Expression> Parser::range()
 {
     std::shared_ptr<Expression> result = this->logical_or();
     while (this->match_any({{ TOKEN_DOUBLE_DOT, TOKEN_TRIPLE_DOT }})) {
+        const bool inclusive = PREVIOUS().type == TOKEN_DOUBLE_DOT ? false : true;
         std::shared_ptr<Expression> right = this->expression();
-        result = NEW_NODE(Range, result, right, PREVIOUS().type == TOKEN_DOUBLE_DOT ? false : true);
+        result = NEW_NODE(Range, result, right, inclusive);
     }
     return result;
 }
@@ -522,7 +526,22 @@ std::shared_ptr<Statement> Parser::if_statement()
     // Else branch
     if (this->match(TOKEN_ELIF)) {
         else_branch.push_back(std::move(this->if_statement()));
+    } else if (CHECK(TOKEN_NEW_LINE) && CHECK_AT(TOKEN_ELIF, 1)) {
+        ADVANCE(2); // Consume the two tokens.
+        else_branch.push_back(std::move(this->if_statement()));
     } else if (this->match(TOKEN_ELSE)) {
+        if (this->match(TOKEN_LEFT_BRACE)) {
+            EXPECT_NEW_LINE();
+            else_branch = this->body();
+            this->consume(TOKEN_RIGHT_BRACE, "Expected '}' after 'else' body.");
+        } else if (this->match(TOKEN_BIG_RIGHT_ARROW)) {
+            else_branch.push_back(std::move(this->statement(false)));
+        } else {
+            ADD_LOG("Expected '{' or '=>' after 'else'.");
+            exit(logger->crash());
+        }
+    } else if (CHECK(TOKEN_NEW_LINE) && CHECK_AT(TOKEN_ELSE, 1)) {
+        ADVANCE(2); // Consume the two tokens.
         if (this->match(TOKEN_LEFT_BRACE)) {
             EXPECT_NEW_LINE();
             else_branch = this->body();
@@ -681,6 +700,7 @@ std::shared_ptr<Statement> Parser::top_level_declaration()
         ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
     } else {
+        printf("TLD NUM: %llu\n", CURRENT().type);
         ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
         exit(logger->crash());
     }
@@ -697,7 +717,7 @@ std::shared_ptr<Statement> Parser::top_level_declaration()
 std::shared_ptr<Statement> Parser::class_body_declaration()
 {
     printf("Parsing class body.\n");
-    std::shared_ptr<Statement> result = nullptr;
+    std::shared_ptr<Statement> result;
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
 
@@ -852,7 +872,7 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
     Lexer lexer = Lexer(this->file);
     // Scan the tokens.
     lexer.scan(tokens);
-    // Token::debug_tokens(*tokens);
+    Token::debug_tokens(*tokens);
     this->current = &tokens->front();
     while (!IS_AT_END()) code->push_back(std::move(this->top_level_declaration()));
     // Check the code size to avoid empty files.
@@ -900,7 +920,9 @@ void Parser::format_path(std::string &path, const std::shared_ptr<const std::str
 #undef CURRENT
 #undef PREVIOUS
 #undef CHECK
+#undef CHECK_AT
 #undef NEXT
+#undef ADVANCE
 #undef IS_AT_END
 #undef LOOKAHEAD
 #undef LINE

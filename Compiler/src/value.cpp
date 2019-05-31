@@ -69,8 +69,12 @@ void Value::build_from_type(const Type *type)
 
 void Value::retype(ValueType new_type, const std::shared_ptr<Type> &new_inner_type)
 {
+    this->type.reset(new_type, new_inner_type);
+    /*
     this->type.type = new_type;
+    this->type.inner_type.reset();
     if (new_inner_type) this->type.inner_type = new_inner_type;
+    */
 }
 
 void Value::copy_to(Value *dest) const

@@ -1,22 +1,12 @@
-use b from "a"
-
-class Person {
-    ages: int
-    fun getAge(): string {
-        // return "Person age: " + self.age as string
-        return "OK"
-    }
+fun fibonacci(n: int): int {
+  if (n <= 1) => return n
+  return fibonacci(n - 2) + fibonacci(n - 1)
 }
 
 fun main() {
-    // erik: Person = Person{}
-    // erik.show_age() as string
-    // print "jklhasduh287asfjnd"[2:5]
-    // print "jklhasduh287asfjnd"[2:5]
-    // print "jklhasduh287asfjnd"[2:50000]
-    // print "jklhasduh287asfjnd"[2:]
-    // print "jklhasduh287asfjnd"[20000:5]
-    // print "jklhasduh287asfjnd"[:5]
-    // print "jklhasduh287asfjnd"[2:5:2]
-    // print "jklhasduh287asfjnd"[2:5:-1]
+    a: [int] = [1, 2, 3]
+    print a
+    b: int = a[2]
+    print b
+    for i in 0..25 => print fibonacci(i)
 }

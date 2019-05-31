@@ -373,10 +373,13 @@ void Type::copy_to(Type &type) const
 void Type::copy_to(Type *type) const
 {
     type->type = this->type;
+    type->inner_type = this->inner_type;
+    /*
     if (this->inner_type) {
         type->inner_type = std::make_shared<Type>();
         this->inner_type->copy_to(type->inner_type);
     }
+    ^*/
     type->class_name = this->class_name;
     for (const std::shared_ptr<Type> &t : this->parameters) {
         type->parameters.push_back(t);
@@ -542,8 +545,11 @@ Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::share
         case RULE_ACCESS: {
             std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
             Type t = Type(access->target, blocks);
-            if (!t.inner_type) {
-                logger->add_entity(access->file, access->line, access->column, "The type " + t.to_string() + " has no inner type.");
+            if (t.type == VALUE_STRING) {
+                t.copy_to(this);
+                break;
+            } else if (!t.inner_type) {
+                logger->add_entity(access->file, access->line, access->column, "The '" + t.to_string() + "' type has no inner type.");
                 exit(logger->crash());
             }
             t.inner_type->copy_to(this);
@@ -584,4 +590,12 @@ std::vector<std::string> Type::classes_used() const
         }
     }
     return result;
+}
+
+void Type::reset(ValueType new_type, const std::shared_ptr<Type> &new_inner_type)
+{
+    this->type = new_type;
+    this->inner_type = new_inner_type;
+    this->class_name.clear();
+    this->parameters.clear();
 }

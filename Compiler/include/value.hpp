@@ -17,6 +17,7 @@
 
 // Forward declaration.
 class ValueDictionary;
+class ValueObject;
 
 // Defines how a function value is.
 class ValueFunction
@@ -38,6 +39,7 @@ typedef std::string nstring_t;
 typedef std::vector<Value> nlist_t;
 typedef ValueDictionary ndict_t;
 typedef ValueFunction nfun_t;
+typedef ValueObject nobject_t;
 
 #define GETV(value, variant) (std::get<variant>(value))
 
@@ -63,7 +65,9 @@ class Value
             // Stores the representation of the VALUE_DICT.
             std::shared_ptr<ndict_t>,
             // Stores the representation of the VALUE_FUN.
-            nfun_t
+            nfun_t,
+            // Stores the representation of the VALUE_OBJECT.
+            std::shared_ptr<nobject_t>
         > value;
         // The following are the basic constructors for the value. Each one respresents
         // a diferent value to be stored. They pretty much speak by themselves.
@@ -115,6 +119,14 @@ class ValueDictionary
         // The basic constructor of the dictionary.
         ValueDictionary(const std::unordered_map<std::string, Value> &values, const std::vector<std::string> &key_order)
             : values(values), key_order(key_order) {}
+};
+
+// Defines how an object value is.
+class ValueObject
+{
+    public:
+        // Stores the registers containing the properties values.
+        std::unique_ptr<Value[]> registers;
 };
 
 #endif

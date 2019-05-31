@@ -71,6 +71,8 @@ class Type
         // Recursive function that also checks inner types.
         bool same_as(const std::shared_ptr<Type> &type) const;
         bool same_as(const Type &type) const;
+        // Resets the type.
+        void reset(ValueType new_type, const std::shared_ptr<Type> &new_inner_type);
         // Returns the names of all the classes used in this type.
         std::vector<std::string> classes_used() const;
         // Prints the type as a string.

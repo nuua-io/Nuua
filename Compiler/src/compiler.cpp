@@ -82,7 +82,7 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                 this->blocks.pop_back();
                 // Create the function value and move it to the register.
                 Value(entry, this->local.current_register, Type(f)).copy_to(
-                    this->program->main_frame.registers + block->get_variable(fun->name)->reg
+                    this->program->main_frame.registers.get() + block->get_variable(fun->name)->reg
                 );
                 // Reset the local frame info.
                 this->local.reset();
@@ -261,8 +261,13 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         }
         case RULE_FOR: {
             std::shared_ptr<For> rfor = std::static_pointer_cast<For>(rule);
+            bool string_index = rfor->type->type == VALUE_DICT;
             // Current index.
             register_t ri = this->local.get_register(true);
+            register_t ris; // String variation for dictionaries.
+            if (string_index) ris = this->local.get_register(true);
+            // Loop variable.
+            register_t re = this->local.get_register(true);
             // Set the initial index.
             this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ 0LL }) }});
             // Save the initial point.
@@ -271,6 +276,14 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             register_t rc = this->compile(rfor->iterator);
             // Set the for block.
             this->blocks.push_back(rfor->block);
+            // Set the used registers in the block.
+            this->get_variable(rfor->variable).first->reg = re;
+            if (rfor->index != "" && string_index) {
+                this->get_variable(rfor->index).first->reg = ris;
+            }
+            else if (rfor->index != "") {
+                this->get_variable(rfor->index).first->reg = ri;
+            }
             // Store the length of the iterator.
             register_t r1 = this->local.get_register();
             switch (rfor->type->type) {
@@ -279,11 +292,6 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 case VALUE_DICT: { this->add_opcodes({{ OP_CAST_DICT_INT, r1, rc }}); break; }
                 default: { ADD_LOG(rfor->iterator, "Invalid iterator type to compile: '" + rfor->type->to_string() + "'"); exit(logger->crash()); }
             }
-            // Loop variable.
-            register_t re = this->local.get_register(true);
-            // Set the used registers in the block.
-            this->get_variable(rfor->variable).first->reg = re;
-            if (rfor->index != "") this->get_variable(rfor->index).first->reg = ri;
             // Add the loop condition.
             register_t rx = this->local.get_register(); // Loop condition.
             this->add_opcodes({{ OP_LT_INT, rx, ri, r1 }});
@@ -291,11 +299,15 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             // Get the jump index for further modification.
             size_t jump_index = this->program->memory->code.size() - 2;
+            // Set the index variable if dictionary.
+            if (string_index) {
+                this->add_opcodes({{ OP_DKEY, ris, rc, ri }});
+            }
             // Set the loop variable/s.
             switch (rfor->type->type) {
                 case VALUE_STRING: { this->add_opcodes({{ OP_SGET, re, rc, ri }}); break; }
                 case VALUE_LIST: { this->add_opcodes({{ OP_LGET, re, rc, ri }}); break; }
-                case VALUE_DICT: { this->add_opcodes({{ OP_DGET, re, rc, ri }}); break; }
+                case VALUE_DICT: { this->add_opcodes({{ OP_DGET, re, rc, ris }}); break; }
                 default: { ADD_LOG(rfor->iterator, "Invalid iterator type to compile: '" + rfor->type->to_string() + "'"); exit(logger->crash()); }
             }
             // Compile the while body.
@@ -304,13 +316,13 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->add_opcodes({{ OP_IINC, ri }});
             // Set the jump back up.
             size_t jb = this->program->memory->code.size() - initial_index;
-            printf("%d - %d = %d\n", this->program->memory->code.size(), initial_index, jb);
             this->add_opcodes({{ OP_BJUMP, jb }});
             // Modify the branch jump.
             // this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
             this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
             // Remove the variables used.
             this->local.free_register(ri, true);
+            if (string_index) this->local.free_register(ris, true);
             this->local.free_register(re, true);
             this->local.free_register(rc);
             // Pop the for block.
@@ -384,7 +396,7 @@ register_t Compiler::compile(
             if (this->is_constant(dict)) {
                 // The list can be stored in the constant pool.
                 if (load_constant) this->add_opcodes({{ OP_LOAD_C, result }});
-                Value v;
+                Value v = dict->type;
                 this->constant_dict(dict, v);
                 this->add_opcodes({{ this->add_constant(v) }});
             } else {
@@ -644,7 +656,7 @@ void Compiler::constant_list(const std::shared_ptr<List> &list, Value &dest)
                 break;
             }
             case RULE_DICTIONARY: {
-                Value v;
+                Value v = Value(std::static_pointer_cast<Dictionary>(value)->type);
                 this->constant_dict(std::static_pointer_cast<Dictionary>(value), v);
                 std::get<std::shared_ptr<nlist_t>>(dest.value)->push_back(std::move(v));
                 break;
@@ -672,7 +684,7 @@ void Compiler::constant_dict(const std::shared_ptr<Dictionary> &dict, Value &des
                 break;
             }
             case RULE_DICTIONARY: {
-                Value v;
+                Value v = Value(std::static_pointer_cast<Dictionary>(value)->type);
                 this->constant_dict(std::static_pointer_cast<Dictionary>(value), v);
                 std::get<std::shared_ptr<ndict_t>>(dest.value)->insert(key, std::move(v));
                 break;

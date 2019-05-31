@@ -20,10 +20,10 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 - ~~Implement modules (imports)~~ :white_check_mark:
 - ~~Implement functions~~ :white_check_mark:
 - Implement classes :construction:
-- Implement function overloading (?)
+- Implement function overloading :clock1:
 - NUSL (Nuua Standard Library) :construction:
-- NUPAC (Nuua Package Manager)
-- Optimizations
+- NUPAC (Nuua Package Manager) :clock1:
+- Optimizations :warning:
 - **Initial Release**
 
 ## How is nuua structured?

@@ -41,6 +41,7 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     { "LDELETE", {{ OT_REG, OT_REG }} }, // LDELETE RX RY
 
     // Dictionary releated
+    { "DKEY", {{ OT_REG, OT_REG, OT_REG }} }, // DKEY RX RY RZ
     { "DGET", {{ OT_REG, OT_REG, OT_REG }} }, // DGET RX RY RZ
     { "DSET", {{ OT_REG, OT_REG, OT_REG }} }, // DSET RX RY RZ
     { "DDELETE", {{ OT_REG, OT_REG }} }, // DDELETE RX RY
@@ -196,22 +197,35 @@ void print_opcode(const opcode_t opcode)
 
 void Frame::allocate_registers(registers_size_t size)
 {
+    /*
     // Reallocate the space if needed.
     if (size > 0 && (size > this->registers_size || size < this->registers_size)) {
         this->free_registers();
         this->registers = new Value[size];
     }
+    */
+    //printf("%llu, %llu: %d\n", size, registers_size, size > registers_size);
+    // if (size > registers_size) this->registers.reset(new Value[size]);
+    this->registers.reset(new Value[size]);
+    /*
+    else {
+        for (size_t i = 0; i < this->registers_size; i++) {
+            this->registers[i].~Value();
+        }
+    }
+    */
     // Set the new frame size.
     this->registers_size = size;
 }
 
+/*
 void Frame::free_registers()
 {
-    if (this->registers != nullptr) {
-        delete[] this->registers;
-        this->registers = nullptr;
+    if (this->registers) {
+        this->registers.reset();
     }
 }
+*/
 
 void Frame::setup(registers_size_t size, opcode_t *return_address)
 {
