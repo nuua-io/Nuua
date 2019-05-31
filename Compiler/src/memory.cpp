@@ -11,10 +11,10 @@ void Memory::dump()
         // Print the opcode operands
         for (const OpCodeType &ot : *opcode_operands(opcode)) {
             switch (ot) {
-                case OT_REG: { printf(" R-%05llu", this->code[++i]); break; }
-                case OT_CONST: { printf(" C-%05llu", this->code[++i]); break; }
-                case OT_GLOBAL: { printf(" G-%05llu", this->code[++i]); break; }
-                case OT_LITERAL: { printf(" L-%05llu", this->code[++i]); break; }
+                case OT_REG: { printf(" R-%05zu", this->code[++i]); break; }
+                case OT_CONST: { printf(" C-%05zu", this->code[++i]); break; }
+                case OT_GLOBAL: { printf(" G-%05zu", this->code[++i]); break; }
+                case OT_LITERAL: { printf(" L-%05zu", this->code[++i]); break; }
             }
         }
         // Print a new line.

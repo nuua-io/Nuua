@@ -164,22 +164,22 @@ class Node
         std::shared_ptr<const std::string> file;
         line_t line;
         column_t column;
-        Node(const Rule rule, std::shared_ptr<const std::string> &file, const line_t line, const column_t column)
-            : rule(rule), file(file), line(line), column(column) {};
+        Node(const Rule r, std::shared_ptr<const std::string> &f, const line_t l, const column_t c)
+            : rule(r), file(f), line(l), column(c) {};
         // ~Node() { printf("Node destroyed: %s:%llu:%llu\n", file->c_str(), line, column); }
 };
 
 class Expression : public Node
 {
     public:
-        Expression(Node node)
+        Expression(const Node &node)
             : Node(node) {};
 };
 
 class Statement : public Node
 {
     public:
-        Statement(Node node)
+        Statement(const Node &node)
             : Node(node) {};
 };
 
@@ -188,32 +188,32 @@ class Integer : public Expression
 {
     public:
         int64_t value;
-        Integer(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, int64_t value)
-            : Expression({ RULE_INTEGER, file, line, column }), value(value) {};
+        Integer(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const int64_t v)
+            : Expression({ RULE_INTEGER, file, line, column }), value(v) {};
 };
 
 class Float : public Expression
 {
     public:
         double value;
-        Float(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, double value)
-            : Expression({ RULE_FLOAT, file, line, column }), value(value) {};
+        Float(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const double v)
+            : Expression({ RULE_FLOAT, file, line, column }), value(v) {};
 };
 
 class String : public Expression
 {
     public:
         std::string value;
-        String(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &value)
-            : Expression({ RULE_STRING, file, line, column }), value(value) {};
+        String(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &v)
+            : Expression({ RULE_STRING, file, line, column }), value(v) {};
 };
 
 class Boolean : public Expression
 {
     public:
         bool value;
-        Boolean(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, bool value)
-            : Expression({ RULE_BOOLEAN, file, line, column }), value(value) {};
+        Boolean(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const bool v)
+            : Expression({ RULE_BOOLEAN, file, line, column }), value(v) {};
 };
 
 class List : public Expression
@@ -221,8 +221,8 @@ class List : public Expression
     public:
         std::vector<std::shared_ptr<Expression>> value;
         std::shared_ptr<Type> type; // Stores the list type since it's complex to analyze later.
-        List(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::vector<std::shared_ptr<Expression>> &value)
-            : Expression({ RULE_LIST, file, line, column }), value(value) {};
+        List(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::vector<std::shared_ptr<Expression>> &v)
+            : Expression({ RULE_LIST, file, line, column }), value(v) {};
 };
 
 class Dictionary : public Expression
@@ -231,16 +231,16 @@ class Dictionary : public Expression
         std::unordered_map<std::string, std::shared_ptr<Expression>> value;
         std::vector<std::string> key_order;
         std::shared_ptr<Type> type; // Stores the dict type since it's complex to analyze later.
-        Dictionary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::unordered_map<std::string, std::shared_ptr<Expression>> &value, const std::vector<std::string> &key_order)
-            : Expression({ RULE_DICTIONARY, file, line, column }), value(std::move(value)), key_order(std::move(key_order)) {};
+        Dictionary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::unordered_map<std::string, std::shared_ptr<Expression>> &v, const std::vector<std::string> &ko)
+            : Expression({ RULE_DICTIONARY, file, line, column }), value(std::move(v)), key_order(std::move(ko)) {};
 };
 
 class Group : public Expression
 {
     public:
         std::shared_ptr<Expression> expression;
-        Group(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &value)
-            : Expression({ RULE_GROUP, file, line, column }), expression(std::move(value)) {};
+        Group(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &v)
+            : Expression({ RULE_GROUP, file, line, column }), expression(std::move(v)) {};
 };
 
 class Unary : public Expression
@@ -249,8 +249,8 @@ class Unary : public Expression
         Token op;
         std::shared_ptr<Expression> right;
         UnaryType type = (UnaryType) NULL; // Determines what type of unary operation will be performed, no need to store a whole Type.
-        Unary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, Token op, const std::shared_ptr<Expression> &right)
-            : Expression({ RULE_UNARY, file, line, column }), op(op), right(std::move(right)) {};
+        Unary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, Token op, const std::shared_ptr<Expression> &r)
+            : Expression({ RULE_UNARY, file, line, column }), op(op), right(std::move(r)) {};
 };
 
 class Binary : public Expression
@@ -260,16 +260,16 @@ class Binary : public Expression
         Token op;
         std::shared_ptr<Expression> right;
         BinaryType type = (BinaryType) NULL; // Determines what type of binary operation will be performed.
-        Binary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &left, Token op, const std::shared_ptr<Expression> &right)
-            : Expression({ RULE_BINARY, file, line, column }), left(std::move(left)), op(op), right(std::move(right)) {};
+        Binary(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &l, Token op, const std::shared_ptr<Expression> &r)
+            : Expression({ RULE_BINARY, file, line, column }), left(std::move(l)), op(op), right(std::move(r)) {};
 };
 
 class Variable : public Expression
 {
     public:
         std::string name;
-        Variable(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name)
-            : Expression({ RULE_VARIABLE, file, line, column }), name(name) {};
+        Variable(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &n)
+            : Expression({ RULE_VARIABLE, file, line, column }), name(n) {};
 };
 
 class Assign : public Expression
@@ -278,8 +278,8 @@ class Assign : public Expression
         std::shared_ptr<Expression> target;
         std::shared_ptr<Expression> value;
         bool is_access = false;
-        Assign(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &value)
-            : Expression({ RULE_ASSIGN, file, line, column }), target(std::move(target)), value(std::move(value)) {};
+        Assign(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &t, const std::shared_ptr<Expression> &v)
+            : Expression({ RULE_ASSIGN, file, line, column }), target(std::move(t)), value(std::move(v)) {};
 };
 
 class Logical : public Expression
@@ -288,8 +288,8 @@ class Logical : public Expression
         std::shared_ptr<Expression> left;
         Token op;
         std::shared_ptr<Expression> right;
-        Logical(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &left, Token op, const std::shared_ptr<Expression> &right)
-            : Expression({ RULE_LOGICAL, file, line, column }), left(std::move(left)),  op(op), right(std::move(right)) {};
+        Logical(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &l, Token op, const std::shared_ptr<Expression> &r)
+            : Expression({ RULE_LOGICAL, file, line, column }), left(std::move(l)),  op(op), right(std::move(r)) {};
 };
 
 class Call : public Expression
@@ -298,8 +298,8 @@ class Call : public Expression
         std::shared_ptr<Expression> target;
         std::vector<std::shared_ptr<Expression>> arguments;
         bool has_return = false; // Determines if the call target returns a value or not.
-        Call(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::vector<std::shared_ptr<Expression>> &arguments)
-            : Expression({ RULE_CALL, file, line, column }), target(std::move(target)), arguments(arguments) {};
+        Call(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &t, const std::vector<std::shared_ptr<Expression>> &a)
+            : Expression({ RULE_CALL, file, line, column }), target(std::move(t)), arguments(a) {};
 };
 
 class Access : public Expression
@@ -308,8 +308,8 @@ class Access : public Expression
         std::shared_ptr<Expression> target;
         std::shared_ptr<Expression> index;
         AccessType type = (AccessType) NULL;
-        Access(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &index)
-            : Expression({ RULE_ACCESS, file, line, column }), target(std::move(target)), index(std::move(index)) {};
+        Access(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &t, const std::shared_ptr<Expression> &i)
+            : Expression({ RULE_ACCESS, file, line, column }), target(std::move(t)), index(std::move(i)) {};
 };
 
 class Cast : public Expression
@@ -318,8 +318,8 @@ class Cast : public Expression
         std::shared_ptr<Expression> expression;
         std::shared_ptr<Type> type;
         CastType cast_type = (CastType) NULL;
-        Cast(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &expression, std::shared_ptr<Type> &type)
-            : Expression({ RULE_CAST, file, line, column }), expression(std::move(expression)), type(std::move(type)) {}
+        Cast(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &e, std::shared_ptr<Type> &t)
+            : Expression({ RULE_CAST, file, line, column }), expression(std::move(e)), type(std::move(t)) {}
 };
 
 /*
@@ -343,8 +343,8 @@ class Slice : public Expression
         std::shared_ptr<Expression> end;
         std::shared_ptr<Expression> step;
         bool is_list = false; // Determines if it's a list or a string, used by Analyzer.
-        Slice(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target, const std::shared_ptr<Expression> &start, const std::shared_ptr<Expression> &end, const std::shared_ptr<Expression> &step)
-            : Expression({ RULE_SLICE, file, line, column }), target(std::move(target)), start(std::move(start)), end(std::move(end)), step(std::move(step)) {}
+        Slice(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &t, const std::shared_ptr<Expression> &s, const std::shared_ptr<Expression> &e, const std::shared_ptr<Expression> &st)
+            : Expression({ RULE_SLICE, file, line, column }), target(std::move(t)), start(std::move(s)), end(std::move(e)), step(std::move(st)) {}
 };
 
 class Range : public Expression
@@ -353,16 +353,16 @@ class Range : public Expression
         std::shared_ptr<Expression> start;
         std::shared_ptr<Expression> end;
         bool inclusive;
-        Range(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &start, const std::shared_ptr<Expression> &end, const bool inclusive)
-            : Expression({ RULE_RANGE, file, line, column }), start(std::move(start)), end(std::move(end)), inclusive(inclusive) {}
+        Range(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &s, const std::shared_ptr<Expression> &e, const bool i)
+            : Expression({ RULE_RANGE, file, line, column }), start(std::move(s)), end(std::move(e)), inclusive(i) {}
 };
 
 class Delete : public Expression
 {
     public:
         std::shared_ptr<Expression> target;
-        Delete(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &target)
-            : Expression({ RULE_DELETE, file, line, column }), target(std::move(target)) {}
+        Delete(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &t)
+            : Expression({ RULE_DELETE, file, line, column }), target(std::move(t)) {}
 };
 
 // Forward declare
@@ -376,8 +376,8 @@ class FunctionValue : public Expression
         std::shared_ptr<Type> return_type;
         std::vector<std::shared_ptr<Statement>> body;
         std::shared_ptr<Block> block;
-        FunctionValue(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::vector<std::shared_ptr<Declaration>> &parameters, std::shared_ptr<Type> &return_type, const std::vector<std::shared_ptr<Statement>> &body)
-            : Expression({ RULE_FUNCTION, file, line, column }), name(name), parameters(parameters), return_type(std::move(return_type)), body(body) {}
+        FunctionValue(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &n, const std::vector<std::shared_ptr<Declaration>> &p, std::shared_ptr<Type> &rt, const std::vector<std::shared_ptr<Statement>> &b)
+            : Expression({ RULE_FUNCTION, file, line, column }), name(n), parameters(p), return_type(std::move(rt)), body(b) {}
 };
 
 class Object : public Expression
@@ -385,8 +385,8 @@ class Object : public Expression
     public:
         std::string name;
         std::unordered_map<std::string, std::shared_ptr<Expression>> arguments;
-        Object(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::unordered_map<std::string, std::shared_ptr<Expression>> &arguments)
-            : Expression({ RULE_OBJECT, file, line, column }), name(name), arguments(arguments) {}
+        Object(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &n, const std::unordered_map<std::string, std::shared_ptr<Expression>> &a)
+            : Expression({ RULE_OBJECT, file, line, column }), name(n), arguments(a) {}
 };
 
 class Property : public Expression
@@ -394,8 +394,8 @@ class Property : public Expression
     public:
         std::shared_ptr<Expression> object;
         std::string name;
-        Property(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &object, const std::string &name)
-            : Expression({ RULE_PROPERTY, file, line, column }), object(object), name(name) {}
+        Property(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &o, const std::string &n)
+            : Expression({ RULE_PROPERTY, file, line, column }), object(o), name(n) {}
 };
 
 /* Statements */
@@ -403,16 +403,16 @@ class Print : public Statement
 {
     public:
         std::shared_ptr<Expression> expression;
-        Print(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &expression)
-            : Statement({ RULE_PRINT, file, line, column }), expression(std::move(expression)) {}
+        Print(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &e)
+            : Statement({ RULE_PRINT, file, line, column }), expression(std::move(e)) {}
 };
 
 class ExpressionStatement : public Statement
 {
     public:
         std::shared_ptr<Expression> expression;
-        ExpressionStatement(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &expression)
-            : Statement({ RULE_EXPRESSION_STATEMENT, file, line, column }), expression(std::move(expression)) {}
+        ExpressionStatement(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &e)
+            : Statement({ RULE_EXPRESSION_STATEMENT, file, line, column }), expression(std::move(e)) {}
 };
 
 class Declaration : public Statement
@@ -421,16 +421,16 @@ class Declaration : public Statement
         std::string name;
         std::shared_ptr<Type> type;
         std::shared_ptr<Expression> initializer;
-        Declaration(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, std::shared_ptr<Type> &type, const std::shared_ptr<Expression> &initializer)
-            : Statement({ RULE_DECLARATION, file, line, column }), name(name), type(std::move(type)), initializer(std::move(initializer)) {};
+        Declaration(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &n, std::shared_ptr<Type> &t, const std::shared_ptr<Expression> &i)
+            : Statement({ RULE_DECLARATION, file, line, column }), name(n), type(std::move(t)), initializer(std::move(i)) {};
 };
 
 class Return : public Statement
 {
     public:
         std::shared_ptr<Expression> value;
-        Return(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &value = std::shared_ptr<Expression>())
-            : Statement({ RULE_RETURN, file, line, column }), value(std::move(value)) {}
+        Return(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &v = std::shared_ptr<Expression>())
+            : Statement({ RULE_RETURN, file, line, column }), value(std::move(v)) {}
 };
 
 class If : public Statement
@@ -440,8 +440,8 @@ class If : public Statement
         std::vector<std::shared_ptr<Statement>> then_branch;
         std::vector<std::shared_ptr<Statement>> else_branch;
         std::shared_ptr<Block> then_block, else_block;
-        If(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &condition, const std::vector<std::shared_ptr<Statement>> &then_branch, const std::vector<std::shared_ptr<Statement>> &else_branch)
-            : Statement({ RULE_IF, file, line, column }), condition(std::move(condition)), then_branch(then_branch), else_branch(else_branch) {};
+        If(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &c, const std::vector<std::shared_ptr<Statement>> &tb, const std::vector<std::shared_ptr<Statement>> &eb)
+            : Statement({ RULE_IF, file, line, column }), condition(std::move(c)), then_branch(tb), else_branch(eb) {};
 };
 
 class While : public Statement
@@ -450,8 +450,8 @@ class While : public Statement
         std::shared_ptr<Expression> condition;
         std::vector<std::shared_ptr<Statement>> body;
         std::shared_ptr<Block> block;
-        While(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &condition, const std::vector<std::shared_ptr<Statement>> &body)
-            : Statement({ RULE_WHILE, file, line, column }), condition(std::move(condition)), body(body) {};
+        While(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Expression> &c, const std::vector<std::shared_ptr<Statement>> &b)
+            : Statement({ RULE_WHILE, file, line, column }), condition(std::move(c)), body(b) {};
 };
 
 class For : public Statement
@@ -463,16 +463,16 @@ class For : public Statement
         std::vector<std::shared_ptr<Statement>> body;
         std::shared_ptr<Block> block;
         std::shared_ptr<Type> type; // Stores the type of the iterator.
-        For(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &variable, const std::string &index, const std::shared_ptr<Expression> &iterator, const std::vector<std::shared_ptr<Statement>> &body)
-            : Statement({ RULE_FOR, file, line, column }), variable(variable), index(index), iterator(std::move(iterator)), body(body) {}
+        For(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &v, const std::string &i, const std::shared_ptr<Expression> &it, const std::vector<std::shared_ptr<Statement>> &b)
+            : Statement({ RULE_FOR, file, line, column }), variable(v), index(i), iterator(std::move(it)), body(b) {}
 };
 
 class Function : public Statement
 {
     public:
         std::shared_ptr<FunctionValue> value;
-        Function(const std::shared_ptr<FunctionValue> &value)
-            : Statement({ RULE_FUNCTION, value->file, value->line, value->column }), value(value) {}
+        Function(const std::shared_ptr<FunctionValue> &v)
+            : Statement({ RULE_FUNCTION, v->file, v->line, v->column }), value(v) {}
 };
 
 class Use : public Statement
@@ -482,16 +482,16 @@ class Use : public Statement
         std::shared_ptr<const std::string> module;
         std::shared_ptr<std::vector<std::shared_ptr<Statement>>> code;
         std::shared_ptr<Block> block;
-        Use(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::vector<std::string> &targets, const std::shared_ptr<const std::string> &module)
-            : Statement({ RULE_USE, file, line, column }), targets(targets), module(std::move(module)) {};
+        Use(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::vector<std::string> &t, const std::shared_ptr<const std::string> &m)
+            : Statement({ RULE_USE, file, line, column }), targets(t), module(std::move(m)) {};
 };
 
 class Export : public Statement
 {
     public:
         std::shared_ptr<Statement> statement;
-        Export(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Statement> &statement)
-            : Statement({ RULE_EXPORT, file, line, column }), statement(std::move(statement)) {}
+        Export(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::shared_ptr<Statement> &s)
+            : Statement({ RULE_EXPORT, file, line, column }), statement(std::move(s)) {}
 };
 
 class Class : public Statement
@@ -500,8 +500,8 @@ class Class : public Statement
         std::string name;
         std::vector<std::shared_ptr<Statement>> body;
         std::shared_ptr<Block> block;
-        Class(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &name, const std::vector<std::shared_ptr<Statement>> &body)
-            : Statement({ RULE_CLASS, file, line, column }), name(name), body(body) {}
+        Class(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &n, const std::vector<std::shared_ptr<Statement>> &b)
+            : Statement({ RULE_CLASS, file, line, column }), name(n), body(b) {}
 };
 
 #endif

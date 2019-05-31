@@ -413,7 +413,6 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
                     exit(logger->crash());
                 }
             }
-            printf("SLICE ANALYZER STEP: %d", (bool) slice->step);
             if (slice->step) {
                 this->analyze_code(slice->step);
                 Type t = Type(slice->step, &this->blocks);

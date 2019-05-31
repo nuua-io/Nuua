@@ -435,7 +435,6 @@ std::shared_ptr<Statement> Parser::use_declaration()
     } else {
         module = this->consume(TOKEN_STRING, "Expected an identifier or 'string' after 'use'")->to_string();
     }
-    printf("Hey, the module: %s\n", module.c_str());
     Parser::format_path(module, this->file);
     std::shared_ptr<Use> use;
     // Parse the contents of the target.
@@ -700,7 +699,6 @@ std::shared_ptr<Statement> Parser::top_level_declaration()
         ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
     } else {
-        printf("TLD NUM: %llu\n", CURRENT().type);
         ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
         exit(logger->crash());
     }
@@ -716,7 +714,6 @@ std::shared_ptr<Statement> Parser::top_level_declaration()
 
 std::shared_ptr<Statement> Parser::class_body_declaration()
 {
-    printf("Parsing class body.\n");
     std::shared_ptr<Statement> result;
     // Remove blank lines
     while (this->match(TOKEN_NEW_LINE));
@@ -906,7 +903,6 @@ void Parser::format_path(std::string &path, const std::shared_ptr<const std::str
     if (!std::filesystem::exists(std::filesystem::absolute(f))) {
         // Check if path exists on std lib.
         f = std::filesystem::path(logger->executable_path).remove_filename().append("Lib").append(path);
-        printf("STD PATH IS: %s\n", f.string().c_str());
         if (!std::filesystem::exists(std::filesystem::absolute(f))) {
             // Well... No module exists with that name.
             logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, "Module " + path + " not found in any path.");

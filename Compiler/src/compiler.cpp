@@ -205,12 +205,9 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             break;
         }
         case RULE_IF: {
-            printf("RULE IF HIT\n");
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             size_t initial_index = this->program->memory->code.size() - 1;
-            printf("SIZE BEFORE CONDITION: %llu\n", this->program->memory->code.size());
             register_t rx = this->compile(rif->condition);
-            printf("CONDITION AT: %llu, size: %llu\n", rx, this->program->memory->code.size());
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             // Save the jump index
             size_t jump_index = this->program->memory->code.size() - 2; // The 0 on the opcode above.
@@ -360,7 +357,6 @@ register_t Compiler::compile(
             break;
         }
         case RULE_BOOLEAN: {
-            printf("BOOL LOAD CONSTANT: %d\n", load_constant);
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
             this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Boolean>(rule)->value }) }});
             break;

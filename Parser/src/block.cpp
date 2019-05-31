@@ -40,10 +40,10 @@ BlockVariableType *Block::get_single_variable(const std::string &name, const std
 
 void Block::debug()
 {
-    printf("\nBlock variables: (%llu)\n\n", this->variables.size());
+    printf("\nBlock variables: (%zu)\n\n", this->variables.size());
     for (auto &[name, variable] : this->variables) {
         printf(
-            "G-%05d -> %s%s %s\n",
+            "G-%05zu -> %s%s %s\n",
             variable.reg,
             name.c_str(),
             variable.exported ? "*:" : ":",
