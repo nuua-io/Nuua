@@ -412,6 +412,15 @@ register_t Compiler::compile(
             }
             break;
         }
+        case RULE_OBJECT: {
+            std::shared_ptr<Object> object = std::static_pointer_cast<Object>(rule);
+            if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            // Get the class of the object.
+            BlockClassType *c = this->get_class(object->name);
+            //c->block->
+            //this->add_opcodes({{ this->add_constant({ object->name,  }) }});
+            break;
+        }
         case RULE_GROUP: {
             result = this->compile(std::static_pointer_cast<Group>(rule)->expression, load_constant, suggested_register);
             break;
@@ -607,6 +616,9 @@ register_t Compiler::compile(
             this->local.free_register(r2);
             break;
         }
+        case RULE_PROPERTY: {
+            break;
+        }
         default: {
             ADD_LOG(rule, "Compilation error: Invalid expression to compile");
             exit(logger->crash());
@@ -624,6 +636,17 @@ std::pair<BlockVariableType *, bool> Compiler::get_variable(const std::string &n
     }
 
     return { nullptr, false }; // Compiler warning... Totally useless.
+}
+
+BlockClassType *Compiler::get_class(const std::string &name)
+{
+    for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
+        BlockClassType *c = this->blocks[i]->get_class(name);
+        if (c) return c;
+        else if (i == 0) return nullptr;
+    }
+
+    return nullptr; // Compiler warning... Totally useless.
 }
 
 void Compiler::add_opcodes(const std::vector<opcode_t> &opcodes)

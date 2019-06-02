@@ -18,6 +18,9 @@ Value::Value(const std::unordered_map<std::string, Value> &a, const std::vector<
 Value::Value(const size_t index, const registers_size_t registers, const Type &type)
     : type(type), value(nfun_t(index, registers)) {}
 
+Value::Value(const std::string &class_name, const registers_size_t registers)
+    : type({ class_name }), value(std::make_shared<nobject_t>(registers)) {}
+
 Value::Value(const std::shared_ptr<Type> &type)
 {
     this->build_from_type(type.get());
@@ -151,4 +154,9 @@ void ValueDictionary::insert(const std::string &key, const Value &value)
     if (std::find(this->key_order.begin(), this->key_order.end(), key) == this->key_order.end()) {
         this->key_order.push_back(key);
     }
+}
+
+ValueObject::ValueObject(registers_size_t size)
+{
+    this->registers = std::make_unique<Value[]>(size);
 }

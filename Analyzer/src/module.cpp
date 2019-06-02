@@ -4,6 +4,7 @@
 #define NODE(rule) (std::static_pointer_cast<Node>(rule))
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))
 #define ADD_NULL_LOG(file_ptr, msg) (logger->add_entity(file_ptr, 0, 0, msg))
+#define MOD(file) (*file + ":")
 
 // Stores the modules symbol table.
 std::unordered_map<std::string, Module> modules;
@@ -11,7 +12,7 @@ std::unordered_map<std::string, Module> modules;
 // Determines the main function name.
 static std::string main_fun = "main";
 
-std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, bool require_main)
+std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const bool require_main)
 {
     // Set the AST source.
     this->code = code;
@@ -21,7 +22,16 @@ std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_p
         // Check if the main function exists
         BlockVariableType *var = this->main_block->get_variable(main_fun);
         if (!var || var->type->type != VALUE_FUN) {
-            logger->add_entity(this->file, 0, 0, "The main block requires a '" + main_fun + "()' function as the entry point");
+            logger->add_entity(this->file, 0, 0, "The main module requires a '" + main_fun + "()' function as the entry point");
+            exit(logger->crash());
+        }
+        // Check if the main function have the required argument of type [string]
+        if (var->type->parameters.size() != 1LL) {
+            logger->add_entity(this->file, 0, 0, "The main function requires a single parameter of type '[string]'.");
+            exit(logger->crash());
+        }
+        if (var->type->parameters[0]->type != VALUE_LIST || var->type->parameters[0]->inner_type->type != VALUE_STRING) {
+            logger->add_entity(var->node->file, var->node->line, var->node->column, "The main function requires a single parameter of type '[string]'.");
             exit(logger->crash());
         }
     }
@@ -51,18 +61,31 @@ void Module::analyze_tld(const std::shared_ptr<Statement> &tld, const bool set_e
                 // Import the requested exported fields.
                 for (const std::string &target : use->targets) {
                     BlockVariableType *var = use->block->get_variable(target);
-                    if (!var) {
+                    BlockClassType *c = use->block->get_class(MOD(use->module) + target);
+                    if (!var && !c) {
                         // Trying to import something that is not declared on that module.
                         ADD_NULL_LOG(use->module, "Importing an unknown target. Make sure your target '" + target + "' is defined in " + *use->module);
                         exit(logger->crash());
                     }
-                    if (!use->block->is_exported(target)) {
-                        // Trying to import something that's not exported.
-                        ADD_LOG(var->node, "Importing an unexported target. Make sure your export '" + target + "' in " + *use->module);
-                        exit(logger->crash());
+                    if (var) {
+                        // It's a function.
+                        if (!var->exported) {
+                            // Trying to import something that's not exported.
+                            ADD_LOG(var->node, "Importing an unexported function. Make sure to export '" + target + "' in " + *use->module);
+                            exit(logger->crash());
+                        }
+                        // All good. Add the variable to the local block.
+                        this->main_block->set_variable(target, { var->type, var->node });
+                    } else {
+                        // It's a class.
+                        if (!c->exported) {
+                            // Trying to import something that's not exported.
+                            ADD_LOG(c->node, "Importing an unexported class. Make sure to export '" + target + "' in " + *use->module);
+                            exit(logger->crash());
+                        }
+                        // All good. Add the variable to the local block.
+                        this->main_block->set_class(MOD(use->file) + target, { c->block, c->node });
                     }
-                    // All good. Add the variable to the local block.
-                    this->main_block->set_variable(target, { var->type, var->node });
                 }
             } else {
                 // Import all exported fields.
@@ -82,8 +105,16 @@ void Module::analyze_tld(const std::shared_ptr<Statement> &tld, const bool set_e
             const std::shared_ptr<Class> c = std::static_pointer_cast<Class>(tld);
             // Create the class block.
             c->block = std::make_shared<Block>();
+            const std::string class_name = *c->file + ":" + c->name;
+            if (this->main_block->has_class(class_name)) {
+                ADD_LOG(c, "The class '" + c->name + "' was already declared in this module.");
+                exit(logger->crash());
+            }
             // Define that class type.
-            this->main_block->set_class(c->name, c->block);
+            this->main_block->set_class(
+                class_name,
+                { c->block, NODE(c), set_exported }
+            );
             // Analyze the class body tld.
             for (const std::shared_ptr<Statement> &tld : c->body) this->analyze_class_tld(tld, c->block);
             break;
@@ -128,7 +159,7 @@ void Module::analyze_class_tld(const std::shared_ptr<Statement> &tld, const std:
                 exit(logger->crash());
             }
             // Check if the type is correct.
-            this->check_classes(dec->type->classes_used(), NODE(dec));
+            this->check_classes(dec->type->classes_used(MOD(dec->file)), NODE(dec));
             // Set the variable to the class block.
             block->set_variable(dec->name, { dec->type, NODE(dec) });
             break;
@@ -197,9 +228,9 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
         }
         case RULE_OBJECT: {
             std::shared_ptr<Object> object = std::static_pointer_cast<Object>(rule);
-            this->check_classes({{ object->name }}, NODE(object));
+            this->check_classes({{ MOD(object->file) + object->name }}, NODE(object));
             // Get the class block.
-            const std::shared_ptr<Block> &block = this->main_block->get_class(object->name)->block;
+            const std::shared_ptr<Block> &block = this->main_block->get_class(MOD(object->file) + object->name)->block;
             // Check the arguments to initialize the class.
             for (const auto &[key, arg] : object->arguments) {
                 BlockVariableType *var;
@@ -446,6 +477,25 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
             }
             break;
         }
+        case RULE_PROPERTY: {
+            std::shared_ptr<Property> prop = std::static_pointer_cast<Property>(rule);
+            // Analyze the type of the prop object.
+            Type t = Type(prop->object, &this->blocks);
+            if (t.type != VALUE_OBJECT) {
+                ADD_LOG(prop->object, "Invalid property access. Tying to get a property of a non-object.");
+                exit(logger->crash());
+            }
+            // Check if the class exists.
+            this->check_classes({{ t.class_name }}, NODE(prop->object));
+            // Get the class block.
+            const std::shared_ptr<Block> &block = this->main_block->get_class(t.class_name)->block;
+            // Check if the prop exists in the object class.
+            if (!(block->get_variable(prop->name))) {
+                ADD_LOG(prop->object, "The class '" + t.class_name + "' does not have a '" + prop->name + "' property.");
+                exit(logger->crash());
+            }
+            break;
+        }
         default: {
             ADD_LOG(rule, "Invalid expression to analyze");
             exit(logger->crash());
@@ -548,11 +598,11 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
                 // Get the type of the initializer,
                 dec->type = std::make_shared<Type>(dec->initializer, &this->blocks);
                 // Check if the type is correct.
-                check_classes(dec->type->classes_used(), NODE(dec));
+                check_classes(dec->type->classes_used(MOD(dec->file)), NODE(dec));
                 if (!no_declare) this->declare(dec);
                 break;
             }
-            check_classes(dec->type->classes_used(), NODE(dec));
+            check_classes(dec->type->classes_used(MOD(dec->file)), NODE(dec));
             if (!no_declare) this->declare(dec);
             if (dec->initializer) {
                 this->analyze_code(dec->initializer);
@@ -672,8 +722,13 @@ bool Module::check_classes(const std::vector<std::string> &classes, const std::s
         // Check if that class is defined here.
         if (!this->main_block->has_class(c)) {
             // The class is not defined in this module.
-            ADD_LOG(fail_at, "The declaration type is an undefined class type. Make sure to import all the necessary classes using 'use'.");
+            ADD_LOG(fail_at, "The class '" + c.substr(c.rfind(':') + 1) + "' is an undeclared class type. Make sure to import all the necessary classes using 'use'.");
             exit(logger->crash());
         }
     }
 }
+
+#undef NODE
+#undef ADD_LOG
+#undef ADD_NULL_LOG
+#undef MOD

@@ -40,7 +40,7 @@ BlockVariableType *Block::get_single_variable(const std::string &name, const std
 
 void Block::debug()
 {
-    printf("\nBlock variables: (%zu)\n\n", this->variables.size());
+    printf("-----------\n-> Block variables: (%zu)\n", this->variables.size());
     for (auto &[name, variable] : this->variables) {
         printf(
             "G-%05zu -> %s%s %s\n",
@@ -50,7 +50,15 @@ void Block::debug()
             variable.type->to_string().c_str()
         );
     }
-    printf("\n");
+    printf("\n-> Block classes: (%zu)\n", this->classes.size());
+    for (auto &[name, c] : this->classes) {
+        printf(
+            "%s -> %p\n",
+            name.c_str(),
+            c.block.get()
+        );
+    }
+    printf("-----------\n");
 }
 
 BlockClassType *Block::get_class(const std::string &name)

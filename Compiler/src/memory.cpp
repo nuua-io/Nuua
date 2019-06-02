@@ -15,6 +15,7 @@ void Memory::dump()
                 case OT_CONST: { printf(" C-%05zu", this->code[++i]); break; }
                 case OT_GLOBAL: { printf(" G-%05zu", this->code[++i]); break; }
                 case OT_LITERAL: { printf(" L-%05zu", this->code[++i]); break; }
+                case OT_PROP: { printf(" P-%05zu", this->code[++i]); break; }
             }
         }
         // Print a new line.

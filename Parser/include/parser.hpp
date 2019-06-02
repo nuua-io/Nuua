@@ -52,7 +52,7 @@ class Parser
     std::shared_ptr<Statement> expression_statement();
     std::shared_ptr<Statement> class_statement();
     std::shared_ptr<Statement> statement(bool new_line = true);
-    std::shared_ptr<Statement> top_level_declaration();
+    std::shared_ptr<Statement> top_level_declaration(const bool expect_new_line = true);
     std::shared_ptr<Statement> class_body_declaration();
     // Helpers
     void parameters(std::vector<std::shared_ptr<Declaration>> *dest);

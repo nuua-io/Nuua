@@ -41,9 +41,11 @@ class BlockClassType
     public:
         std::shared_ptr<Block> block;
         bool exported = false;
+        // Stores the AST node where this variable is.
+        std::shared_ptr<Node> node;
         BlockClassType() {}
-        BlockClassType(const std::shared_ptr<Block> &block, const bool exported = false)
-            : block(block), exported(exported) {}
+        BlockClassType(const std::shared_ptr<Block> &block, const std::shared_ptr<Node> &node, const bool exported = false)
+            : block(block), node(node), exported(exported) {}
 };
 
 // The block class represents a block

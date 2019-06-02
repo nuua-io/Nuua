@@ -51,6 +51,10 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     // { "GCALL", {{ OT_GLOBAL }} }, // CALL G1
     { "RETURN", {{ }} }, // RETURN
 
+    // Object releated
+    { "LPROP", {{ OT_REG, OT_PROP }} }, // LPROP RX PX
+    { "SPROP", {{ OT_PROP, OT_REG }} }, // SPROP PX RX
+
     // Value casting
     { "CAST_INT_FLOAT", {{ OT_REG, OT_REG }} }, // CAST_INT_FLOAT RX RY
     { "CAST_INT_BOOL", {{ OT_REG, OT_REG }} }, // CAST_INT_BOOL RX RY

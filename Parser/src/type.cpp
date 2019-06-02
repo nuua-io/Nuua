@@ -31,7 +31,7 @@ void Type::operator =(const Type &t)
     this->class_name = t.class_name;
 }
 */
-Type::Type(const std::string &name, const std::shared_ptr<Block> &class_block)
+Type::Type(const std::string &name)
 {
     if (Type::value_types.find(name) != Type::value_types.end()) {
         this->type = Type::value_types.at(name);
@@ -511,12 +511,11 @@ Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::share
         case RULE_VARIABLE: {
             std::string var = std::static_pointer_cast<Variable>(rule)->name;
             BlockVariableType *res = Block::get_single_variable(var, blocks);
-            if (res) {
-                res->type->copy_to(this);
-                break;
+            if (!res) {
+                logger->add_entity(rule->file, rule->line, rule->column, "No variable named '" + var + "' was found in the current or previous blocks.");
+                exit(logger->crash());
             }
-            logger->add_entity(rule->file, rule->line, rule->column, "No variable named '" + var + "' was found in the current or previous blocks.");
-            exit(logger->crash());
+            res->type->copy_to(this);
             break;
         }
         case RULE_ASSIGN: {
@@ -569,6 +568,27 @@ Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::share
             this->class_name = std::static_pointer_cast<Object>(rule)->name;
             break;
         }
+        case RULE_PROPERTY: {
+            std::shared_ptr<Property> prop = std::static_pointer_cast<Property>(rule);
+            // Get the class of the prop.
+            if (blocks->size() == 0) {
+                logger->add_entity(rule->file, rule->line, rule->column, "No blocks to get the class of a property.");
+                exit(logger->crash());
+            }
+            Type t = Type(prop->object, blocks);
+            BlockClassType *c = blocks->front()->get_class(t.class_name);
+            if (!c) {
+                logger->add_entity(rule->file, rule->line, rule->column, "No class named '" + t.class_name + "' was found.");
+                exit(logger->crash());
+            }
+            BlockVariableType *var = c->block->get_variable(prop->name);
+            if (!var) {
+                logger->add_entity(rule->file, rule->line, rule->column, "No property named '" + prop->name + "' was found in class '" + t.class_name + "'.");
+                exit(logger->crash());
+            }
+            var->type->copy_to(this);
+            break;
+        }
         default: {
             logger->add_entity(rule->file, rule->line, rule->column, "Invalid expression to get the type of.");
             exit(logger->crash());
@@ -576,15 +596,15 @@ Type::Type(const std::shared_ptr<Expression> &rule, const std::vector<std::share
     }
 }
 
-std::vector<std::string> Type::classes_used() const
+std::vector<std::string> Type::classes_used(const std::string &mod) const
 {
     std::vector<std::string> result;
     switch (this->type) {
-        case VALUE_OBJECT: { result.push_back(this->class_name); break; }
+        case VALUE_OBJECT: { result.push_back(mod + this->class_name); break; }
         case VALUE_LIST:
         case VALUE_DICT: {
             // Get the classes used by the inner type.
-            std::vector<std::string> r = this->inner_type->classes_used();
+            std::vector<std::string> r = this->inner_type->classes_used(mod);
             // Appends the results here.
             result.insert(result.end(), r.begin(), r.end());
         }

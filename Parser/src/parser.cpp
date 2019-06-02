@@ -456,11 +456,12 @@ export_declaration -> "export" top_level_declaration
 */
 std::shared_ptr<Statement> Parser::export_declaration()
 {
-    std::shared_ptr<Statement> stmt = this->top_level_declaration();
+    std::shared_ptr<Statement> stmt = this->top_level_declaration(false);
     if (stmt->rule == RULE_EXPORT) {
         ADD_LOG("Can't export an export. Does that even make sense?.");
         exit(logger->crash());
     }
+    printf("CURRENT: %s\n", CURRENT().to_string().c_str());
     return NEW_NODE(Export, stmt);
 }
 
@@ -492,6 +493,7 @@ std::shared_ptr<Statement> Parser::fun_declaration()
         ADD_LOG("Unknown token found after function. Expected '->', '=>' or '{'.");
         exit(logger->crash());
     }
+    printf("FUNCTION PARSED; CURRENT: %s\n", CURRENT().to_string().c_str());
     return std::make_shared<Function>(NEW_NODE(FunctionValue, name, parameters, return_type, body));
 }
 
@@ -676,7 +678,7 @@ top_level_declaration -> use_declaration "\n"
     | class_declaration "\n"
     | fun_declaration "\n";
 */
-std::shared_ptr<Statement> Parser::top_level_declaration()
+std::shared_ptr<Statement> Parser::top_level_declaration(const bool expect_new_line)
 {
     std::shared_ptr<Statement> result;
     // Remove blank lines
@@ -702,7 +704,7 @@ std::shared_ptr<Statement> Parser::top_level_declaration()
         ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
         exit(logger->crash());
     }
-    EXPECT_NEW_LINE();
+    if (expect_new_line) EXPECT_NEW_LINE();
     logger->pop_entity();
 
     // Set the line / column to overwrite the ones in the node.

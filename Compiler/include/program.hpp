@@ -15,7 +15,7 @@
 
 typedef uint32_t registers_size_t;
 typedef enum : uint8_t {
-    OT_NONE, OT_REG, OT_CONST, OT_GLOBAL, OT_LITERAL
+    OT_NONE, OT_REG, OT_CONST, OT_GLOBAL, OT_LITERAL, OT_PROP
 } OpCodeType;
 
 class Memory;

@@ -12,7 +12,7 @@
 #define REGISTER(at) (this->active_frame->registers.get() + *PC_AT(at))
 #define CONSTANT(at) (this->program->memory->constants.data() + *PC_AT(at))
 #define INC_PC(num) (PC += num)
-#define PUSH(value_ptr) (value_ptr->copy_to(this->top_stack++))
+#define PUSH(value_ptr) ((value_ptr)->copy_to(this->top_stack++))
 #define POP(value_ptr) (--this->top_stack)->copy_to(value_ptr)
 #define CRASH(msg) logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, msg); exit(logger->crash())
 
@@ -618,7 +618,7 @@ void VirtualMachine::run()
     }
 }
 
-void VirtualMachine::interpret(const char *file)
+void VirtualMachine::interpret(const char *file, const std::vector<std::string> &argv)
 {
     printf("----> Virtual Machine\n");
     // Compile the code.
@@ -626,6 +626,13 @@ void VirtualMachine::interpret(const char *file)
     register_t main = compiler.compile(file);
     // Call the main function.
     const ValueFunction &calle = std::get<ValueFunction>((this->program->main_frame.registers.get() + main)->value);
+    // Push the argv of the main function.
+    nlist_t args;
+    for (const std::string arg : argv) {
+        args.push_back({ arg });
+    }
+    Value av = { args, std::make_shared<Type>(VALUE_STRING) };
+    PUSH(&av);
     // Set the new frame and allocate it's registers.
     (++this->active_frame)->setup(calle.registers, END_PC);
     // Change the program counter.

@@ -47,7 +47,7 @@ class Module
         Module(std::shared_ptr<const std::string> &file)
             : file(file) {}
         // Analyzes the module and adds it's entry to the modules symbol table.
-        std::shared_ptr<Block> analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, bool require_main = false);
+        std::shared_ptr<Block> analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const bool require_main = false);
 };
 
 // Module symbol table.

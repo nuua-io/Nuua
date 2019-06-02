@@ -14,7 +14,7 @@
 void Application::string(const std::string &string)
 {
     printf("----> Application\n");
-    this->virtual_machine.interpret(string.c_str());
+    this->virtual_machine.interpret(string.c_str(), this->argv);
     printf("----> !Application\n");
 }
 
@@ -25,9 +25,18 @@ Application::Application(int argc, char *argv[])
     }
     // Set the executable_path.
     logger->executable_path = argv[0];
+
+    for (int i = 0; i < argc; i++) {
+        this->argv.push_back({ argv[i] });
+    }
+
     // Fire the application
     switch (argc) {
-        case 2: { this->application_type = APPLICATION_FILE; this->file_name = std::string(argv[1]); break; }
+        case 2: {
+            this->application_type = APPLICATION_FILE;
+            this->file_name = std::string(argv[1]);
+            break;
+        }
         default: {
             this->application_type = APPLICATION_FILE; this->file_name = std::string("C:/Nuua/simple_app/test.nu"); break;
             // logger->add_entity(this->file, LINE(), "Invalid usage. Try: nuua <path_to_file>\n");

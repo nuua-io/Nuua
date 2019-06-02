@@ -71,6 +71,7 @@ class Compiler
     // return a pair containing the variable and a boolean
     // to indicate if it's global or not.
     std::pair<BlockVariableType *, bool> get_variable(const std::string &name);
+    BlockClassType *get_class(const std::string &name);
     public:
         // Compile an input source and returns the main global register.
         register_t compile(const char *file);

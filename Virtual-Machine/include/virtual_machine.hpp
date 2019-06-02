@@ -32,7 +32,7 @@ class VirtualMachine
     void run();
     public:
         // It runs the virtual machine given a source input.
-        void interpret(const char *file);
+        void interpret(const char *file, const std::vector<std::string> &argv);
         // Resets the virtual machine program memories.
         void reset();
 };

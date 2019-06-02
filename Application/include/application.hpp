@@ -27,6 +27,8 @@ class Application
     VirtualMachine virtual_machine;
     // Stores the file name if the application type requires it.
     std::string file_name;
+    // Stores the command line arguments.
+    std::vector<std::string> argv;
     // Run the application based on an input string.
     void string(const std::string &string);
     public:
