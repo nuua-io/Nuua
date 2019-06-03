@@ -26,14 +26,14 @@ typedef uint16_t column_t;
 class LoggerEntity {
     public:
         // Stores the file where the log comes from.
-        std::shared_ptr<const std::string> file;
+        const std::shared_ptr<const std::string> file;
         // Stores the line of the log.
         const line_t line;
         // Stores the column of the log.
         const column_t column;
         // Stores the message of the log.
         const std::string msg;
-        LoggerEntity(std::shared_ptr<const std::string> file, const line_t line, const column_t column, const std::string &msg)
+        LoggerEntity(const std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg)
             : file(file), line(line), column(column), msg(msg) {}
 };
 
@@ -42,16 +42,17 @@ class Logger
 {
     // Stores all the log entities.
     std::vector<LoggerEntity> entities;
-    void display_log(uint16_t index, bool red);
+    // Displays a specific log entity.
+    void display_log(const uint16_t index, const bool red) const;
     public:
         // Stores the executable path.
         std::string executable_path;
         // Adds a new entity to the entity stack.
-        void add_entity(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg);
+        void add_entity(const std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg);
         // Pops an entity from the entity stack.
         void pop_entity();
         // Crashes the program by emmiting the whole entity stack as an error.
-        int crash();
+        int crash() const;
 };
 
 // logger will be a global class instance.

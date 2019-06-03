@@ -24,7 +24,7 @@ Application::Application(int argc, char *argv[])
         exit(logger->crash());
     }
     // Set the executable_path.
-    logger->executable_path = argv[0];
+    logger->executable_path = { argv[0] };
 
     for (int i = 0; i < argc; i++) {
         this->argv.push_back({ argv[i] });

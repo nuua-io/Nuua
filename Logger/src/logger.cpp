@@ -20,32 +20,27 @@ Logger *logger = new Logger;
 static int red_printf(const char *format, ...)
 {
     va_list arg;
-    int done;
+    int result;
     va_start(arg, format);
-
     #if defined(_WIN32) || defined(_WIN64)
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
         WORD saved_attributes;
-        /* Save current attributes */
         GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
         saved_attributes = consoleInfo.wAttributes;
         SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
-        done = vfprintf(stderr, format, arg);
-        /* Restore original attributes */
+        result = vfprintf(stderr, format, arg);
         SetConsoleTextAttribute(hConsole, saved_attributes);
     #else
         char *fmt = malloc(sizeof(char) * (strlen(format) + 10)); // \x1b[31m\x1b[0m = (9 + '\0')
         strcpy(fmt, "\x1b[31m");
         strcat(fmt, format);
         strcat(fmt, "\x1b[0m");
-        done = vfprintf(stderr, fmt, arg);
+        result = vfprintf(stderr, fmt, arg);
         free(fmt);
     #endif
-
     va_end(arg);
-
-    return done;
+    return result;
 }
 
 static void print_file_line(const char *file, const line_t line, const column_t column)
@@ -93,7 +88,7 @@ static void print_msg(const std::string &msg, bool red)
     printf("\n");
 }
 
-void Logger::add_entity(std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg)
+void Logger::add_entity(const std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg)
 {
     this->entities.push_back({ file, line, column, msg });
 }
@@ -103,7 +98,7 @@ void Logger::pop_entity()
     this->entities.pop_back();
 }
 
-int Logger::crash()
+int Logger::crash() const
 {
     if (this->entities.size() == 0) {
         // Show a generic error since no entities exists.
@@ -122,7 +117,7 @@ int Logger::crash()
     return EXIT_FAILURE;
 }
 
-void Logger::display_log(uint16_t index, bool red)
+void Logger::display_log(const uint16_t index, const bool red) const
 {
     if (this->entities[index].file) {
         printf(

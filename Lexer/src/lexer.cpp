@@ -44,7 +44,7 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "export", TOKEN_EXPORT }
 };
 
-const std::string Lexer::token_error()
+const std::string Lexer::token_error() const
 {
     return std::string("Unexpected token '") + *this->start + "'";
 }
@@ -205,7 +205,7 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
             }
             case '+': { ADD_TOKEN(TOKEN_PLUS); break; }
             case '/': {
-                if (this->match('/')) { while (PEEK() != '\n' && !IS_AT_END()) { SKIP(); } SKIP(); break; }
+                if (this->match('/')) { while (PEEK() != '\n' && !IS_AT_END()) { SKIP(); } SKIP(); ++this->line; break; }
                 ADD_TOKEN(TOKEN_SLASH); break;
             }
             case '*': { ADD_TOKEN(TOKEN_STAR); break; }

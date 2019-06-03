@@ -26,7 +26,7 @@ class Lexer
 
     static const std::unordered_map<std::string, TokenType> reserved_words;
 
-    const std::string token_error();
+    const std::string token_error() const;
     Token make_token(TokenType type);
     bool match(const char c);
     TokenType is_string(bool simple);

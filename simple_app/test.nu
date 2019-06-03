@@ -10,6 +10,6 @@ class Person2 {
 
 fun main(argv: [string]) {
     for argument in argv {
-        print argument
+        print argument2
     }
 }
