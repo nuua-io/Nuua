@@ -5,7 +5,7 @@ BlockVariableType *Block::get_variable(const std::string &name)
 {
     return this->variables.find(name) == this->variables.end()
         ? nullptr
-        : &this->variables[name];
+        : &this->variables.at(name);
 }
 
 void Block::set_variable(const std::string &name, const BlockVariableType &var)
@@ -38,10 +38,10 @@ BlockVariableType *Block::get_single_variable(const std::string &name, const std
     return nullptr; // Compiler warning... Totally useless.
 }
 
-void Block::debug()
+void Block::debug() const
 {
     printf("-----------\n-> Block variables: (%zu)\n", this->variables.size());
-    for (auto &[name, variable] : this->variables) {
+    for (const auto &[name, variable] : this->variables) {
         printf(
             "G-%05zu -> %s%s %s\n",
             variable.reg,
@@ -51,7 +51,7 @@ void Block::debug()
         );
     }
     printf("\n-> Block classes: (%zu)\n", this->classes.size());
-    for (auto &[name, c] : this->classes) {
+    for (const auto &[name, c] : this->classes) {
         printf(
             "%s -> %p\n",
             name.c_str(),

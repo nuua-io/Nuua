@@ -48,7 +48,7 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_FOR",
     "TOKEN_IF",
     "TOKEN_EOF",
-    "TOKEN_PERCENT",
+    // "TOKEN_PERCENT",
     "TOKEN_LEFT_SQUARE",
     "TOKEN_RIGHT_SQUARE",
     "TOKEN_BIG_RIGHT_ARROW",
@@ -57,10 +57,11 @@ std::vector<std::string> Token::token_names = {
     "TOKEN_PRINT",
     "TOKEN_USE",
     "TOKEN_FROM",
-    "TOKEN_STICK",
+    // "TOKEN_STICK",
     "TOKEN_ELIF",
     "TOKEN_IN",
-    "TOKEN_EXPORT"
+    "TOKEN_EXPORT",
+    "TOKEN_DELETE"
 };
 std::vector<std::string> Token::type_names = {
     "\\n",
@@ -114,6 +115,7 @@ std::vector<std::string> Token::type_names = {
     "elif", // ELIF
     "in", // in
     "export", // export
+    "delete",
 };
 
 const std::unordered_map<char, char> Token::escaped_chars = {
@@ -129,7 +131,7 @@ const std::unordered_map<char, char> Token::escaped_chars = {
     { '0', '\0' }
 };
 
-std::string Token::to_string()
+std::string Token::to_string() const
 {
     std::string s;
     for (uint32_t i = 0; i < this->length; i++) {
@@ -148,12 +150,12 @@ std::string Token::to_string()
     return s;
 }
 
-std::string Token::to_type_string()
+std::string Token::to_type_string() const
 {
     return Token::type_names[this->type];
 }
 
-void Token::debug_token()
+void Token::debug_token() const
 {
     printf("%s\n", Token::token_names[this->type].c_str());
 }

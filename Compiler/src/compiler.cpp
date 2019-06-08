@@ -67,19 +67,21 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                 // Push the function block.
                 this->blocks.push_back(fun->block);
                 // Pop the function parameters.
-                for (const std::shared_ptr<Declaration> &param : fun->parameters) {
+                for (size_t i = fun->parameters.size() - 1;; i--) {
                     // Get the variable from the block.
-                    BlockVariableType *var = this->get_variable(param->name).first;
+                    BlockVariableType *var = this->get_variable(fun->parameters[i]->name).first;
                     // Assign the register to the parameter.
                     var->reg = this->local.get_register(true);
                     // Pop the parameter from the stack.
                     this->add_opcodes({{ OP_POP, var->reg }});
+                    if (i == 0) break; // Don't change this.
                 }
                 // Compile the function body.
                 for (const std::shared_ptr<Statement> &statement : fun->body) this->compile(statement);
                 // Clear the function body (so that the elements may be freed)
                 fun->body.clear();
                 this->blocks.pop_back();
+                printf("Compiling function: %s\n", fun->name.c_str());
                 // Create the function value and move it to the register.
                 Value(entry, this->local.current_register, Type(f)).copy_to(
                     this->program->main_frame.registers.get() + block->get_variable(fun->name)->reg
@@ -98,7 +100,7 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
     this->blocks.pop_back();
     for (const std::shared_ptr<Use> &use : delay_usages) {
         // Only compile if needed.
-        if (std::find(compiled_modules.begin(), compiled_modules.end(), code) == compiled_modules.end()) {
+        if (std::find(compiled_modules.begin(), compiled_modules.end(), use->code) == compiled_modules.end()) {
             // Register the module.
             this->compile_module(use->code, use->block);
             // Set the module as registered.

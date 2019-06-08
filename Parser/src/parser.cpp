@@ -280,7 +280,7 @@ multiplication -> cast (("/" | "*") cast)*;
 std::shared_ptr<Expression> Parser::multiplication()
 {
     std::shared_ptr<Expression> result = this->cast();
-    while (this->match_any({{ TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT }})) {
+    while (this->match_any({{ TOKEN_SLASH, TOKEN_STAR /* , TOKEN_PERCENT */ }})) {
         Token op = PREVIOUS();
         std::shared_ptr<Expression> expr = this->cast();
         result = NEW_NODE(Binary, result, op, expr);

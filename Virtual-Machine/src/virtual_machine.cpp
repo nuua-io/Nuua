@@ -18,7 +18,6 @@
 
 void VirtualMachine::run()
 {
-    static uint64_t frame;
     for (;;) {
         // printf("=> %llu (%llu)\n", PC, *PC);
         switch (*PC) {
@@ -119,10 +118,10 @@ void VirtualMachine::run()
                 break;
             }
             case OP_RETURN: {
+				// Delete the allocated memory
+				this->active_frame->free_registers();
                 // Drop the frame and reset the PC position.
-                // The allocate_registers drops the old registers if needed.
                 PC = (this->active_frame--)->return_address;
-                --frame;
                 break;
             }
             case OP_CAST_INT_FLOAT: {

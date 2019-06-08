@@ -43,12 +43,11 @@ typedef enum : uint8_t {
 
     // Function releated
     OP_CALL, // CALL RX
-    // OP_GCALL, // GCALL G1
     OP_RETURN, // RETURN
 
     // Object releated
-    OP_LPROP, // PROP RX PX
-    OP_SPROP, // PROP PX RX
+    OP_LPROP, // PROP RX RY PX (dest, obj, prop)
+    OP_SPROP, // PROP PX RX RY (prop, obj, value)
 
     /* Casting Operations */
 

@@ -51,13 +51,12 @@ typedef enum : uint8_t {
     TOKEN_ELSE, // else
     TOKEN_TRUE, // true
     TOKEN_FALSE, // false
-    // TOKEN_FUN, // Not really needed
     TOKEN_WHILE, // while
     TOKEN_FOR, // for
     TOKEN_IF, // if
     // TOKEN_SUPER,
     TOKEN_EOF, // \0
-    TOKEN_PERCENT, // %
+    // TOKEN_PERCENT, // %
     TOKEN_LEFT_SQUARE, // [
     TOKEN_RIGHT_SQUARE, // ]
     TOKEN_BIG_RIGHT_ARROW, // =>
@@ -66,20 +65,21 @@ typedef enum : uint8_t {
     TOKEN_PRINT, // print
     TOKEN_USE, // use
     TOKEN_FROM, // from,
-    TOKEN_STICK, // |
-    TOKEN_ELIF, // ELIF
+    // TOKEN_STICK, // |
+    TOKEN_ELIF, // elif
     TOKEN_IN, // in
     TOKEN_EXPORT, // export
+    TOKEN_DELETE, // delete
 } TokenType;
 
 class Token
 {
     public:
-        TokenType type;
+        const TokenType type;
         const char *start;
-        uint32_t length;
-        line_t line;
-        column_t column;
+        const uint32_t length;
+        const line_t line;
+        const column_t column;
 
         static std::vector<std::string> token_names;
         static std::vector<std::string> type_names;
@@ -87,12 +87,12 @@ class Token
         // Contains the escaped chars of the language.
         static const std::unordered_map<char, char> escaped_chars;
 
-        Token(TokenType type, const char *start, uint32_t length, line_t line, column_t column)
+        Token(const TokenType type, const char *start, const uint32_t length, const line_t line, const column_t column)
             : type(type), start(start), length(length), line(line), column(column) {}
 
-        void debug_token();
-        std::string to_string();
-        std::string to_type_string();
+        void debug_token() const;
+        std::string to_string() const;
+        std::string to_type_string() const;
         static void debug_token(const TokenType token);
         static void debug_tokens(const std::vector<Token> &tokens);
         static void debug_tokens(const std::vector<TokenType> &tokens);

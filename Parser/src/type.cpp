@@ -434,9 +434,9 @@ std::string Type::to_string() const
         std::string result = "(";
         for (const std::shared_ptr<Type> &inner : this->parameters) result += inner->to_string() + ", ";
         // pop the ", " of the last element
-        if (this->parameters.size() > 0) { result.pop_back(); result.pop_back(); result += " "; }
+        if (this->parameters.size() > 0) { result.pop_back(); result.pop_back(); }
         // Append the return type if needed.
-        if (this->inner_type) result += "-> " + this->inner_type->to_string();
+        if (this->inner_type) result += " -> " + this->inner_type->to_string();
         return result + ")";
     }
 
@@ -612,7 +612,7 @@ std::vector<std::string> Type::classes_used(const std::string &mod) const
     return result;
 }
 
-void Type::reset(ValueType new_type, const std::shared_ptr<Type> &new_inner_type)
+void Type::reset(const ValueType new_type, const std::shared_ptr<Type> &new_inner_type)
 {
     this->type = new_type;
     this->inner_type = new_inner_type;

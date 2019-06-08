@@ -36,7 +36,7 @@ class Frame
         // Allocates the space to store the registers.
         void allocate_registers(registers_size_t size);
         // Frees the allocated register space.
-        // void free_registers();
+        void free_registers();
         // Setup the frame.
         void setup(registers_size_t size, opcode_t *return_address);
 };
@@ -71,6 +71,9 @@ class Program
         Frame main_frame;
         // Stores the program memory (The main code).
         std::unique_ptr<Memory> memory;
+        // Constructor to allocate the memory of the
+        // program memory. Can't be done here since
+        // Memory is a forward declared class.
         Program();
 };
 

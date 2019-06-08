@@ -41,7 +41,8 @@ const std::unordered_map<std::string, TokenType> Lexer::reserved_words = {
     { "from", TOKEN_FROM },
     { "elif", TOKEN_ELIF },
     { "in", TOKEN_IN },
-    { "export", TOKEN_EXPORT }
+    { "export", TOKEN_EXPORT },
+    { "delete", TOKEN_DELETE }
 };
 
 const std::string Lexer::token_error() const
@@ -131,7 +132,7 @@ TokenType Lexer::is_identifier()
     return (Lexer::reserved_words.find(key) != Lexer::reserved_words.end()) ? Lexer::reserved_words.at(key) : TOKEN_IDENTIFIER;
 }
 
-void Lexer::read_from_file(std::unique_ptr<std::string> &dest, std::shared_ptr<const std::string> &file)
+void Lexer::read_from_file(const std::shared_ptr<const std::string> &file)
 {
     std::ifstream file_stream = std::ifstream(file->c_str());
     if (!file_stream.is_open()) {
@@ -139,14 +140,14 @@ void Lexer::read_from_file(std::unique_ptr<std::string> &dest, std::shared_ptr<c
         exit(logger->crash());
     }
 
-    *dest = std::string((std::istreambuf_iterator<char>(file_stream)), (std::istreambuf_iterator<char>()));
+    *this->source = std::string((std::istreambuf_iterator<char>(file_stream)), (std::istreambuf_iterator<char>()));
 }
 
 void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
 {
     printf("----> Lexer\n");
     this->source = std::make_unique<std::string>();
-    this->read_from_file(this->source, this->file);
+    this->read_from_file(this->file);
 
     this->start = this->source->c_str();
     this->current = this->start;
@@ -193,7 +194,7 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
                 break;
             }
             case ':': { ADD_TOKEN(TOKEN_COLON); break; }
-            case '|': { ADD_TOKEN(TOKEN_STICK); break; }
+            // case '|': { ADD_TOKEN(TOKEN_STICK); break; }
             case '!': {
                 if (this->match('=')) { ADD_TOKEN(TOKEN_BANG_EQUAL); break; }
                 ADD_TOKEN(TOKEN_BANG);
@@ -231,7 +232,7 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
     printf("----> !Lexer\n");
 }
 
-Lexer::Lexer(std::shared_ptr<const std::string> &file)
+Lexer::Lexer(const std::shared_ptr<const std::string> &file)
 {
     this->file = file;
 }

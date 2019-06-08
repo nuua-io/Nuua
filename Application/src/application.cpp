@@ -20,17 +20,15 @@ void Application::string(const std::string &string)
 
 Application::Application(int argc, char *argv[])
 {
-    if (argc < 1) {
-        exit(logger->crash());
-    }
+    // Generic error in case the argc is lower than 1.
+    if (argc < 1) { exit(logger->crash()); }
     // Set the executable_path.
     logger->executable_path = { argv[0] };
-
+    // Create the argv: [string] vector
     for (int i = 0; i < argc; i++) {
         this->argv.push_back({ argv[i] });
     }
-
-    // Fire the application
+    // Setup the application
     switch (argc) {
         case 2: {
             this->application_type = APPLICATION_FILE;
@@ -38,8 +36,7 @@ Application::Application(int argc, char *argv[])
             break;
         }
         default: {
-            this->application_type = APPLICATION_FILE; this->file_name = std::string("C:/Nuua/simple_app/test.nu"); break;
-            // logger->add_entity(this->file, LINE(), "Invalid usage. Try: nuua <path_to_file>\n");
+            logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, "Invalid usage. Try: nuua <path_to_file>\n");
             logger->crash();
             exit(64); // Exit status for incorrect command usage.
         }
@@ -50,7 +47,6 @@ int Application::start()
 {
     switch (this->application_type) {
         case APPLICATION_FILE: { this->string(this->file_name); break; }
-        case APPLICATION_STRING: { this->string(""); break; }
     }
 
     return EXIT_SUCCESS;

@@ -10,10 +10,10 @@
 // Analyzes:
 // - Declared variables
 // - Function return value match
-// - Non-assignment for functions without return
+// - Functions without return type usage
 // - Argument type match
 // - Assignment type match
-// - List / Dictionary index type
+// - List / String / Dictionary index type
 //! - Variable lifetime (last_use)
 // - Use / Export declarations.
 // - Check for iterator (must be list / dict)

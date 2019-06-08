@@ -29,13 +29,8 @@ class Type
         std::shared_ptr<Type> inner_type;
         // Class name.
         std::string class_name;
-        // Class node.
-        // std::shared_ptr<Block> class_block;
         // Store the parameters of a function type.
         std::vector<std::shared_ptr<Type>> parameters;
-        // Copy constructor
-        // Type(const Type &t);
-        // void operator =(const Type &t);
         // Create a value type given the type.
         Type() : type(VALUE_NO_TYPE) {}
         Type(const ValueType type)
@@ -72,7 +67,7 @@ class Type
         bool same_as(const std::shared_ptr<Type> &type) const;
         bool same_as(const Type &type) const;
         // Resets the type.
-        void reset(ValueType new_type, const std::shared_ptr<Type> &new_inner_type);
+        void reset(const ValueType new_type, const std::shared_ptr<Type> &new_inner_type);
         // Returns the names of all the classes used in this type.
         std::vector<std::string> classes_used(const std::string &mod) const;
         // Prints the type as a string.

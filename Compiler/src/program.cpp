@@ -222,14 +222,12 @@ void Frame::allocate_registers(registers_size_t size)
     this->registers_size = size;
 }
 
-/*
 void Frame::free_registers()
 {
     if (this->registers) {
         this->registers.reset();
     }
 }
-*/
 
 void Frame::setup(registers_size_t size, opcode_t *return_address)
 {

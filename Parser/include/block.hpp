@@ -29,13 +29,11 @@ class BlockVariableType
         // Represents the last use of the variable (Variable life)
         std::shared_ptr<Node> last_use;
         BlockVariableType() {};
-        BlockVariableType(const std::shared_ptr<Type> &type, const std::shared_ptr<Node> &node, bool exported = false)
+        BlockVariableType(const std::shared_ptr<Type> &type, const std::shared_ptr<Node> &node, const bool exported = false)
             : type(type), node(node), exported(exported) { }
 };
 
-// Forward declare
-class Block;
-
+class Block; // Forward declaration.
 class BlockClassType
 {
     public:
@@ -60,15 +58,24 @@ class Block
         std::unordered_map<std::string, BlockClassType> classes;
         // Gets a variable from the current block or returns nullptr.
         BlockVariableType *get_variable(const std::string &name);
+        // Gets a class from the current block or returns nullptr.
         BlockClassType *get_class(const std::string &name);
-        // Sets a variable and returns it's reference.
+        // Sets a variable.
         void set_variable(const std::string &name, const BlockVariableType &var);
+        // Sets a class.
         void set_class(const std::string &name, const BlockClassType &c);
+        // Determines if a variable is exported.
         bool is_exported(const std::string &name);
+        // Determines if a class is exported.
         bool is_exported_class(const std::string &name);
+        // Determines if the block have a variable.
         bool has(const std::string &name);
+        // Determines if the block have a class.
         bool has_class(const std::string &name);
-        void debug();
+        // Debug the block by printing it to the screen.
+        void debug() const;
+        // Helper to get a single variable out of a list of blocks.
+        // It iterates through it starting from the end till the front.
         static BlockVariableType *get_single_variable(const std::string &name, const std::vector<std::shared_ptr<Block>> *blocks);
 };
 
