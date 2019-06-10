@@ -608,6 +608,17 @@ std::vector<std::string> Type::classes_used(const std::string &mod) const
             // Appends the results here.
             result.insert(result.end(), r.begin(), r.end());
         }
+        case VALUE_FUN: {
+            // Return type.
+            std::vector<std::string> r = this->inner_type->classes_used(mod);
+            result.insert(result.end(), r.begin(), r.end());
+            // Parameters.
+            for (const std::shared_ptr<Type> &p : this->parameters) {
+                std::vector<std::string> r2 = p->classes_used(mod);
+                result.insert(result.end(), r2.begin(), r2.end());
+            }
+            break;
+        }
     }
     return result;
 }

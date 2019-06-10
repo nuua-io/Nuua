@@ -69,7 +69,7 @@ class Type
         // Resets the type.
         void reset(const ValueType new_type, const std::shared_ptr<Type> &new_inner_type);
         // Returns the names of all the classes used in this type.
-        std::vector<std::string> classes_used(const std::string &mod) const;
+        std::vector<std::string> classes_used(const std::string &mod = "") const;
         // Prints the type as a string.
         void print() const ;
         // Prints the type as a string with a new line.

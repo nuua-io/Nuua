@@ -1,13 +1,17 @@
-fun rec_fib(n: int): int {
-    if n < 2 => return n
-    return rec_fib(n - 2) + rec_fib(n - 1)
+use Length, Rect, create_rec from 'rect'
+
+class Person {
+    name: string
+    age: int
+    fun show(): string {
+        return self.name
+    }
 }
 
 fun main(argv: [string]) {
-    print rec_fib(35)
-    i := 0
-    while i < 100000000 {
-        i = i + 1
-    }
-    print rec_fib(35)
+    p: Person = Person!{name: "Erik", age: 22}
+    print p.show()
+    r := create_rec()
+    r2 := Rect!{x: Length!{value: 10}, y: Length!{value: 10}}
+    print p.name
 }

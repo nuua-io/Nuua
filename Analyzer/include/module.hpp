@@ -36,6 +36,11 @@ class Module
         const std::vector<std::shared_ptr<Declaration>> &initializers = std::vector<std::shared_ptr<Declaration>>(),
         const std::shared_ptr<Node> &initializer_node = std::shared_ptr<Node>()
     );
+    // Analyzes a function.
+    void analyze_function(
+        const std::shared_ptr<FunctionValue> &fun,
+        const std::vector<std::shared_ptr<Declaration>> &additionals = std::vector<std::shared_ptr<Declaration>>()
+    );
     // Declares a variable to the most top level block.
     void declare(const std::shared_ptr<Declaration> &dec, const std::shared_ptr<Node> &node = std::shared_ptr<Node>());
     // Check if the given module have all the classes defined.

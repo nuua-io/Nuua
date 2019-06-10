@@ -63,9 +63,11 @@ void Block::debug() const
 
 BlockClassType *Block::get_class(const std::string &name)
 {
-    return this->classes.find(name) == this->classes.end()
-        ? nullptr
-        : &this->classes[name];
+    for (auto &[c, ct] : this->classes) {
+        printf("Checking: %s vs %s\n", c.substr(c.rfind(":") + 1).c_str(), name.c_str());
+        if (c.substr(c.rfind(":") + 1) == name) return &ct;
+    }
+    return nullptr;
 }
 
 void Block::set_class(const std::string &name, const BlockClassType &c)
