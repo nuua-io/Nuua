@@ -11,10 +11,17 @@
 #define LITERAL(at) (*PC_AT(at))
 #define REGISTER(at) (this->active_frame->registers.get() + *PC_AT(at))
 #define CONSTANT(at) (this->program->memory->constants.data() + *PC_AT(at))
+#define PROP(object_at, prop_at) (GETV(REGISTER(object_at)->value, std::shared_ptr<nobject_t>)->registers.get() + *PC_AT(prop_at))
 #define INC_PC(num) (PC += num)
 #define PUSH(value_ptr) ((value_ptr)->copy_to(this->top_stack++))
 #define POP(value_ptr) (--this->top_stack)->copy_to(value_ptr)
 #define CRASH(msg) logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, msg); exit(logger->crash())
+
+// Safe cheks
+#define CHECK_OBJECT(object_at) if (!GETV(REGISTER(object_at)->value, std::shared_ptr<nobject_t>)) { \
+    CRASH("Segmentation fault: Uninitialized object '" + REGISTER(object_at)->to_string() + "'."); }
+#define CHECK_FUN(fun_at) if (!GETV(REGISTER(fun_at)->value, std::shared_ptr<nfun_t>)) { \
+    CRASH("Segmentation fault: Uninitialized function '" + REGISTER(fun_at)->to_string() + "'."); }
 
 void VirtualMachine::run()
 {
@@ -109,11 +116,12 @@ void VirtualMachine::run()
                 break;
             }
             case OP_CALL: {
-                const nfun_t &r = GETV(REGISTER(1)->value, nfun_t);
+                CHECK_FUN(1);
+                const std::shared_ptr<nfun_t> &r = GETV(REGISTER(1)->value, std::shared_ptr<nfun_t>);
                 // Set the new frame and allocate it's registers.
-                (++this->active_frame)->setup(r.registers, PC + 2);
+                (++this->active_frame)->setup(r->registers, PC + 2);
                 // Change the program counter.
-                PC = BASE_PC + r.index;
+                PC = BASE_PC + r->index;
                 // printf("Frame: %llu\n", ++frame);
                 break;
             }
@@ -122,6 +130,18 @@ void VirtualMachine::run()
 				this->active_frame->free_registers();
                 // Drop the frame and reset the PC position.
                 PC = (this->active_frame--)->return_address;
+                break;
+            }
+            case OP_LPROP: {
+                CHECK_OBJECT(2);
+                PROP(2, 3)->copy_to(REGISTER(1));
+                INC_PC(4);
+                break;
+            }
+            case OP_SPROP: {
+                CHECK_OBJECT(2);
+                REGISTER(3)->copy_to(PROP(2, 1));
+                INC_PC(4);
                 break;
             }
             case OP_CAST_INT_FLOAT: {
@@ -624,7 +644,7 @@ void VirtualMachine::interpret(const char *file, const std::vector<std::string> 
     Compiler compiler = Compiler(this->program);
     register_t main = compiler.compile(file);
     // Call the main function.
-    const ValueFunction &calle = std::get<ValueFunction>((this->program->main_frame.registers.get() + main)->value);
+    const std::shared_ptr<nfun_t> &callee = GETV((this->program->main_frame.registers.get() + main)->value, std::shared_ptr<nfun_t>);
     // Push the argv of the main function.
     nlist_t args;
     for (const std::string arg : argv) {
@@ -633,9 +653,9 @@ void VirtualMachine::interpret(const char *file, const std::vector<std::string> 
     Value av = { args, std::make_shared<Type>(VALUE_STRING) };
     PUSH(&av);
     // Set the new frame and allocate it's registers.
-    (++this->active_frame)->setup(calle.registers, END_PC);
+    (++this->active_frame)->setup(callee->registers, END_PC);
     // Change the program counter.
-    PC = BASE_PC + calle.index;
+    PC = BASE_PC + callee->index;
     // Run the compiled code.
     this->run();
     printf("----> !Virtual Machine\n");

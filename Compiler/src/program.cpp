@@ -52,8 +52,8 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     { "RETURN", {{ }} }, // RETURN
 
     // Object releated
-    { "LPROP", {{ OT_REG, OT_PROP }} }, // LPROP RX PX
-    { "SPROP", {{ OT_PROP, OT_REG }} }, // SPROP PX RX
+    { "LPROP", {{ OT_REG, OT_REG, OT_PROP }} }, // LPROP RX RY PX
+    { "SPROP", {{ OT_PROP, OT_REG, OT_REG }} }, // SPROP PX RX RY
 
     // Value casting
     { "CAST_INT_FLOAT", {{ OT_REG, OT_REG }} }, // CAST_INT_FLOAT RX RY

@@ -43,9 +43,12 @@ class Compiler
         const bool load_constant = true,
         // If a register is suggested as the output instead of a new one.
         const register_t *suggested_register = nullptr,
-        // If the access is an assignment, the value of it is passed here.
-        const std::shared_ptr<Expression> &access_assignment_value = std::shared_ptr<Expression>()
+        // If the inner expresion needs to assign rather than get the value.
+        const std::shared_ptr<Expression> &assignment_value = std::shared_ptr<Expression>(),
+        // It stores the object of the property in case is needed.
+        register_t *object_reg = nullptr
     );
+    Value compile_function(const std::shared_ptr<Function> &f);
     // Adds an opcode to the program.
     void add_opcodes(const std::vector<opcode_t> &opcodes);
     // Adds a constant to the constant pool of the current frame

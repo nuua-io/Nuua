@@ -10,10 +10,10 @@
 std::unordered_map<std::string, Module> modules;
 
 // Determines the main function name.
-static std::string main_fun = "main";
+static const std::string main_fun = "main";
 
 // Determines the name of the self variable.
-static std::string self_var = "self";
+static const std::string self_var = "self";
 
 std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const bool require_main)
 {
@@ -229,7 +229,7 @@ void Module::analyze_class_tld(const std::shared_ptr<Statement> &tld, const std:
                 ADD_LOG(fun, "'" + fun->name + "' was already declared. Function overloading is not currently implemented in this version of nuua.");
                 exit(logger->crash());
             }
-            block->set_variable(fun->name, { std::make_shared<Type>(f), NODE(fun) });
+            block->set_variable(fun->name, { std::make_shared<Type>(f), NODE(fun), false, true });
             break;
         }
         default: {
@@ -239,8 +239,11 @@ void Module::analyze_class_tld(const std::shared_ptr<Statement> &tld, const std:
     }
 }
 
-void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool allowed_noreturn_call)
-{
+void Module::analyze_code(
+    const std::shared_ptr<Expression> &rule,
+    const bool allowed_noreturn_call,
+    bool *allow_method_and_save_is_method
+) {
     switch (rule->rule) {
         case RULE_INTEGER:
         case RULE_FLOAT:
@@ -286,7 +289,9 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
             const std::string c = object->name;
             this->check_classes({{ c }}, NODE(object));
             // Get the class block.
-            const std::shared_ptr<Block> &block = this->main_block->get_class(c)->block;
+            BlockClassType *ct = this->main_block->get_class(c);
+            object->c = std::static_pointer_cast<Class>(ct->node);
+            const std::shared_ptr<Block> &block = ct->block;
             // Check the arguments to initialize the class.
             for (const auto &[key, arg] : object->arguments) {
                 BlockVariableType *var;
@@ -366,7 +371,23 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
             this->analyze_code(assign->value);
             this->analyze_code(assign->target);
             // Set the is_access field.
-            assign->is_access = assign->target->rule == RULE_ACCESS;
+            switch (assign->target->rule) {
+                case RULE_ACCESS: {
+                    if (std::static_pointer_cast<Access>(assign->target)->target->rule == RULE_PROPERTY) {
+                        assign->type = ASSIGN_PROP_ACCESS;
+                        break;
+                    }
+                    assign->type = ASSIGN_ACCESS;
+                    break;
+                }
+                case RULE_PROPERTY: {
+                    assign->type = ASSIGN_PROP;
+                    break;
+                }
+                default: {
+                    assign->type = ASSIGN_VALUE;
+                }
+            }
             // Make sure the types match.
             Type vtype = Type(assign->value, &this->blocks);
             Type ttype = Type(assign->target, &this->blocks);
@@ -394,12 +415,12 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
         }
         case RULE_CALL: {
             std::shared_ptr<Call> call = std::static_pointer_cast<Call>(rule);
-            this->analyze_code(call->target);
+            this->analyze_code(call->target, false, &call->is_method);
             Type type = Type(call->target, &this->blocks);
             // Check if it's callable.
             if (type.type != VALUE_FUN) {
                 ADD_LOG(call, "The call target is not callable. Got '" + type.to_string() + "'");
-                exit(EXIT_FAILURE);
+                exit(logger->crash());
             }
             // Assign the has_return prop in the call.
             call->has_return = static_cast<bool>(type.inner_type); // If the inner type if set it means there's a return value.
@@ -417,6 +438,7 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
                     + std::to_string(type.parameters.size())
                     + " arguments, but got "
                     + std::to_string(call->arguments.size())
+                    + "."
                 );
                 exit(logger->crash());
             }
@@ -542,13 +564,20 @@ void Module::analyze_code(const std::shared_ptr<Expression> &rule, const bool al
                 ADD_LOG(prop->object, "Invalid property access. Tying to get a property of a non-object.");
                 exit(logger->crash());
             }
-            // Get the class block.
-            const std::shared_ptr<Block> &block = this->main_block->get_class(t.class_name)->block;
+            // Get the class block and store it for future reference.
+            const BlockClassType *ct = this->main_block->get_class(t.class_name);
+            prop->c = std::static_pointer_cast<Class>(ct->node);
             // Check if the prop exists in the object class.
-            if (!(block->get_variable(prop->name))) {
+            BlockVariableType * var = ct->block->get_variable(prop->name);
+            if (!var) {
                 ADD_LOG(prop->object, "The class '" + t.class_name + "' does not have a '" + prop->name + "' property.");
                 exit(logger->crash());
             }
+            if (var->is_method && !allow_method_and_save_is_method) {
+                ADD_LOG(prop->object, "Class methods can't be used as values. You can only call them.");
+                exit(logger->crash());
+            }
+            if (allow_method_and_save_is_method) *allow_method_and_save_is_method = var->is_method;
             break;
         }
         default: {
@@ -813,9 +842,8 @@ void Module::analyze_function(const std::shared_ptr<FunctionValue> &fun, const s
     params.reserve(additionals.size() + fun->parameters.size());
     params.insert(params.end(), additionals.begin(), additionals.end());
     params.insert(params.end(), fun->parameters.begin(), fun->parameters.end());
-    for (const auto &el : params) {
-        printf("DEC: %s -> %s\n", el->name.c_str(), el->type ? "y" : "n" );
-    }
+    // Insert the params as the function parameters.
+    fun->parameters = params;
     // Analyze the function body.
     fun->block = this->analyze_code(fun->body, params);
     this->return_type.reset();

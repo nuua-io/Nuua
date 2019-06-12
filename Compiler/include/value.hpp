@@ -65,7 +65,7 @@ class Value
             // Stores the representation of the VALUE_DICT.
             std::shared_ptr<ndict_t>,
             // Stores the representation of the VALUE_FUN.
-            nfun_t,
+            std::shared_ptr<nfun_t>,
             // Stores the representation of the VALUE_OBJECT.
             std::shared_ptr<nobject_t>
         > value;
@@ -91,7 +91,7 @@ class Value
         // They make use of a forward declared constructor.
         Value(const std::unordered_map<std::string, Value> &a, const std::vector<std::string> &b, const std::shared_ptr<Type> &inner_type);
         Value(const size_t index, const registers_size_t registers, const Type &type);
-        Value(const std::string &class_name, const registers_size_t registers);
+        Value(const std::string &class_name, const std::vector<std::string> &props);
         // Create default initialized value, given the type.
         Value(const std::shared_ptr<Type> &type);
         Value(const Type &type);
@@ -128,8 +128,10 @@ class ValueObject
     public:
         // Stores the registers containing the properties values.
         std::unique_ptr<Value[]> registers;
+        // Stores the names of the props for string conversion.
+        std::vector<std::string> props;
         // Create a new object value and allocates the registers given the size.
-        ValueObject(registers_size_t size);
+        ValueObject(const std::vector<std::string> &props);
 };
 
 #endif

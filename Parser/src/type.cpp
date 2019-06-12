@@ -374,16 +374,8 @@ void Type::copy_to(Type *type) const
 {
     type->type = this->type;
     type->inner_type = this->inner_type;
-    /*
-    if (this->inner_type) {
-        type->inner_type = std::make_shared<Type>();
-        this->inner_type->copy_to(type->inner_type);
-    }
-    ^*/
     type->class_name = this->class_name;
-    for (const std::shared_ptr<Type> &t : this->parameters) {
-        type->parameters.push_back(t);
-    }
+    type->parameters = this->parameters;
 }
 
 bool Type::same_as(const std::shared_ptr<Type> &type) const
@@ -434,9 +426,9 @@ std::string Type::to_string() const
         std::string result = "(";
         for (const std::shared_ptr<Type> &inner : this->parameters) result += inner->to_string() + ", ";
         // pop the ", " of the last element
-        if (this->parameters.size() > 0) { result.pop_back(); result.pop_back(); }
+        if (this->parameters.size() > 0) { result.pop_back(); result.pop_back(); result += " "; }
         // Append the return type if needed.
-        if (this->inner_type) result += " -> " + this->inner_type->to_string();
+        if (this->inner_type) result += "-> " + this->inner_type->to_string();
         return result + ")";
     }
 

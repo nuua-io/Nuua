@@ -16,10 +16,10 @@ Value::Value(const std::unordered_map<std::string, Value> &a, const std::vector<
     : type({ VALUE_DICT, inner_type }), value(std::make_shared<ndict_t>(a, b)) {}
 
 Value::Value(const size_t index, const registers_size_t registers, const Type &type)
-    : type(type), value(nfun_t(index, registers)) {}
+    : type(type), value(std::make_shared<nfun_t>(index, registers)) {}
 
-Value::Value(const std::string &class_name, const registers_size_t registers)
-    : type({ class_name }), value(std::make_shared<nobject_t>(registers)) {}
+Value::Value(const std::string &class_name, const std::vector<std::string> &props)
+    : type({ class_name }), value(std::make_shared<nobject_t>(props)) {}
 
 Value::Value(const std::shared_ptr<Type> &type)
 {
@@ -37,18 +37,6 @@ Value::Value(const Value &value)
     value.type.copy_to(this->type);
     // Copy the value.
     this->value = value.value;
-    /*
-    switch (value.type.type) {
-        case VALUE_INT: { this->value_int = value.value_int; break; }
-        case VALUE_FLOAT: { this->value_float = value.value_float; break; }
-        case VALUE_BOOL: { this->value_bool = value.value_bool; break; }
-        case VALUE_STRING: { this->value_string = std::make_unique<std::string>(*value.value_string); break; }
-        case VALUE_LIST: { this->value_list = std::make_unique<std::vector<Value>>(*value.value_list); break; }
-        case VALUE_DICT: { this->value_dict = std::make_unique<ValueDictionary>(*value.value_dict); break; }
-        case VALUE_FUN: { this->value_fun = std::make_unique<ValueFunction>(*value.value_fun); break; }
-        default: { break; }
-    }
-    */
 }
 
 void Value::build_from_type(const Type *type)
@@ -61,9 +49,10 @@ void Value::build_from_type(const Type *type)
         case VALUE_STRING: { this->value = std::string(); break; }
         case VALUE_LIST: { this->value = std::make_shared<std::vector<Value>>(); break; }
         case VALUE_DICT: { this->value = std::make_shared<ValueDictionary>(std::unordered_map<std::string, Value>(), std::vector<std::string>()); break; }
-        case VALUE_FUN: { this->value = ValueFunction(0, 0); break; }
+        case VALUE_FUN: { this->value = std::shared_ptr<nfun_t>(); break; }
+        case VALUE_OBJECT: { this->value = std::shared_ptr<nobject_t>(); break; }
         default: {
-            // logger->add_entity(this->file, LINE(), "Can't declare this value type without an initializer.");
+            logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, "Can't declare a value given only the type: '" + type->to_string() + "'.");
             exit(logger->crash());
         }
     }
@@ -73,36 +62,16 @@ void Value::build_from_type(const Type *type)
 void Value::retype(ValueType new_type, const std::shared_ptr<Type> &new_inner_type)
 {
     this->type.reset(new_type, new_inner_type);
-    /*
-    this->type.type = new_type;
-    this->type.inner_type.reset();
-    if (new_inner_type) this->type.inner_type = new_inner_type;
-    */
 }
 
 void Value::copy_to(Value *dest) const
 {
-    // printf("COPY TO: <from> : %s\n", this->to_string().c_str());
     // Simple check to see if there's no need to copy it.
     if (this == dest) return;
     // Copy the type.
     this->type.copy_to(dest->type);
     // Copy the value.
     dest->value = this->value;
-    /*
-    switch (this->type.type) {
-        case VALUE_INT: { dest->value = this->value_int; break; }
-        case VALUE_FLOAT: { dest->value_float = this->value_float; break; }
-        case VALUE_BOOL: { dest->value_bool = this->value_bool; break; }
-        case VALUE_STRING: {
-            auto s = *this->value_string;
-            dest->value_string.reset(new std::string(s)); break; }
-        case VALUE_LIST: { dest->value_list = std::make_unique<std::vector<Value>>(*this->value_list); break; }
-        case VALUE_DICT: { dest->value_dict = std::make_unique<ValueDictionary>(*this->value_dict); break; }
-        case VALUE_FUN: { dest->value_fun = std::make_unique<ValueFunction>(*this->value_fun); break; }
-        default: { break; }
-    }
-    */
 }
 
 std::string Value::to_string() const
@@ -142,6 +111,20 @@ std::string Value::to_string() const
             r += this->type.to_string();
             break;
         }
+        case VALUE_OBJECT: {
+            const std::shared_ptr<nobject_t> &object = GETV(this->value, std::shared_ptr<nobject_t>);
+            r += this->type.to_string() + "!{";
+            if (object) {
+                for (registers_size_t i = 0; i < object->props.size(); i++) {
+                    r += object->props[i] + ": " + (object->registers.get() + i)->to_string() + ", ";
+                }
+                if (object->props.size() > 0) { r.pop_back(); r.pop_back(); }
+            } else {
+                r += "<Uninitialized>";
+            }
+            r += "}";
+            break;
+        }
         default: { break; }
     }
     return r;
@@ -156,7 +139,7 @@ void ValueDictionary::insert(const std::string &key, const Value &value)
     }
 }
 
-ValueObject::ValueObject(registers_size_t size)
+ValueObject::ValueObject(const std::vector<std::string> &props) : props(props)
 {
-    this->registers = std::make_unique<Value[]>(size);
+    this->registers = std::make_unique<Value[]>(props.size());
 }

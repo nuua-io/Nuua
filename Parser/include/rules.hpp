@@ -159,6 +159,13 @@ typedef enum : uint8_t {
     ACCESS_DICT,
 } AccessType;
 
+typedef enum : uint8_t {
+    ASSIGN_VALUE,
+    ASSIGN_ACCESS,
+    ASSIGN_PROP,
+    ASSIGN_PROP_ACCESS,
+} AssignType;
+
 class Node
 {
     public:
@@ -279,7 +286,7 @@ class Assign : public Expression
     public:
         std::shared_ptr<Expression> target;
         std::shared_ptr<Expression> value;
-        bool is_access = false;
+        AssignType type = ASSIGN_VALUE; // Assign type determines by the analyzer.
         Assign(NODE_PROPS, const std::shared_ptr<Expression> &t, const std::shared_ptr<Expression> &v)
             : Expression({ RULE_ASSIGN, file, line, column }), target(std::move(t)), value(std::move(v)) {};
 };
@@ -300,6 +307,7 @@ class Call : public Expression
         std::shared_ptr<Expression> target;
         std::vector<std::shared_ptr<Expression>> arguments;
         bool has_return = false; // Determines if the call target returns a value or not.
+        bool is_method = false; // Determines if the call target is a method.
         Call(NODE_PROPS, const std::shared_ptr<Expression> &t, const std::vector<std::shared_ptr<Expression>> &a)
             : Expression({ RULE_CALL, file, line, column }), target(std::move(t)), arguments(a) {};
 };
@@ -382,11 +390,15 @@ class FunctionValue : public Expression
             : Expression({ RULE_FUNCTION, file, line, column }), name(n), parameters(p), return_type(std::move(rt)), body(b) {}
 };
 
+// Forward declaration
+class Class;
+
 class Object : public Expression
 {
     public:
         std::string name;
         std::unordered_map<std::string, std::shared_ptr<Expression>> arguments;
+        std::shared_ptr<Class> c; // Used by the analyzer and compiler.
         Object(NODE_PROPS, const std::string &n, const std::unordered_map<std::string, std::shared_ptr<Expression>> &a)
             : Expression({ RULE_OBJECT, file, line, column }), name(n), arguments(a) {}
 };
@@ -396,6 +408,7 @@ class Property : public Expression
     public:
         std::shared_ptr<Expression> object;
         std::string name;
+        std::shared_ptr<Class> c; // Used by the analyzer and compiler.
         Property(NODE_PROPS, const std::shared_ptr<Expression> &o, const std::string &n)
             : Expression({ RULE_PROPERTY, file, line, column }), object(o), name(n) {}
 };

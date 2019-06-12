@@ -15,20 +15,24 @@
 
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))
 
+// Class constant pool.
+static std::unordered_map<
+    // The class.
+    std::shared_ptr<Class>,
+    // Variable name and constant index.
+    std::unordered_map<std::string, size_t>
+> class_constant_pool;
+
 register_t Compiler::compile(const char *file)
 {
     printf("----> Compiler\n");
     Analyzer analyzer = Analyzer(file);
     std::shared_ptr<std::vector<std::shared_ptr<Statement>>>code = std::make_shared<std::vector<std::shared_ptr<Statement>>>();
     std::shared_ptr<Block> block = analyzer.analyze(code);
-
     // Register the TLDs.
     this->register_tld(code, block);
     // Allocate the main registers.
     this->program->main_frame.allocate_registers(this->global.current_register);
-
-    // Add the initial function call.
-    // this->add_opcodes({{ OP_GCALL, block->get_variable("main")->reg }});
     // Compile the code.
     this->compile_module(code, block);
     // Add the exit opcode.
@@ -57,37 +61,28 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                 break;
             }
             case RULE_CLASS: {
+                std::shared_ptr<Class> c = std::static_pointer_cast<Class>(node);
+                for (const std::shared_ptr<Statement> &el : c->body) {
+                    switch (el->rule) {
+                        case RULE_FUNCTION: {
+                            const std::shared_ptr<Function> &fun = std::static_pointer_cast<Function>(el);
+                            printf("BEFORE %s.%s ==> %s\n", c->name.c_str(), fun->value->name.c_str(), this->program->memory->constants[class_constant_pool[c][fun->value->name]].to_string().c_str());
+                            this->compile_function(fun).copy_to(
+                                &this->program->memory->constants[class_constant_pool[c][fun->value->name]]
+                            );
+                            printf("AFTER %s.%s ==> %s\n", c->name.c_str(), fun->value->name.c_str(), this->program->memory->constants[class_constant_pool[c][fun->value->name]].to_string().c_str());
+                            break;
+                        }
+                        default: { /* Do nothing */ }
+                    }
+                }
                 break;
             }
             case RULE_FUNCTION: {
-                std::shared_ptr<Function> f = std::static_pointer_cast<Function>(node);
-                const std::shared_ptr<FunctionValue> &fun = f->value;
-                // Get the entry point of the function.
-                size_t entry = this->program->memory->code.size();
-                // Push the function block.
-                this->blocks.push_back(fun->block);
-                // Pop the function parameters.
-                for (size_t i = fun->parameters.size() - 1;; i--) {
-                    // Get the variable from the block.
-                    BlockVariableType *var = this->get_variable(fun->parameters[i]->name).first;
-                    // Assign the register to the parameter.
-                    var->reg = this->local.get_register(true);
-                    // Pop the parameter from the stack.
-                    this->add_opcodes({{ OP_POP, var->reg }});
-                    if (i == 0) break; // Don't change this.
-                }
-                // Compile the function body.
-                for (const std::shared_ptr<Statement> &statement : fun->body) this->compile(statement);
-                // Clear the function body (so that the elements may be freed)
-                fun->body.clear();
-                this->blocks.pop_back();
-                printf("Compiling function: %s\n", fun->name.c_str());
-                // Create the function value and move it to the register.
-                Value(entry, this->local.current_register, Type(f)).copy_to(
-                    this->program->main_frame.registers.get() + block->get_variable(fun->name)->reg
+                std::shared_ptr<Function> fun = std::static_pointer_cast<Function>(node);
+                this->compile_function(fun).copy_to(
+                    this->program->main_frame.registers.get() + block->get_variable(fun->value->name)->reg
                 );
-                // Reset the local frame info.
-                this->local.reset();
                 break;
             }
             default: {
@@ -126,6 +121,15 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
                 break;
             }
             case RULE_CLASS: {
+                std::shared_ptr<Class> c = std::static_pointer_cast<Class>(tld);
+                for (auto &[vn, vt] : c->block->variables) {
+                    // Set the class register.
+                    vt.reg = this->local.get_register(true);
+                    // Set the constant register.
+                    class_constant_pool[c][vn] = this->add_constant({ vt.type });
+                    printf("INIT CONST %s.%s to: %s\n", c->name.c_str(), vn.c_str(), this->program->memory->constants[class_constant_pool[c][vn]].to_string().c_str());
+                }
+                this->local.reset();
                 break;
             }
             case RULE_FUNCTION: {
@@ -150,7 +154,9 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
         }
         // Register the targets in the current block with the same register as use block.
         for (const std::string &name : use->targets) {
-            block->get_variable(name)->reg = use->block->get_variable(name)->reg;
+            // Check if it's a variable.
+            BlockVariableType *var = use->block->get_variable(name);
+            if (var) block->get_variable(name)->reg = var->reg;
         }
     }
     block->debug();
@@ -339,7 +345,8 @@ register_t Compiler::compile(
     const std::shared_ptr<Expression> &rule,
     const bool load_constant,
     const register_t *suggested_register,
-    const std::shared_ptr<Expression> &access_assignment_value
+    const std::shared_ptr<Expression> &assignment_value,
+    register_t *object_reg
 ) {
     register_t result = 0;
     switch (rule->rule) {
@@ -417,10 +424,27 @@ register_t Compiler::compile(
         case RULE_OBJECT: {
             std::shared_ptr<Object> object = std::static_pointer_cast<Object>(rule);
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
-            // Get the class of the object.
-            BlockClassType *c = this->get_class(object->name);
-            //c->block->
-            //this->add_opcodes({{ this->add_constant({ object->name,  }) }});
+            // Create the constant object.
+            std::vector<std::string> props;
+            for (const auto &[name, type] : object->c->block->variables) props.push_back(name);
+            size_t objr = this->add_constant({ object->c->name, props });
+            this->add_opcodes({{ objr }});
+            // Assign each register its corresponding values.
+            for (const auto &[name, type] : object->c->block->variables) {
+                register_t val;
+                // Check if the value is part of the init arguments.
+                for (const auto &[n, e] : object->arguments) {
+                    if (n == name) {
+                        val = this->compile(e);
+                        goto object_add_prop;
+                    }
+                }
+                this->add_opcodes({{ OP_LOAD_C, val = this->local.get_register(), class_constant_pool[object->c][name] }});
+                printf("%s.%s: %s\n", object->c->name.c_str(), name.c_str(), this->program->memory->constants[class_constant_pool[object->c][name]].to_string().c_str());
+                object_add_prop:
+                this->add_opcodes({{ OP_SPROP, type.reg, result, val }});
+                this->local.free_register(val);
+            }
             break;
         }
         case RULE_GROUP: {
@@ -466,25 +490,32 @@ register_t Compiler::compile(
         case RULE_ASSIGN: {
             std::shared_ptr<Assign> assign = std::static_pointer_cast<Assign>(rule);
             // Compile the value of the assignment
-            if (assign->is_access) {
-                result = this->compile(assign->target, true, nullptr, assign->value);
-            } else {
-                result = this->compile(assign->value);
-                // Compile the target.
-                register_t target = this->compile(assign->target);
-                // Check if it's a global variable.
-                if (assign->target->rule == RULE_VARIABLE) {
-                    // Check if the assignment is to a global variable
-                    const auto [variable, is_global] = this->get_variable(std::static_pointer_cast<Variable>(assign->target)->name);
-                    if (is_global) {
-                        // Assign it to it.
-                        this->add_opcodes({{ OP_SET_G, target /* variable->reg */ , result }});
-                        goto analyzer_assign_finished;
+            switch (assign->type) {
+                case ASSIGN_VALUE: {
+                    result = this->compile(assign->value);
+                    // Compile the target.
+                    register_t target = this->compile(assign->target);
+                    // Check if it's a global variable.
+                    if (assign->target->rule == RULE_VARIABLE) {
+                        // Check if the assignment is to a global variable
+                        const auto [variable, is_global] = this->get_variable(std::static_pointer_cast<Variable>(assign->target)->name);
+                        if (is_global) {
+                            // Assign it to it.
+                            this->add_opcodes({{ OP_SET_G, target /* variable->reg */ , result }});
+                            goto analyzer_assign_finished;
+                        }
                     }
+                    this->add_opcodes({{ OP_MOVE, target, result }});
+                    analyzer_assign_finished:
+                    this->local.free_register(target);
+                    break;
                 }
-                this->add_opcodes({{ OP_MOVE, target, result }});
-                analyzer_assign_finished:
-                this->local.free_register(target);
+                case ASSIGN_ACCESS:
+                case ASSIGN_PROP:
+                case ASSIGN_PROP_ACCESS: {
+                    result = this->compile(assign->target, true, nullptr, assign->value);
+                    break;
+                }
             }
             break;
         }
@@ -509,7 +540,15 @@ register_t Compiler::compile(
         }
         case RULE_CALL: {
             std::shared_ptr<Call> call = std::static_pointer_cast<Call>(rule);
-            register_t target = this->compile(call->target);
+            register_t target;
+            if (call->is_method) {
+                register_t objr;
+                target = this->compile(call->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
+                this->add_opcodes({{ OP_PUSH, objr }});
+                this->local.free_register(objr);
+            } else {
+                target = this->compile(call->target);
+            }
             // Push the function arguments.
             for (const std::shared_ptr<Expression> &arg : call->arguments) {
                 if (this->is_constant(arg)) {
@@ -531,11 +570,17 @@ register_t Compiler::compile(
         }
         case RULE_ACCESS: {
             std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
-            register_t target = this->compile(access->target);
             register_t index = this->compile(access->index);
-            if (access_assignment_value) {
+            register_t target;
+            if (assignment_value) {
                 // The value needs to be compiled.
-                result = this->compile(access_assignment_value);
+                register_t objr;
+                if (access->target->rule == RULE_PROPERTY) {
+                    target = this->compile(access->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
+                } else {
+                    target = this->compile(access->target);
+                }
+                result = this->compile(assignment_value);
                 switch (access->type) {
                     case ACCESS_STRING: {
                         this->add_opcodes({{ OP_SSET, target, index, result }});
@@ -550,7 +595,17 @@ register_t Compiler::compile(
                         break;
                     }
                 }
+                if (access->target->rule == RULE_PROPERTY) {
+                    const std::shared_ptr<Property> &prop = std::static_pointer_cast<Property>(access->target);
+                    // Re-assign the result to the prop.
+                    this->add_opcodes({{
+                        OP_SPROP, prop->c->block->get_variable(prop->name)->reg,
+                        objr, target,
+                    }});
+                    this->local.free_register(objr);
+                }
             } else {
+                target = this->compile(access->target);
                 switch (access->type) {
                     case ACCESS_STRING: {
                         this->add_opcodes({{ OP_SGET, result = suggested_register ? *suggested_register : this->local.get_register(), target, index }});
@@ -576,14 +631,14 @@ register_t Compiler::compile(
             if (slice->start) r1 = this->compile(slice->start);
             else {
                 r1 = this->local.get_register();
-                this->add_opcodes({ OP_LOAD_C, r1, this->add_constant({ 0LL }) });
+                this->add_opcodes({{ OP_LOAD_C, r1, this->add_constant({ 0LL }) }});
             }
             register_t r2 = slice->end ? this->compile(slice->end) : 0;
             register_t r3;
             if (slice->step) r3 = this->compile(slice->step);
             else {
                 r3 = this->local.get_register();
-                this->add_opcodes({ OP_LOAD_C, r3, this->add_constant({ 1LL }) });
+                this->add_opcodes({{ OP_LOAD_C, r3, this->add_constant({ 1LL }) }});
             }
             register_t rx = this->compile(slice->target);
             if (slice->end) {
@@ -619,6 +674,24 @@ register_t Compiler::compile(
             break;
         }
         case RULE_PROPERTY: {
+            std::shared_ptr<Property> prop = std::static_pointer_cast<Property>(rule);
+            // Compile the object.
+            register_t ry = this->compile(prop->object);
+            if (assignment_value) {
+                // The value needs to be compiled.
+                result = this->compile(assignment_value);
+                this->add_opcodes({{
+                    OP_SPROP, prop->c->block->get_variable(prop->name)->reg,
+                    ry, result,
+                }});
+            } else {
+                this->add_opcodes({{
+                    OP_LPROP, result = suggested_register ? *suggested_register : this->local.get_register(),
+                    ry, prop->c->block->get_variable(prop->name)->reg
+                }});
+            }
+            if (object_reg) *object_reg = ry;
+            else this->local.free_register(ry);
             break;
         }
         default: {
@@ -756,6 +829,42 @@ void Compiler::set_column(const column_t column)
 {
     this->program->memory->columns[this->program->memory->code.size()] = column;
     this->current_column = column;
+}
+
+Value Compiler::compile_function(const std::shared_ptr<Function> &f)
+{
+    const std::shared_ptr<FunctionValue> &fun = f->value;
+    // Get the entry point of the function.
+    size_t entry = this->program->memory->code.size();
+    // Push the function block.
+    this->blocks.push_back(fun->block);
+    // Pop the function parameters.
+    if (fun->parameters.size() > 0) {
+        for (size_t i = fun->parameters.size() - 1;; i--) {
+            // Get the variable from the block.
+            BlockVariableType *var = this->get_variable(fun->parameters[i]->name).first;
+            // Assign the register to the parameter.
+            var->reg = this->local.get_register(true);
+            // Pop the parameter from the stack.
+            this->add_opcodes({{ OP_POP, var->reg }});
+            if (i == 0) break; // Don't change this.
+        }
+    }
+    // Compile the function body.
+    for (const std::shared_ptr<Statement> &statement : fun->body) this->compile(statement);
+    // Clear the function body (so that the elements may be freed)
+    fun->body.clear();
+    this->blocks.pop_back();
+    printf("Compiling function: %s\n", fun->name.c_str());
+    // Get the number of registers needed.
+    registers_size_t regs = this->local.current_register;
+    // Reset the local frame info.
+    this->local.reset();
+    // Create the function value and return it.
+    Value v = Value(entry, regs, Type(f));
+    printf("FUN VALUE STR: %s\n", v.to_string().c_str());
+    printf("FUN TYPE STR: %s\n", v.type.to_string().c_str());
+    return v;
 }
 
 #undef ADD_LOG

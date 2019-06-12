@@ -19,12 +19,12 @@ Nuua homepage is <https://nuua.io>. You may subscribe to recieve further informa
 - ~~Better error reporting~~ :white_check_mark:
 - ~~Implement modules (imports)~~ :white_check_mark:
 - ~~Implement functions~~ :white_check_mark:
-- Implement classes :construction:
+- ~~Implement classes~~ :white_check_mark:
 - Implement function overloading :clock1:
-- NUSL (Nuua Standard Library) :construction:
+- ~~Minimal NUSL (Nuua Standard Library)~~ :white_check_mark:
 - NUPAC (Nuua Package Manager) :clock1:
 - Optimizations :warning:
-- **Initial Release**
+- **Initial Release** :construction:
 
 ## How is nuua structured?
 
@@ -32,17 +32,17 @@ Nuua is structured as a layered system. It have diferent tiers (ordered):
 
 - Application
 - Virtual Machine
-- Compiler
-- Analyzer
+- Compiler (Code Generator)
+- Analyzer (Semantic analyzer)
 - Parser
 - Lexer
 
 Nuua also have independent modules to help with it's development on every layer.
-In the case of the current state, nuua have the following modules:
+In the current state, nuua have the following independent modules:
 
 - Logger
 
-![Layered System](https://i.imgur.com/vNaPz7x.png)
+![Layered System](https://i.imgur.com/wFQHGnp.png)
 
 ## Building Nuua
 
