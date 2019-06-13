@@ -729,6 +729,22 @@ void Module::analyze_code(const std::shared_ptr<Statement> &rule, bool no_declar
             }
             break;
         }
+        case RULE_DELETE: {
+            std::shared_ptr<Delete> del = std::static_pointer_cast<Delete>(rule);
+            this->analyze_code(del->target);
+            switch (del->target->rule) {
+                case RULE_ACCESS: {
+                    del->is_prop = std::static_pointer_cast<Access>(del->target)->target->rule == RULE_PROPERTY;
+                    break;
+                }
+                default: {
+                    ADD_LOG(del->target, "The expression bust be an access to an iterator.");
+                    exit(logger->crash());
+                    break;
+                }
+            }
+            break;
+        }
         case RULE_IF: {
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             this->analyze_code(rif->condition);

@@ -367,14 +367,6 @@ class Range : public Expression
             : Expression({ RULE_RANGE, file, line, column }), start(std::move(s)), end(std::move(e)), inclusive(i) {}
 };
 
-class Delete : public Expression
-{
-    public:
-        std::shared_ptr<Expression> target;
-        Delete(NODE_PROPS, const std::shared_ptr<Expression> &t)
-            : Expression({ RULE_DELETE, file, line, column }), target(std::move(t)) {}
-};
-
 // Forward declare
 class Declaration;
 
@@ -517,6 +509,15 @@ class Class : public Statement
         std::shared_ptr<Block> block;
         Class(NODE_PROPS, const std::string &n, const std::vector<std::shared_ptr<Statement>> &b)
             : Statement({ RULE_CLASS, file, line, column }), name(n), body(b) {}
+};
+
+class Delete : public Statement
+{
+    public:
+        std::shared_ptr<Expression> target;
+        bool is_prop; // Determines if the delete is on a prop access.
+        Delete(NODE_PROPS, const std::shared_ptr<Expression> &t)
+            : Statement({ RULE_DELETE, file, line, column }), target(std::move(t)) {}
 };
 
 #endif

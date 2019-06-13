@@ -45,6 +45,7 @@ class Parser
     std::shared_ptr<Statement> export_declaration();
     std::shared_ptr<Statement> variable_declaration();
     std::shared_ptr<Statement> print_statement();
+    std::shared_ptr<Statement> delete_statement();
     std::shared_ptr<Statement> return_statement();
     std::shared_ptr<Statement> if_statement();
     std::shared_ptr<Statement> while_statement();

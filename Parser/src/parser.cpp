@@ -611,6 +611,12 @@ std::shared_ptr<Statement> Parser::return_statement()
     return NEW_NODE(Return, expr);
 }
 
+std::shared_ptr<Statement> Parser::delete_statement()
+{
+    std::shared_ptr<Expression> expr = this->expression();
+    return NEW_NODE(Delete, expr);
+}
+
 std::shared_ptr<Statement> Parser::class_statement()
 {
     std::string name = this->consume(TOKEN_IDENTIFIER, "Expected identifier after 'class'.")->to_string();
@@ -626,6 +632,7 @@ statement -> variable_declaration "\n"?
     | while_statement "\n"
     | for_statement "\n"
     | return_statement "\n"
+    | delete_statement "\n"
     | print_statement "\n"
     | expression_statement "\n"?;
 */
@@ -655,6 +662,9 @@ std::shared_ptr<Statement> Parser::statement(bool new_line)
     } else if (this->match(TOKEN_RETURN)) {
         ADD_PREV_LOG("Parsing return statement");
         result = this->return_statement();
+    } else if (this->match(TOKEN_DELETE)) {
+        ADD_PREV_LOG("Parsing delete statement");
+        result = this->delete_statement();
     } else if (this->match(TOKEN_PRINT)) {
         ADD_PREV_LOG("Parsing print statement");
         result = this->print_statement();

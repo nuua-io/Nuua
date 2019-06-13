@@ -426,7 +426,11 @@ std::string Type::to_string() const
         std::string result = "(";
         for (const std::shared_ptr<Type> &inner : this->parameters) result += inner->to_string() + ", ";
         // pop the ", " of the last element
-        if (this->parameters.size() > 0) { result.pop_back(); result.pop_back(); result += " "; }
+        if (this->parameters.size() > 0) {
+            result.pop_back();
+            result.pop_back();
+            if (this->inner_type) result += " ";
+        }
         // Append the return type if needed.
         if (this->inner_type) result += "-> " + this->inner_type->to_string();
         return result + ")";

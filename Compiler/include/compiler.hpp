@@ -46,7 +46,9 @@ class Compiler
         // If the inner expresion needs to assign rather than get the value.
         const std::shared_ptr<Expression> &assignment_value = std::shared_ptr<Expression>(),
         // It stores the object of the property in case is needed.
-        register_t *object_reg = nullptr
+        register_t *object_reg = nullptr,
+        // Determines if the access must be deleted
+        const bool delete_access = false
     );
     Value compile_function(const std::shared_ptr<Function> &f);
     // Adds an opcode to the program.

@@ -58,7 +58,11 @@ void VirtualMachine::run()
                 INC_PC(4);
                 break;
             }
-            case OP_SDELETE: { break; }
+            case OP_SDELETE: {
+                GETV(REGISTER(1)->value, nstring_t).erase(GETV(REGISTER(2)->value, nint_t), 1);
+                INC_PC(3);
+                break;
+            }
             case OP_LPUSH: {
                 GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>)->push_back(*REGISTER(2));
                 INC_PC(3);
@@ -91,7 +95,12 @@ void VirtualMachine::run()
                 INC_PC(4);
                 break;
             }
-            case OP_LDELETE: {  break; }
+            case OP_LDELETE: {
+                std::shared_ptr<nlist_t> &target = GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>);
+                target->erase(target->begin() + GETV(REGISTER(2)->value, nint_t));
+                INC_PC(3);
+                break;
+            }
             case OP_DKEY: {
                 const std::shared_ptr<ndict_t> &d = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>);
                 const nint_t &index = GETV(REGISTER(3)->value, nint_t);
@@ -113,6 +122,9 @@ void VirtualMachine::run()
                 break;
             }
             case OP_DDELETE: {
+                std::shared_ptr<ndict_t> &target = GETV(REGISTER(1)->value, std::shared_ptr<ndict_t>);
+                target->values.erase(GETV(REGISTER(2)->value, nstring_t));
+                INC_PC(3);
                 break;
             }
             case OP_CALL: {

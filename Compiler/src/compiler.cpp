@@ -212,6 +212,11 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->add_opcodes({{ OP_RETURN }});
             break;
         }
+        case RULE_DELETE: {
+            std::shared_ptr<Delete> del = std::static_pointer_cast<Delete>(rule);
+            this->compile(del->target, true, nullptr, std::shared_ptr<Expression>(), nullptr, true);
+            break;
+        }
         case RULE_IF: {
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             size_t initial_index = this->program->memory->code.size() - 1;
@@ -300,8 +305,10 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Add the loop condition.
             register_t rx = this->local.get_register(); // Loop condition.
             this->add_opcodes({{ OP_LT_INT, rx, ri, r1 }});
+            this->local.free_register(r1);
             // Perform the jump if nessesary.
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
+            this->local.free_register(rx);
             // Get the jump index for further modification.
             size_t jump_index = this->program->memory->code.size() - 2;
             // Set the index variable if dictionary.
@@ -346,7 +353,8 @@ register_t Compiler::compile(
     const bool load_constant,
     const register_t *suggested_register,
     const std::shared_ptr<Expression> &assignment_value,
-    register_t *object_reg
+    register_t *object_reg,
+    const bool delete_access
 ) {
     register_t result = 0;
     switch (rule->rule) {
@@ -572,7 +580,37 @@ register_t Compiler::compile(
             std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
             register_t index = this->compile(access->index);
             register_t target;
-            if (assignment_value) {
+            if (delete_access) {
+                register_t objr;
+                if (access->target->rule == RULE_PROPERTY) {
+                    target = this->compile(access->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
+                } else {
+                    target = this->compile(access->target);
+                }
+                switch (access->type) {
+                    case ACCESS_STRING: {
+                        this->add_opcodes({{ OP_SDELETE, target, index }});
+                        break;
+                    }
+                    case ACCESS_LIST: {
+                        this->add_opcodes({{ OP_LDELETE, target, index }});
+                        break;
+                    }
+                    case ACCESS_DICT: {
+                        this->add_opcodes({{ OP_DDELETE, target, index }});
+                        break;
+                    }
+                }
+                if (access->target->rule == RULE_PROPERTY) {
+                    const std::shared_ptr<Property> &prop = std::static_pointer_cast<Property>(access->target);
+                    // Re-assign the result to the prop.
+                    this->add_opcodes({{
+                        OP_SPROP, prop->c->block->get_variable(prop->name)->reg,
+                        objr, target,
+                    }});
+                    this->local.free_register(objr);
+                }
+            } else if (assignment_value) {
                 // The value needs to be compiled.
                 register_t objr;
                 if (access->target->rule == RULE_PROPERTY) {
