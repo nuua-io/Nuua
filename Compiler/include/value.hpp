@@ -101,6 +101,8 @@ class Value
         void retype(ValueType new_type, const std::shared_ptr<Type> &new_inner_type = std::shared_ptr<Type>());
         // Copies the current value to the destnation.
         void copy_to(Value *dest) const;
+        // Compares one value with another.
+        bool same_as(const Value &value) const;
         // Gets a string representation of the value.
         std::string to_string() const;
 };

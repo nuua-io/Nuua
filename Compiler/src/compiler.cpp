@@ -164,6 +164,7 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
 
 void Compiler::compile(const std::shared_ptr<Statement> &rule)
 {
+    printf("Compiling expr: %d\n", rule->rule);
     switch (rule->rule) {
         case RULE_PRINT: {
             std::shared_ptr<Print> print = std::static_pointer_cast<Print>(rule);
@@ -380,14 +381,14 @@ register_t Compiler::compile(
         }
         case RULE_LIST: {
             std::shared_ptr<List> list = std::static_pointer_cast<List>(rule);
-            result = suggested_register ? *suggested_register : this->local.get_register();
             if (this->is_constant(list)) {
                 // The list can be stored in the constant pool.
-                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result }});
+                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
                 Value v = Value(list->type);
                 this->constant_list(list, v);
                 this->add_opcodes({{ this->add_constant(v) }});
             } else {
+                result = suggested_register ? *suggested_register : this->local.get_register();
                 // The list needs to be constructed from the groud up
                 this->add_opcodes({{ OP_LOAD_C, result, this->add_constant({ list->type }) }});
                 for (const std::shared_ptr<Expression> &e : list->value) {
@@ -405,14 +406,14 @@ register_t Compiler::compile(
         }
         case RULE_DICTIONARY: {
             std::shared_ptr<Dictionary> dict = std::static_pointer_cast<Dictionary>(rule);
-            result = suggested_register ? *suggested_register : this->local.get_register();
             if (this->is_constant(dict)) {
                 // The list can be stored in the constant pool.
-                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result }});
+                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
                 Value v = dict->type;
                 this->constant_dict(dict, v);
                 this->add_opcodes({{ this->add_constant(v) }});
             } else {
+                result = suggested_register ? *suggested_register : this->local.get_register();
                 // The list needs to be constructed from the groud up
                 this->add_opcodes({{ OP_LOAD_C, result, this->add_constant({ dict->type }) }});
                 for (const auto &[key, value] : dict->value) {

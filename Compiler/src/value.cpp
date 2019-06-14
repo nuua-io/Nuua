@@ -74,6 +74,68 @@ void Value::copy_to(Value *dest) const
     dest->value = this->value;
 }
 
+bool Value::same_as(const Value &value) const
+{
+    // Check if they match in type.
+    if (!this->type.same_as(value.type)) return false;
+    // Check the value.
+    switch (this->type.type) {
+        case VALUE_INT:
+        case VALUE_FLOAT:
+        case VALUE_BOOL:
+        case VALUE_STRING: { return this->value == value.value; }
+        case VALUE_LIST: {
+            const std::shared_ptr<nlist_t> &a = GETV(this->value, std::shared_ptr<nlist_t>);
+            const std::shared_ptr<nlist_t> &b = GETV(value.value, std::shared_ptr<nlist_t>);
+            // Do they match in length?
+            if (a->size() != b->size()) return false;
+            // Does it have elements?
+            if (a->size() == 0) return true;
+            // Check each element.
+            for (size_t i = 0; i < a->size(); i++) {
+                // Check if their inner element match at position i.
+                if (!(*a)[i].same_as((*b)[i])) return false;
+            }
+            // They are equal.
+            return true;
+        }
+        case VALUE_DICT: {
+            const std::shared_ptr<ndict_t> &a = GETV(this->value, std::shared_ptr<ndict_t>);
+            const std::shared_ptr<ndict_t> &b = GETV(value.value, std::shared_ptr<ndict_t>);
+            // Do they match in length?
+            if (a->values.size() != b->values.size()) return false;
+            // Does it have elements?
+            if (a->values.size() == 0) return true;
+            // Compare their keys and values.
+            for (const auto &[k, e] : a->values) {
+                // Check if b have that key.
+                if (b->values.find(k) == b->values.end()) return false;
+                // Check if the value matches at that key.
+                if (!e.same_as(b->values[k])) return false;
+            }
+            // They are equal.
+            return true;
+        }
+        case VALUE_FUN: { return GETV(this->value, std::shared_ptr<nfun_t>).get() == GETV(value.value, std::shared_ptr<nfun_t>).get(); }
+        case VALUE_OBJECT: {
+            const std::shared_ptr<nobject_t> &a = GETV(this->value, std::shared_ptr<nobject_t>);
+            const std::shared_ptr<nobject_t> &b = GETV(value.value, std::shared_ptr<nobject_t>);
+            // Check the number of props.
+            if (a->props.size() != b->props.size()) return false;
+            // Are there any props at all?
+            if (a->props.size() == 0) return true;
+            // Check the props names and values.
+            for (size_t i = 0; i < a->props.size(); i++) {
+                // Check for the prop name.
+                if (a->props[i] != b->props[i]) return false;
+                // Check for the prop value.
+                if (!a->registers[i].same_as(b->registers[i])) return false;
+            }
+            return true;
+        }
+    }
+}
+
 std::string Value::to_string() const
 {
     std::string r;

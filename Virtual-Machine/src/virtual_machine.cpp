@@ -429,9 +429,15 @@ void VirtualMachine::run()
                 break;
             }
             case OP_EQ_LIST: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = REGISTER(2)->same_as(*REGISTER(3));
+                INC_PC(4);
                 break;
             }
             case OP_EQ_DICT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = REGISTER(2)->same_as(*REGISTER(3));
+                INC_PC(4);
                 break;
             }
             case OP_NEQ_INT: {
@@ -459,9 +465,15 @@ void VirtualMachine::run()
                 break;
             }
             case OP_NEQ_LIST: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = !REGISTER(2)->same_as(*REGISTER(3));
+                INC_PC(4);
                 break;
             }
             case OP_NEQ_DICT: {
+                REGISTER(1)->retype(VALUE_BOOL);
+                REGISTER(1)->value = !REGISTER(2)->same_as(*REGISTER(3));
+                INC_PC(4);
                 break;
             }
             case OP_HT_INT: {
@@ -536,7 +548,6 @@ void VirtualMachine::run()
                 INC_PC(4);
                 break;
             }
-            // Lower than or equal to
             case OP_LTE_INT: {
                 REGISTER(1)->retype(VALUE_BOOL);
                 REGISTER(1)->value = GETV(REGISTER(2)->value, nint_t) <= GETV(REGISTER(3)->value, nint_t);

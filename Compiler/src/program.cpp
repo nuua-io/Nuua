@@ -255,6 +255,7 @@ register_t FrameInfo::get_register(bool protect)
     // Protect it in case protect is true.
     if (protect) this->protected_registers.push_back(reg);
     // Return the register.
+    printf("Register allocated: %d\n", reg);
     return reg;
 }
 
