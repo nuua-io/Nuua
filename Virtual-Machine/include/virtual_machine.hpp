@@ -30,11 +30,15 @@ class VirtualMachine
     Frame *active_frame = this->frames - 1; // It performs a pre-increment when a call is done.
     // Runs the virtual machine.
     void run();
+    // Helpers to get the file, line and column.
+    std::shared_ptr<const std::string> current_file();
+    line_t current_line();
+    column_t current_column();
     public:
         // It runs the virtual machine given a source input.
         void interpret(const char *file, const std::vector<std::string> &argv);
         // Resets the virtual machine program memories.
-        void reset();
+        // void reset();
 };
 
 #endif

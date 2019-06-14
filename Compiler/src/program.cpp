@@ -255,7 +255,6 @@ register_t FrameInfo::get_register(bool protect)
     // Protect it in case protect is true.
     if (protect) this->protected_registers.push_back(reg);
     // Return the register.
-    printf("Register allocated: %d\n", reg);
     return reg;
 }
 
@@ -271,7 +270,9 @@ void FrameInfo::free_register(register_t reg, bool force)
         this->protected_registers.erase(el);
     }
     // Add the element to the free list.
-    this->free_registers.push_back(reg);
+    if (std::find(this->free_registers.begin(), this->free_registers.end(), reg) == this->free_registers.end()) {
+        this->free_registers.push_back(reg);
+    }
 }
 
 void FrameInfo::reset()

@@ -145,7 +145,6 @@ void Lexer::read_from_file(const std::shared_ptr<const std::string> &file)
 
 void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
 {
-    printf("----> Lexer\n");
     this->source = std::make_unique<std::string>();
     this->read_from_file(this->file);
 
@@ -229,7 +228,6 @@ void Lexer::scan(std::unique_ptr<std::vector<Token>> &tokens)
     }
 
     tokens->push_back(this->make_token(TOKEN_EOF));
-    printf("----> !Lexer\n");
 }
 
 Lexer::Lexer(const std::shared_ptr<const std::string> &file)

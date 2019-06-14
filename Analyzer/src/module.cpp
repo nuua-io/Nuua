@@ -356,7 +356,7 @@ void Module::analyze_code(
                 if (v) {
                     // Variable found!
                     // Declare last use.
-                    v->last_use = rule;
+                    v->last_use = NODE(rule);
                     break;
                 } else if (i == 0) {
                     ADD_LOG(var, "Undeclared variable '" + var->name + "'");
@@ -833,7 +833,6 @@ void Module::analyze_function(const std::shared_ptr<FunctionValue> &fun, const s
     // Analyze the function parameters.
     for (const std::shared_ptr<Declaration> &parameter : fun->parameters) this->analyze_code(std::static_pointer_cast<Statement>(parameter), true);
     // Check if there's a top level return on the function.
-    printf("A\n");
     if (fun->return_type) {
         this->return_type = fun->return_type;
         for (const std::shared_ptr<Statement> &rule : fun->body) {

@@ -1,8 +1,10 @@
 fun main(argv: [string]) {
-    a := [1, 2, 3, 4]
-    print a
-    b := [1, 2, 3, 4]
-    print b
-    print a == b
-    c := 10
+    a: int = 10
+    b: int = 20
+    print a + b
+    c: int = a
+    print "BEFORE"
+    print 10.5 + (c / 1)
+    print "AFTER"
+    print c
 }

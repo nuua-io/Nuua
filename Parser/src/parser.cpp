@@ -493,7 +493,6 @@ std::shared_ptr<Statement> Parser::fun_declaration()
         ADD_LOG("Unknown token found after function. Expected '->', '=>' or '{'.");
         exit(logger->crash());
     }
-    printf("FUNCTION PARSED; CURRENT: %s\n", CURRENT().to_string().c_str());
     return std::make_shared<Function>(NEW_NODE(FunctionValue, name, parameters, return_type, body));
 }
 
@@ -873,7 +872,6 @@ program -> top_level_declaration*;
 */
 void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code)
 {
-    printf("----> Parser\n");
     // Add the file we are going to parse to the file_stack.
     file_stack.push_back(this->file);
     // Prepare the token list.
@@ -881,7 +879,7 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
     Lexer lexer = Lexer(this->file);
     // Scan the tokens.
     lexer.scan(tokens);
-    Token::debug_tokens(*tokens);
+    if (logger->show_tokens) Token::debug_tokens(*tokens);
     this->current = &tokens->front();
     while (!IS_AT_END()) code->push_back(std::move(this->top_level_declaration()));
     // Check the code size to avoid empty files.
@@ -890,7 +888,6 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
         exit(logger->crash());
     }
     parsed_files[*this->file] = std::make_pair(code, this->file);
-    printf("----> !Parser\n");
 }
 
 Parser::Parser(const char *file)

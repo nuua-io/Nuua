@@ -45,6 +45,10 @@ class Logger
     // Displays a specific log entity.
     void display_log(const uint16_t index, const bool red) const;
     public:
+        // Stores some command line options.
+        bool show_tokens = false;
+        bool show_ast = false;
+        bool show_opcodes = false;
         // Stores the executable path.
         std::string executable_path;
         // Adds a new entity to the entity stack.

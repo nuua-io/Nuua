@@ -14,6 +14,10 @@
 #include <algorithm>
 
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))
+#define SET_SOURCE_LOCATION(node) \
+    if (this->current_column != node->column) this->set_column(node->column); \
+    if (this->current_line != node->line) this->set_line(node->line); \
+    if (!this->current_file || *this->current_file != *node->file) this->set_file(node->file);
 
 // Class constant pool.
 static std::unordered_map<
@@ -25,7 +29,6 @@ static std::unordered_map<
 
 register_t Compiler::compile(const char *file)
 {
-    printf("----> Compiler\n");
     Analyzer analyzer = Analyzer(file);
     std::shared_ptr<std::vector<std::shared_ptr<Statement>>>code = std::make_shared<std::vector<std::shared_ptr<Statement>>>();
     std::shared_ptr<Block> block = analyzer.analyze(code);
@@ -38,8 +41,7 @@ register_t Compiler::compile(const char *file)
     // Add the exit opcode.
     this->add_opcodes({{ OP_EXIT }});
     // Dump the program opcodes to the stdout.
-    this->program->memory->dump();
-    printf("----> !Compiler\n");
+    if (logger->show_opcodes) this->program->memory->dump();
     return block->get_variable("main")->reg;
 }
 
@@ -66,11 +68,9 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
                     switch (el->rule) {
                         case RULE_FUNCTION: {
                             const std::shared_ptr<Function> &fun = std::static_pointer_cast<Function>(el);
-                            printf("BEFORE %s.%s ==> %s\n", c->name.c_str(), fun->value->name.c_str(), this->program->memory->constants[class_constant_pool[c][fun->value->name]].to_string().c_str());
                             this->compile_function(fun).copy_to(
                                 &this->program->memory->constants[class_constant_pool[c][fun->value->name]]
                             );
-                            printf("AFTER %s.%s ==> %s\n", c->name.c_str(), fun->value->name.c_str(), this->program->memory->constants[class_constant_pool[c][fun->value->name]].to_string().c_str());
                             break;
                         }
                         default: { /* Do nothing */ }
@@ -127,7 +127,6 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
                     vt.reg = this->local.get_register(true);
                     // Set the constant register.
                     class_constant_pool[c][vn] = this->add_constant({ vt.type });
-                    printf("INIT CONST %s.%s to: %s\n", c->name.c_str(), vn.c_str(), this->program->memory->constants[class_constant_pool[c][vn]].to_string().c_str());
                 }
                 this->local.reset();
                 break;
@@ -159,12 +158,21 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
             if (var) block->get_variable(name)->reg = var->reg;
         }
     }
-    block->debug();
+    // block->debug();
 }
 
 void Compiler::compile(const std::shared_ptr<Statement> &rule)
 {
-    printf("Compiling expr: %d\n", rule->rule);
+    SET_SOURCE_LOCATION(rule);
+    // Check if the local registers were reset.
+    if (this->local.current_register == 0 && this->dead_variables.size() > 0) {
+        this->dead_variables.clear();
+    }
+    // Free the registers of the dead variables.
+    while (this->dead_variables.size() > 0) {
+        this->local.free_register(this->dead_variables.back(), true);
+        this->dead_variables.pop_back();
+    }
     switch (rule->rule) {
         case RULE_PRINT: {
             std::shared_ptr<Print> print = std::static_pointer_cast<Print>(rule);
@@ -186,8 +194,9 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(rule);
             // Get a register from the register allocator.
             register_t rx = this->local.get_register(true);
+            BlockVariableType *var = this->get_variable(dec->name).first;
             // Set the variable register in the current block.
-            this->get_variable(dec->name).first->reg = rx;
+            var->reg = rx;
             if (dec->initializer) {
                 if (this->is_constant(dec->initializer)) {
                     this->add_opcodes({{ OP_LOAD_C, rx }});
@@ -196,6 +205,8 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             } else {
                 this->add_opcodes({{ OP_LOAD_C, rx, this->add_constant({ dec->type }) }});
             }
+            // Check if the variable is ever used.
+            if (!var->last_use) this->dead_variables.push_back(var->reg);
             break;
         }
         case RULE_RETURN: {
@@ -357,6 +368,7 @@ register_t Compiler::compile(
     register_t *object_reg,
     const bool delete_access
 ) {
+    SET_SOURCE_LOCATION(rule);
     register_t result = 0;
     switch (rule->rule) {
         case RULE_INTEGER: {
@@ -449,7 +461,6 @@ register_t Compiler::compile(
                     }
                 }
                 this->add_opcodes({{ OP_LOAD_C, val = this->local.get_register(), class_constant_pool[object->c][name] }});
-                printf("%s.%s: %s\n", object->c->name.c_str(), name.c_str(), this->program->memory->constants[class_constant_pool[object->c][name]].to_string().c_str());
                 object_add_prop:
                 this->add_opcodes({{ OP_SPROP, type.reg, result, val }});
                 this->local.free_register(val);
@@ -481,7 +492,17 @@ register_t Compiler::compile(
             opcode_t base = OP_ADD_INT;
             register_t ry = this->compile(binary->left);
             register_t rz = this->compile(binary->right);
-            this->add_opcodes({{ base + binary->type, result = suggested_register ? *suggested_register : this->local.get_register(), ry, rz }});
+            // Use a suggested register if needed.
+            if (suggested_register) result = *suggested_register;
+            // Check if there are some dead variables to use.
+            else if (this->dead_variables.size() > 0) {
+                this->local.free_register(this->dead_variables.back(), true);
+                this->dead_variables.pop_back();
+                result = this->local.get_register();
+            }
+            // Otherwise get a new register.
+            else result = this->local.get_register();
+            this->add_opcodes({{ base + binary->type, result, ry, rz }});
             this->local.free_register(ry);
             this->local.free_register(rz);
             break;
@@ -493,7 +514,16 @@ register_t Compiler::compile(
                 // The variable is global, and needs to be loaded first.
                 result = suggested_register ? *suggested_register : this->local.get_register();
                 this->add_opcodes({{ OP_LOAD_G, result, variable->reg }});
-            } else result = variable->reg;
+            } else {
+                if (suggested_register) {
+                    this->add_opcodes({{ OP_MOVE, *suggested_register, variable->reg }});
+                } else result = variable->reg;
+            }
+            // Check if the variable is last used.
+            if (variable->last_use.get() == std::static_pointer_cast<Node>(rule).get()) {
+                // This is the last time the variable is needed.
+                this->dead_variables.push_back(variable->reg);
+            }
             break;
         }
         case RULE_ASSIGN: {
@@ -886,6 +916,8 @@ Value Compiler::compile_function(const std::shared_ptr<Function> &f)
             var->reg = this->local.get_register(true);
             // Pop the parameter from the stack.
             this->add_opcodes({{ OP_POP, var->reg }});
+            // Check if the variable is ever used.
+            if (!var->last_use) this->dead_variables.push_back(var->reg);
             if (i == 0) break; // Don't change this.
         }
     }
@@ -894,15 +926,12 @@ Value Compiler::compile_function(const std::shared_ptr<Function> &f)
     // Clear the function body (so that the elements may be freed)
     fun->body.clear();
     this->blocks.pop_back();
-    printf("Compiling function: %s\n", fun->name.c_str());
     // Get the number of registers needed.
     registers_size_t regs = this->local.current_register;
     // Reset the local frame info.
     this->local.reset();
     // Create the function value and return it.
     Value v = Value(entry, regs, Type(f));
-    printf("FUN VALUE STR: %s\n", v.to_string().c_str());
-    printf("FUN TYPE STR: %s\n", v.type.to_string().c_str());
     return v;
 }
 
