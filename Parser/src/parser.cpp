@@ -350,7 +350,7 @@ logical_or -> logical_and ("or" logical_and)*;
 std::shared_ptr<Expression> Parser::logical_or()
 {
     std::shared_ptr<Expression> result = this->logical_and();
-    while (this->match(TOKEN_AND)) {
+    while (this->match(TOKEN_OR)) {
         Token op = PREVIOUS();
         std::shared_ptr<Expression> expr = this->logical_and();
         result = NEW_NODE(Logical, result, op, expr);
