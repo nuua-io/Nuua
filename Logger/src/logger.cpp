@@ -32,7 +32,7 @@ static int red_printf(const char *format, ...)
         result = vfprintf(stderr, format, arg);
         SetConsoleTextAttribute(hConsole, saved_attributes);
     #else
-        char *fmt = malloc(sizeof(char) * (strlen(format) + 10)); // \x1b[31m\x1b[0m = (9 + '\0')
+        char *fmt = (char *) malloc(sizeof(char) * (strlen(format) + 10)); // \x1b[31m\x1b[0m = (9 + '\0')
         strcpy(fmt, "\x1b[31m");
         strcat(fmt, format);
         strcat(fmt, "\x1b[0m");
