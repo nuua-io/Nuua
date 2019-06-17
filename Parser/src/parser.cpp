@@ -32,7 +32,7 @@
 
 // Stores the parsing file stack, to avoid
 // cyclic imports.
-static std::vector<std::shared_ptr<const std::string>> file_stack;
+static std::vector<const std::string *> file_stack;
 
 #define PREVENT_CYCLIC(file_ptr) \
 { \
@@ -440,12 +440,12 @@ std::shared_ptr<Statement> Parser::use_declaration()
     // Parse the contents of the target.
     if (parsed_files.find(module) == parsed_files.end()) {
         use = NEW_NODE(Use, targets, std::make_shared<std::string>(module));
-        PREVENT_CYCLIC(use->module);
+        PREVENT_CYCLIC(use->module.get());
         use->code = std::make_shared<std::vector<std::shared_ptr<Statement>>>();
         Parser(use->module).parse(use->code);
     } else {
         use = NEW_NODE(Use, targets, parsed_files[module].second);
-        PREVENT_CYCLIC(use->module);
+        PREVENT_CYCLIC(use->module.get());
         use->code = parsed_files[module].first;
     }
     return use;
@@ -873,7 +873,7 @@ program -> top_level_declaration*;
 void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code)
 {
     // Add the file we are going to parse to the file_stack.
-    file_stack.push_back(this->file);
+    file_stack.push_back(this->file.get());
     // Prepare the token list.
     std::unique_ptr<std::vector<Token>> tokens = std::make_unique<std::vector<Token>>();
     Lexer lexer = Lexer(this->file);
