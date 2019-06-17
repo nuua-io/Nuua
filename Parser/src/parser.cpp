@@ -10,6 +10,7 @@
 #include "../../Lexer/include/lexer.hpp"
 #include "../../Logger/include/logger.hpp"
 #include <filesystem>
+#include <algorithm>
 
 #define CURRENT() (*(this->current))
 #define PREVIOUS() (*(this->current - 1))
