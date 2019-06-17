@@ -47,7 +47,7 @@ static void print_file_line(const char *file, const line_t line, const column_t 
 {
     FILE *source_file = fopen(file, "r");
     if (source_file == NULL) {
-        printf("   \n   <unknown>\n");
+        printf("%*c\n%*c<unknown>\n", 3, ' ', 3, ' ');
         exit(EXIT_FAILURE);
     }
     char buffer[MAX_LINE_LENGTH];
@@ -55,7 +55,7 @@ static void print_file_line(const char *file, const line_t line, const column_t 
         error_read_again:
         fgets(buffer, sizeof(buffer), source_file);
         if (buffer == NULL || *buffer == EOF) {
-            printf("   \n   <unknown>\n");
+            printf("\n%*c<unknown>\n", 3, ' ');
             exit(EXIT_FAILURE);
         }
         if (strlen(buffer) == MAX_LINE_LENGTH && buffer[strlen(buffer) - 1] != '\n') {
@@ -66,18 +66,18 @@ static void print_file_line(const char *file, const line_t line, const column_t 
     // Trim the initial spaces / tabs.
     uint16_t offset = 0;
     while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
-    printf("   \n   %s   ", buffer + offset);
+    printf("\n%*c%s%*c", 3, ' ', buffer + offset, 3, ' ');
     for (column_t i = 1; i < column - offset; i++) printf(" ");
-    printf("^\n   ");
+    printf("^\n");
 }
 
 static void print_msg(const std::string &msg, bool red)
 {
-    printf("   ");
+    printf("%*c", 3, ' ');
     size_t current_char = 0, current_col = 0;
     while (current_char < msg.length()) {
         if (current_col > MAX_LINE_CHARS && msg[current_char] == ' ') {
-            printf("\n   ");
+            printf("\n%*c", 3, ' ');
             ++current_char;
             current_col = 0;
         }
