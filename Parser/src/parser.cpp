@@ -710,6 +710,10 @@ std::shared_ptr<Statement> Parser::top_level_declaration(const bool expect_new_l
     } else if (this->match(TOKEN_FUN)) {
         ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
+        // Set the line / column to overwrite the ones in the node.
+        // MUST BE SET ON THE INNER VALUE
+        std::static_pointer_cast<Function>(result)->value->line = line;
+        std::static_pointer_cast<Function>(result)->value->column = column;
     } else {
         ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
         exit(logger->crash());
@@ -740,6 +744,10 @@ std::shared_ptr<Statement> Parser::class_body_declaration()
     } else if (this->match(TOKEN_FUN)) {
         ADD_PREV_LOG("Parsing 'fun' declaration");
         result = this->fun_declaration();
+        // Set the line / column to overwrite the ones in the node.
+        // MUST BE SET ON THE INNER VALUE
+        std::static_pointer_cast<Function>(result)->value->line = line;
+        std::static_pointer_cast<Function>(result)->value->column = column;
     } else {
         ADD_LOG("Invalid class block declaration. Expected 'fun' or variable declaration. But got '" + CURRENT().to_string() + "'");
         exit(logger->crash());

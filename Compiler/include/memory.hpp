@@ -20,6 +20,7 @@ class Memory
         std::unordered_map<size_t, column_t> columns;
         // Dumps the memory.
         void dump();
+        void show_refs();
 };
 
 #endif

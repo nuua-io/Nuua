@@ -163,7 +163,6 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
 
 void Compiler::compile(const std::shared_ptr<Statement> &rule)
 {
-    SET_SOURCE_LOCATION(rule);
     // Check if the local registers were reset.
     if (this->local.current_register == 0 && this->dead_variables.size() > 0) {
         this->dead_variables.clear();
@@ -177,10 +176,12 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         case RULE_PRINT: {
             std::shared_ptr<Print> print = std::static_pointer_cast<Print>(rule);
             if (this->is_constant(print->expression)) {
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_PRINT_C }});
                 this->compile(print->expression, false);
             } else {
                 reg_t rx = this->compile(print->expression);
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_PRINT, rx }});
                 this->local.free_register(rx);
             }
@@ -199,10 +200,12 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             var->reg = rx;
             if (dec->initializer) {
                 if (this->is_constant(dec->initializer)) {
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_LOAD_C, rx }});
                     this->compile(dec->initializer, false);
                 } else this->compile(dec->initializer, true, &rx);
             } else {
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_LOAD_C, rx, this->add_constant({ dec->type }) }});
             }
             // Check if the variable is ever used.
@@ -215,14 +218,17 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             std::shared_ptr<Return> ret = std::static_pointer_cast<Return>(rule);
             if (ret->value) {
                 if (this->is_constant(ret->value)) {
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_PUSH_C }});
                     this->compile(ret->value, false);
                 } else {
                     reg_t res = this->compile(ret->value);
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_PUSH, res }});
                     this->local.free_register(res);
                 }
             }
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_RETURN }});
             break;
         }
@@ -234,6 +240,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         case RULE_IF: {
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             reg_t rx = this->compile(rif->condition);
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             // Save the jump index
             size_t jump_index = this->program->memory->code.size() - 2; // The 0 on the opcode above.
@@ -245,6 +252,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             this->blocks.pop_back();
             if (rif->else_branch.size() > 0) {
                 // Add a jump to the then branch to avoid going to else.
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_FJUMP, 0 }});
                 size_t then_jump = this->program->memory->code.size() - 1;
                 // Change the initial jump index to here.
@@ -265,6 +273,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Compile the condition.
             reg_t rx = this->compile(rwhile->condition);
             // Perform the jump if nessesary.
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             this->local.free_register(rx);
             // Get the jump index for further modification.
@@ -275,6 +284,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             for (const std::shared_ptr<Statement> &stmt : rwhile->body) this->compile(stmt);
             // Set the jump back up.
             size_t jb = this->program->memory->code.size() - initial_index;
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_BJUMP, jb }});
             // Modify the branch jump.
             this->program->memory->code[jump_index] = this->program->memory->code.size() - (jump_index - 1);
@@ -292,6 +302,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Loop variable.
             reg_t re = this->local.get_register(true);
             // Set the initial index.
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ static_cast<nint_t>(0) }) }});
             // Save the initial point.
             size_t initial_index = this->program->memory->code.size();
@@ -309,6 +320,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             }
             // Store the length of the iterator.
             reg_t r1 = this->local.get_register();
+            SET_SOURCE_LOCATION(rule);
             switch (rfor->type->type) {
                 case VALUE_STRING: { this->add_opcodes({{ OP_CAST_STRING_INT, r1, rc }}); break; }
                 case VALUE_LIST: { this->add_opcodes({{ OP_CAST_LIST_INT, r1, rc }}); break; }
@@ -317,18 +329,22 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             }
             // Add the loop condition.
             reg_t rx = this->local.get_register(); // Loop condition.
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_LT_INT, rx, ri, r1 }});
             this->local.free_register(r1);
             // Perform the jump if nessesary.
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             this->local.free_register(rx);
             // Get the jump index for further modification.
             size_t jump_index = this->program->memory->code.size() - 2;
             // Set the index variable if dictionary.
             if (string_index) {
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_DKEY, ris, rc, ri }});
             }
             // Set the loop variable/s.
+            SET_SOURCE_LOCATION(rule);
             switch (rfor->type->type) {
                 case VALUE_STRING: { this->add_opcodes({{ OP_SGET, re, rc, ri }}); break; }
                 case VALUE_LIST: { this->add_opcodes({{ OP_LGET, re, rc, ri }}); break; }
@@ -338,9 +354,11 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Compile the while body.
             for (const std::shared_ptr<Statement> &stmt : rfor->body) this->compile(stmt);
             // Increment the current index.
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_IINC, ri }});
             // Set the jump back up.
             size_t jb = this->program->memory->code.size() - initial_index;
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_BJUMP, jb }});
             // Modify the branch jump.
             // this->program->memory->code[jump_index] = (this->program->memory->code.size() - 1) - (jump_index + 1);
@@ -369,26 +387,38 @@ reg_t Compiler::compile(
     reg_t *object_reg,
     const bool delete_access
 ) {
-    SET_SOURCE_LOCATION(rule);
     reg_t result = 0;
     switch (rule->rule) {
         case RULE_INTEGER: {
-            if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            SET_SOURCE_LOCATION(rule);
+            if (load_constant) {
+                SET_SOURCE_LOCATION(rule);
+                this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            }
             this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Integer>(rule)->value }) }});
             break;
         }
         case RULE_FLOAT: {
-            if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            if (load_constant) {
+                SET_SOURCE_LOCATION(rule);
+                this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            }
             this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Float>(rule)->value }) }});
             break;
         }
         case RULE_STRING: {
-            if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            if (load_constant) {
+                SET_SOURCE_LOCATION(rule);
+                this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            }
             this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<String>(rule)->value }) }});
             break;
         }
         case RULE_BOOLEAN: {
-            if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            if (load_constant) {
+                SET_SOURCE_LOCATION(rule);
+                this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            }
             this->add_opcodes({{ this->add_constant({ std::static_pointer_cast<Boolean>(rule)->value }) }});
             break;
         }
@@ -396,7 +426,10 @@ reg_t Compiler::compile(
             std::shared_ptr<List> list = std::static_pointer_cast<List>(rule);
             if (this->is_constant(list)) {
                 // The list can be stored in the constant pool.
-                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+                if (load_constant) {
+                    SET_SOURCE_LOCATION(rule);
+                    this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+                }
                 Value v = Value(list->type);
                 this->constant_list(list, v);
                 this->add_opcodes({{ this->add_constant(v) }});
@@ -406,10 +439,12 @@ reg_t Compiler::compile(
                 this->add_opcodes({{ OP_LOAD_C, result, this->add_constant({ list->type }) }});
                 for (const std::shared_ptr<Expression> &e : list->value) {
                     if (this->is_constant(e)) {
+                        SET_SOURCE_LOCATION(rule);
                         this->add_opcodes({{ OP_LPUSH_C, result }});
                         this->compile(e, false);
                     } else {
                         reg_t ry = this->compile(e);
+                        SET_SOURCE_LOCATION(rule);
                         this->add_opcodes({{ OP_LPUSH, result, ry }});
                         this->local.free_register(ry);
                     }
@@ -421,21 +456,27 @@ reg_t Compiler::compile(
             std::shared_ptr<Dictionary> dict = std::static_pointer_cast<Dictionary>(rule);
             if (this->is_constant(dict)) {
                 // The list can be stored in the constant pool.
-                if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+                if (load_constant) {
+                    SET_SOURCE_LOCATION(rule);
+                    this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+                }
                 Value v = dict->type;
                 this->constant_dict(dict, v);
                 this->add_opcodes({{ this->add_constant(v) }});
             } else {
                 result = suggested_register ? *suggested_register : this->local.get_register();
                 // The list needs to be constructed from the groud up
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_LOAD_C, result, this->add_constant({ dict->type }) }});
                 for (const auto &[key, value] : dict->value) {
                     size_t key_reg = this->add_constant({ key });
                     if (this->is_constant(value)) {
+                        SET_SOURCE_LOCATION(rule);
                         this->add_opcodes({{ OP_DSET, result, key_reg }});
                         this->compile(value, false);
                     } else {
                         reg_t ry = this->compile(value);
+                        SET_SOURCE_LOCATION(rule);
                         this->add_opcodes({{ OP_DSET, result, key_reg, ry }});
                         this->local.free_register(ry);
                     }
@@ -445,7 +486,10 @@ reg_t Compiler::compile(
         }
         case RULE_OBJECT: {
             std::shared_ptr<Object> object = std::static_pointer_cast<Object>(rule);
-            if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            if (load_constant) {
+                SET_SOURCE_LOCATION(rule);
+                this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
+            }
             // Create the constant object.
             std::vector<std::string> props;
             for (const auto &[name, type] : object->c->block->variables) props.push_back(name);
@@ -461,8 +505,10 @@ reg_t Compiler::compile(
                         goto object_add_prop;
                     }
                 }
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_LOAD_C, val = this->local.get_register(), class_constant_pool[object->c][name] }});
                 object_add_prop:
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_SPROP, type.reg, result, val }});
                 this->local.free_register(val);
             }
@@ -476,6 +522,7 @@ reg_t Compiler::compile(
             std::shared_ptr<Cast> cast = std::static_pointer_cast<Cast>(rule);
             opcode_t base = OP_CAST_INT_FLOAT;
             reg_t rx = this->compile(cast->expression);
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ base + cast->cast_type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
             this->local.free_register(rx);
             break;
@@ -484,6 +531,7 @@ reg_t Compiler::compile(
             std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(rule);
             opcode_t base = OP_NEG_BOOL;
             reg_t rx = this->compile(unary->right);
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ base + unary->type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
             this->local.free_register(rx);
             break;
@@ -503,6 +551,7 @@ reg_t Compiler::compile(
             }
             // Otherwise get a new register.
             else result = this->local.get_register();
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ base + binary->type, result, ry, rz }});
             this->local.free_register(ry);
             this->local.free_register(rz);
@@ -514,9 +563,11 @@ reg_t Compiler::compile(
             if (is_global) {
                 // The variable is global, and needs to be loaded first.
                 result = suggested_register ? *suggested_register : this->local.get_register();
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_LOAD_G, result, variable->reg }});
             } else {
                 if (suggested_register) {
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_MOVE, *suggested_register, variable->reg }});
                 } else result = variable->reg;
             }
@@ -541,10 +592,12 @@ reg_t Compiler::compile(
                         const auto [variable, is_global] = this->get_variable(std::static_pointer_cast<Variable>(assign->target)->name);
                         if (is_global) {
                             // Assign it to it.
+                            SET_SOURCE_LOCATION(rule);
                             this->add_opcodes({{ OP_SET_G, target /* variable->reg */ , result }});
                             goto analyzer_assign_finished;
                         }
                     }
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_MOVE, target, result }});
                     analyzer_assign_finished:
                     this->local.free_register(target);
@@ -566,10 +619,12 @@ reg_t Compiler::compile(
             reg_t rz = this->compile(logical->right);
             switch (logical->op.type) {
                 case TOKEN_OR: {
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_OR, result, ry, rz }});
                     break;
                 }
                 case TOKEN_AND: {
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_AND, result, ry, rz }});
                     break;
                 }
@@ -588,6 +643,7 @@ reg_t Compiler::compile(
             if (call->is_method) {
                 reg_t objr;
                 target = this->compile(call->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_PUSH, objr }});
                 this->local.free_register(objr);
             } else {
@@ -596,18 +652,22 @@ reg_t Compiler::compile(
             // Push the function arguments.
             for (const std::shared_ptr<Expression> &arg : call->arguments) {
                 if (this->is_constant(arg)) {
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_PUSH_C }});
                     this->compile(arg, false);
                 } else {
                     reg_t rx = this->compile(arg);
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{ OP_PUSH, rx }});
                     this->local.free_register(rx);
                 }
             }
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_CALL, target }});
             this->local.free_register(target);
             if (call->has_return) {
                 // Pop the return value from the stack into the return register.
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_POP, result = suggested_register ? *suggested_register : this->local.get_register() }});
             }
             break;
@@ -623,6 +683,7 @@ reg_t Compiler::compile(
                 } else {
                     target = this->compile(access->target);
                 }
+                SET_SOURCE_LOCATION(rule);
                 switch (access->type) {
                     case ACCESS_STRING: {
                         this->add_opcodes({{ OP_SDELETE, target, index }});
@@ -640,6 +701,7 @@ reg_t Compiler::compile(
                 if (access->target->rule == RULE_PROPERTY) {
                     const std::shared_ptr<Property> &prop = std::static_pointer_cast<Property>(access->target);
                     // Re-assign the result to the prop.
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{
                         OP_SPROP, prop->c->block->get_variable(prop->name)->reg,
                         objr, target,
@@ -655,6 +717,7 @@ reg_t Compiler::compile(
                     target = this->compile(access->target);
                 }
                 result = this->compile(assignment_value);
+                SET_SOURCE_LOCATION(rule);
                 switch (access->type) {
                     case ACCESS_STRING: {
                         this->add_opcodes({{ OP_SSET, target, index, result }});
@@ -672,6 +735,7 @@ reg_t Compiler::compile(
                 if (access->target->rule == RULE_PROPERTY) {
                     const std::shared_ptr<Property> &prop = std::static_pointer_cast<Property>(access->target);
                     // Re-assign the result to the prop.
+                    SET_SOURCE_LOCATION(rule);
                     this->add_opcodes({{
                         OP_SPROP, prop->c->block->get_variable(prop->name)->reg,
                         objr, target,
@@ -680,6 +744,7 @@ reg_t Compiler::compile(
                 }
             } else {
                 target = this->compile(access->target);
+                SET_SOURCE_LOCATION(rule);
                 switch (access->type) {
                     case ACCESS_STRING: {
                         this->add_opcodes({{ OP_SGET, result = suggested_register ? *suggested_register : this->local.get_register(), target, index }});
@@ -705,6 +770,7 @@ reg_t Compiler::compile(
             if (slice->start) r1 = this->compile(slice->start);
             else {
                 r1 = this->local.get_register();
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_LOAD_C, r1, this->add_constant({ static_cast<nint_t>(0) }) }});
             }
             reg_t r2 = slice->end ? this->compile(slice->end) : 0;
@@ -712,16 +778,19 @@ reg_t Compiler::compile(
             if (slice->step) r3 = this->compile(slice->step);
             else {
                 r3 = this->local.get_register();
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{ OP_LOAD_C, r3, this->add_constant({ static_cast<nint_t>(1) }) }});
             }
             reg_t rx = this->compile(slice->target);
             if (slice->end) {
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{
                     slice->is_list ? OP_LSLICE : OP_SSLICE,
                     result = suggested_register ? *suggested_register : this->local.get_register(),
                     rx, r1, r2, r3
                 }});
             } else {
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{
                 slice->is_list ? OP_LSLICEE : OP_SSLICEE,
                 result = suggested_register ? *suggested_register : this->local.get_register(),
@@ -738,6 +807,7 @@ reg_t Compiler::compile(
             std::shared_ptr<Range> range = std::static_pointer_cast<Range>(rule);
             reg_t r1 = this->compile(range->start);
             reg_t r2 = this->compile(range->end);
+            SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{
                 range->inclusive ? OP_RANGEI : OP_RANGEE,
                 result = suggested_register ? *suggested_register : this->local.get_register(),
@@ -754,11 +824,13 @@ reg_t Compiler::compile(
             if (assignment_value) {
                 // The value needs to be compiled.
                 result = this->compile(assignment_value);
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{
                     OP_SPROP, prop->c->block->get_variable(prop->name)->reg,
                     ry, result,
                 }});
             } else {
+                SET_SOURCE_LOCATION(rule);
                 this->add_opcodes({{
                     OP_LPROP, result = suggested_register ? *suggested_register : this->local.get_register(),
                     ry, prop->c->block->get_variable(prop->name)->reg
@@ -920,6 +992,7 @@ Value Compiler::compile_function(const std::shared_ptr<Function> &f)
             // Assign the register to the parameter.
             var->reg = this->local.get_register(true);
             // Pop the parameter from the stack.
+            SET_SOURCE_LOCATION(fun);
             this->add_opcodes({{ OP_POP, var->reg }});
             // Check if the variable is ever used.
             if (!var->last_use) this->dead_variables.push_back(var->reg);

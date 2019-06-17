@@ -665,6 +665,7 @@ void VirtualMachine::interpret(const char *file, const std::vector<std::string> 
     // Compile the code.
     Compiler compiler = Compiler(this->program);
     reg_t main = compiler.compile(file);
+    if (logger->show_references) this->program->memory->show_refs();
     // Call the main function.
     const std::shared_ptr<nfun_t> &callee = GETV((this->program->main_frame.registers.get() + main)->value, std::shared_ptr<nfun_t>);
     // Push the argv of the main function.
@@ -693,8 +694,7 @@ std::shared_ptr<const std::string> VirtualMachine::current_file()
 {
     std::pair<size_t, std::shared_ptr<const std::string>> result = { 0, std::shared_ptr<const std::string>() };
     for (const auto &el : this->program->memory->files) {
-        if (!result.second) result = el;
-        else if (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
+        if ((el.first == 0 && !result.second) || el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
     }
     return result.second;
 }
@@ -703,8 +703,7 @@ line_t VirtualMachine::current_line()
 {
     std::pair<size_t, line_t> result = { 0, 0 };
     for (const auto &el : this->program->memory->lines) {
-        if (result.first == 0 && result.second == 0) result = el;
-        else if (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
+        if ((el.first == 0 && result.second == 0) || el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
     }
     return result.second;
 }
@@ -713,8 +712,7 @@ column_t VirtualMachine::current_column()
 {
     std::pair<size_t, column_t> result = { 0, 0 };
     for (const auto &el : this->program->memory->columns) {
-        if (result.first == 0 && result.second == 0) result = el;
-        else if (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
+        if ((el.first == 0 && result.second == 0) || el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
     }
     return result.second;
 }

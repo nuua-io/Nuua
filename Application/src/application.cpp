@@ -37,6 +37,8 @@ Application::Application(int argc, char *argv[])
             logger->show_tokens = true;
         } else if (this->argv.back() == "--opcodes") {
             logger->show_opcodes = true;
+        } else if (this->argv.back() == "--refs") {
+            logger->show_references = true;
         } else if (this->file_name == "") {
             this->file_name = std::string(argv[1]);
         }

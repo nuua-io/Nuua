@@ -128,7 +128,7 @@ void Logger::display_log(const uint16_t index, const bool red) const
             this->entities[index].line,
             this->entities[index].column
         );
-    }
+    } else printf("\n");
     print_msg(this->entities[index].msg, red);
     if (this->entities[index].line != 0 && this->entities[index].column != 0) {
         print_file_line(

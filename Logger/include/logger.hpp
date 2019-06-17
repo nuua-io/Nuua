@@ -45,12 +45,13 @@ class Logger
     // Displays a specific log entity.
     void display_log(const uint16_t index, const bool red) const;
     public:
+        // Stores the executable path.
+        std::string executable_path;
         // Stores some command line options.
         bool show_tokens = false;
         bool show_ast = false;
         bool show_opcodes = false;
-        // Stores the executable path.
-        std::string executable_path;
+        bool show_references = false;
         // Adds a new entity to the entity stack.
         void add_entity(const std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg);
         // Pops an entity from the entity stack.
