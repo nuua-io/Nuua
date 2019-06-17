@@ -462,7 +462,7 @@ std::shared_ptr<Statement> Parser::export_declaration()
         ADD_LOG("Can't export an export. Does that even make sense?.");
         exit(logger->crash());
     }
-    printf("CURRENT: %s\n", CURRENT().to_string().c_str());
+    // printf("CURRENT: %s\n", CURRENT().to_string().c_str());
     return NEW_NODE(Export, stmt);
 }
 

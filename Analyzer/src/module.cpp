@@ -822,7 +822,7 @@ bool Module::check_classes(const std::vector<std::string> &classes, const std::s
 {
     for (const std::string &c : classes) {
         // Check if that class is defined here.
-        printf("Checking class: %s\n", c.c_str());
+        // printf("Checking class: %s\n", c.c_str());
         if (!this->main_block->has_class(c)) {
             // The class is not defined in this module.
             ADD_LOG(fail_at, "The class '" + c.substr(c.rfind(':') + 1) + "' is an undeclared class type. Make sure to import all the necessary classes using 'use'.");
