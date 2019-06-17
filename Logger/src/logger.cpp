@@ -81,6 +81,7 @@ static void print_msg(const std::string &msg, bool red)
             ++current_char;
             current_col = 0;
         }
+        fflush(stdout);
         if (red) red_printf("%c", msg[current_char++]);
         else printf("%c", msg[current_char++]);
         ++current_col;
