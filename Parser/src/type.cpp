@@ -603,6 +603,7 @@ std::vector<std::string> Type::classes_used(const std::string &mod) const
             std::vector<std::string> r = this->inner_type->classes_used(mod);
             // Appends the results here.
             result.insert(result.end(), r.begin(), r.end());
+            break;
         }
         case VALUE_FUN: {
             // Return type.
@@ -615,6 +616,7 @@ std::vector<std::string> Type::classes_used(const std::string &mod) const
             }
             break;
         }
+        default: { /* No classes used by the type */ }
     }
     return result;
 }

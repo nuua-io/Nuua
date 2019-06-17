@@ -40,7 +40,7 @@ void VirtualMachine::run()
                 REGISTER(2)->type.copy_to(REGISTER(1)->type);
                 const nint_t &index = GETV(REGISTER(3)->value, nint_t);
                 const nstring_t &str = GETV(REGISTER(2)->value, nstring_t);
-                if (index > str.length() || index < 0) {
+                if (index < 0 || static_cast<size_t>(index) > str.length()) {
                     CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(str.length()) + "]");
                 }
                 REGISTER(1)->value = std::string(1, str[index]);
@@ -51,7 +51,7 @@ void VirtualMachine::run()
                 nstring_t &target = GETV(REGISTER(1)->value, nstring_t);
                 const nint_t &index = GETV(REGISTER(2)->value, nint_t);
                 const nstring_t &value = GETV(REGISTER(3)->value, nstring_t);
-                if (index > target.length() || index < 0) {
+                if (index < 0 || static_cast<size_t>(index) > target.length()) {
                     CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(target.length()) + "]");
                 }
                 target[index] = value[0];
@@ -78,7 +78,7 @@ void VirtualMachine::run()
                 REGISTER(2)->type.inner_type->copy_to(REGISTER(1)->type);
                 nint_t index = GETV(REGISTER(3)->value, nint_t);
                 const std::shared_ptr<nlist_t> &list = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>);
-                if (index > list->size() || index < 0) {
+                if (index < 0 || static_cast<size_t>(index) > list->size()) {
                     CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(list->size()) + "]");
                 }
                 (*list)[index].copy_to(REGISTER(1));
@@ -88,7 +88,7 @@ void VirtualMachine::run()
             case OP_LSET: {
                 const std::shared_ptr<nlist_t> &list = GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>);
                 const nint_t &index = GETV(REGISTER(2)->value, nint_t);
-                if (index > list->size() || index < 0) {
+                if (index < 0 || static_cast<size_t>(index) > list->size()) {
                     CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(list->size()) + "]");
                 }
                 REGISTER(3)->copy_to(&list->at(index));
@@ -694,7 +694,7 @@ std::shared_ptr<const std::string> VirtualMachine::current_file()
     std::pair<size_t, std::shared_ptr<const std::string>> result = { 0, std::shared_ptr<const std::string>() };
     for (const auto &el : this->program->memory->files) {
         if (!result.second) result = el;
-        else if (el.first > result.first && el.first <= PC - BASE_PC) result = el;
+        else if (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
     }
     return result.second;
 }
@@ -704,7 +704,7 @@ line_t VirtualMachine::current_line()
     std::pair<size_t, line_t> result = { 0, 0 };
     for (const auto &el : this->program->memory->lines) {
         if (result.first == 0 && result.second == 0) result = el;
-        else if (el.first > result.first && el.first <= PC - BASE_PC) result = el;
+        else if (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
     }
     return result.second;
 }
@@ -714,7 +714,7 @@ column_t VirtualMachine::current_column()
     std::pair<size_t, column_t> result = { 0, 0 };
     for (const auto &el : this->program->memory->columns) {
         if (result.first == 0 && result.second == 0) result = el;
-        else if (el.first > result.first && el.first <= PC - BASE_PC) result = el;
+        else if (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
     }
     return result.second;
 }

@@ -90,14 +90,14 @@ bool Value::same_as(const Value &value) const
             // Do they match in length?
             if (a->size() != b->size()) return false;
             // Does it have elements?
-            if (a->size() == 0) return true;
+            if (a->size() == 0) break;
             // Check each element.
             for (size_t i = 0; i < a->size(); i++) {
                 // Check if their inner element match at position i.
                 if (!(*a)[i].same_as((*b)[i])) return false;
             }
             // They are equal.
-            return true;
+            break;
         }
         case VALUE_DICT: {
             const std::shared_ptr<ndict_t> &a = GETV(this->value, std::shared_ptr<ndict_t>);
@@ -105,7 +105,7 @@ bool Value::same_as(const Value &value) const
             // Do they match in length?
             if (a->values.size() != b->values.size()) return false;
             // Does it have elements?
-            if (a->values.size() == 0) return true;
+            if (a->values.size() == 0) break;
             // Compare their keys and values.
             for (const auto &[k, e] : a->values) {
                 // Check if b have that key.
@@ -114,7 +114,7 @@ bool Value::same_as(const Value &value) const
                 if (!e.same_as(b->values[k])) return false;
             }
             // They are equal.
-            return true;
+            break;
         }
         case VALUE_FUN: { return GETV(this->value, std::shared_ptr<nfun_t>).get() == GETV(value.value, std::shared_ptr<nfun_t>).get(); }
         case VALUE_OBJECT: {
@@ -123,7 +123,7 @@ bool Value::same_as(const Value &value) const
             // Check the number of props.
             if (a->props.size() != b->props.size()) return false;
             // Are there any props at all?
-            if (a->props.size() == 0) return true;
+            if (a->props.size() == 0) break;
             // Check the props names and values.
             for (size_t i = 0; i < a->props.size(); i++) {
                 // Check for the prop name.
@@ -131,9 +131,14 @@ bool Value::same_as(const Value &value) const
                 // Check for the prop value.
                 if (!a->registers[i].same_as(b->registers[i])) return false;
             }
-            return true;
+            break;
+        }
+        case VALUE_NO_TYPE: {
+            logger->add_entity(std::shared_ptr<const std::string>(), 0, 0, "Invalid value.");
+            exit(logger->crash());
         }
     }
+    return true;
 }
 
 std::string Value::to_string() const
@@ -187,7 +192,9 @@ std::string Value::to_string() const
             r += "}";
             break;
         }
-        default: { break; }
+        case VALUE_NO_TYPE: {
+            r += "<no-value>";
+        }
     }
     return r;
 }

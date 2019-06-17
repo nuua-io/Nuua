@@ -14,7 +14,7 @@
 // This defines the basic application types
 // It includes all nessesary supported types.
 typedef enum : uint8_t {
-    APPLICATION_FILE, APPLICATION_STRING,
+    APPLICATION_FILE,
 } ApplicationType;
 
 // The application class handles the application logic
