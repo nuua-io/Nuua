@@ -289,7 +289,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             bool string_index = rfor->type->type == VALUE_DICT;
             // Current index.
             reg_t ri = this->local.get_register(true);
-            reg_t ris; // String variation for dictionaries.
+            reg_t ris = 0; // String variation for dictionaries.
             if (string_index) ris = this->local.get_register(true);
             // Loop variable.
             reg_t re = this->local.get_register(true);
