@@ -1,5 +1,6 @@
 #include "../include/module.hpp"
 #include "../../Logger/include/logger.hpp"
+#include <algorithm>
 
 #define NODE(rule) (std::static_pointer_cast<Node>(rule))
 #define ADD_LOG(rule, msg) (logger->add_entity(rule->file, rule->line, rule->column, msg))

@@ -29,7 +29,7 @@ endif ()
 if (CMAKE_COMPILER_IS_GNUCXX)
     set (CMAKE_CXX_FLAGS "-Wall -Wextra -pipe")
     set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=true")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -s -flto -frename-registers -fopenmp -D_GLIBCXX_PARALLEL -DDEBUG=false")
+    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -s -flto -frename-registers -fopenmp -DDEBUG=false")
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 # Set the output directories.
