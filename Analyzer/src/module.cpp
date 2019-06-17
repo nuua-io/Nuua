@@ -29,7 +29,7 @@ std::shared_ptr<Block> Module::analyze(std::shared_ptr<std::vector<std::shared_p
             exit(logger->crash());
         }
         // Check if the main function have the required argument of type [string]
-        if (var->type->parameters.size() != 1LL) {
+        if (var->type->parameters.size() != 1) {
             logger->add_entity(this->file, 0, 0, "The main function requires a single parameter of type '[string]'.");
             exit(logger->crash());
         }

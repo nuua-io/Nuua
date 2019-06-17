@@ -43,7 +43,7 @@ void Value::build_from_type(const Type *type)
 {
     type->copy_to(this->type);
     switch (type->type) {
-        case VALUE_INT: { this->value = 0LL; break; }
+        case VALUE_INT: { this->value = static_cast<nint_t>(0); break; }
         case VALUE_FLOAT: { this->value = 0.0; break; }
         case VALUE_BOOL: { this->value = false; break; }
         case VALUE_STRING: { this->value = std::string(); break; }

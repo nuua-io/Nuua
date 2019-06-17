@@ -72,7 +72,7 @@ class Value
         // The following are the basic constructors for the value. Each one respresents
         // a diferent value to be stored. They pretty much speak by themselves.
         // Integer (int) value.
-        Value() : type({ VALUE_INT }), value(0LL) {}
+        Value() : type({ VALUE_INT }), value(static_cast<nint_t>(0)) {}
         Value(const nint_t a)
             : type({ VALUE_INT }), value(a) {}
         // Float value (double in C/C++).

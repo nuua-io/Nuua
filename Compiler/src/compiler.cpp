@@ -294,7 +294,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Loop variable.
             reg_t re = this->local.get_register(true);
             // Set the initial index.
-            this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ 0LL }) }});
+            this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ static_cast<nint_t>(0) }) }});
             // Save the initial point.
             size_t initial_index = this->program->memory->code.size();
             // Setup the for condition.
@@ -703,14 +703,14 @@ reg_t Compiler::compile(
             if (slice->start) r1 = this->compile(slice->start);
             else {
                 r1 = this->local.get_register();
-                this->add_opcodes({{ OP_LOAD_C, r1, this->add_constant({ 0LL }) }});
+                this->add_opcodes({{ OP_LOAD_C, r1, this->add_constant({ static_cast<nint_t>(0) }) }});
             }
             reg_t r2 = slice->end ? this->compile(slice->end) : 0;
             reg_t r3;
             if (slice->step) r3 = this->compile(slice->step);
             else {
                 r3 = this->local.get_register();
-                this->add_opcodes({{ OP_LOAD_C, r3, this->add_constant({ 1LL }) }});
+                this->add_opcodes({{ OP_LOAD_C, r3, this->add_constant({ static_cast<nint_t>(1) }) }});
             }
             reg_t rx = this->compile(slice->target);
             if (slice->end) {
