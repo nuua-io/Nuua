@@ -53,8 +53,8 @@ static void print_file_line(const char *file, const line_t line, const column_t 
     char buffer[MAX_LINE_LENGTH];
     for (line_t current_line = 1; current_line <= line; current_line++) {
         error_read_again:
-        fgets(buffer, sizeof(buffer), source_file);
-        if (buffer == NULL || *buffer == EOF) {
+        char *ok = fgets(buffer, sizeof(buffer), source_file);
+        if (ok == NULL || buffer == NULL || *buffer == EOF) {
             printf("\n%*c<unknown>\n", 3, ' ');
             exit(EXIT_FAILURE);
         }
