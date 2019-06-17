@@ -206,7 +206,10 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 this->add_opcodes({{ OP_LOAD_C, rx, this->add_constant({ dec->type }) }});
             }
             // Check if the variable is ever used.
-            if (!var->last_use) this->dead_variables.push_back(var->reg);
+            if (!var->last_use) {
+                printf("Dead...\n");
+                this->dead_variables.push_back(var->reg);
+            }
             break;
         }
         case RULE_RETURN: {

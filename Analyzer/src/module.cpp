@@ -259,6 +259,7 @@ void Module::analyze_code(
             this->analyze_code(list->value[0]);
             Type type = Type(list->value[0], &this->blocks);
             for (size_t i = 1; i < list->value.size(); i++) {
+                this->analyze_code(list->value[i]);
                 if (!Type(list->value[i], &this->blocks).same_as(type)) {
                     ADD_LOG(list, "Lists must have the same type. This list can only contain '" + type.to_string() + "' based on the first element");
                     exit(logger->crash());
@@ -277,6 +278,7 @@ void Module::analyze_code(
             Type type = Type(dict->value[dict->key_order[0]], &this->blocks);
             for (size_t i = 1; i < dict->key_order.size(); i++) {
                 if (!Type(dict->value[dict->key_order[i]], &this->blocks).same_as(type)) {
+                    this->analyze_code(dict->value[dict->key_order[i]]);
                     ADD_LOG(dict->value[dict->key_order[i]], "Dictionaries must have the same type. This dictionary can only contain '" + type.to_string() + "' based on the first element");
                     exit(logger->crash());
                 }
