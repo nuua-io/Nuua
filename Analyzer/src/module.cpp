@@ -354,7 +354,7 @@ void Module::analyze_code(
         case RULE_VARIABLE: {
             // Check if the variable has been declared.
             std::shared_ptr<Variable> var = std::static_pointer_cast<Variable>(rule);
-            for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
+            for (size_t i = this->blocks.size() - 1;; i--) {
                 BlockVariableType *v = this->blocks[i]->get_variable(var->name);
                 if (v) {
                     // Variable found!
@@ -818,7 +818,7 @@ void Module::declare(const std::shared_ptr<Declaration> &dec, const std::shared_
     block->set_variable(dec->name, { dec->type, node ? node : NODE(dec) });
 }
 
-bool Module::check_classes(const std::vector<std::string> &classes, const std::shared_ptr<Node> &fail_at)
+void Module::check_classes(const std::vector<std::string> &classes, const std::shared_ptr<Node> &fail_at)
 {
     for (const std::string &c : classes) {
         // Check if that class is defined here.

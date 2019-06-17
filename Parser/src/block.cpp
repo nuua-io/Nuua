@@ -29,7 +29,7 @@ bool Block::has(const std::string &name)
 
 BlockVariableType *Block::get_single_variable(const std::string &name, const std::vector<std::shared_ptr<Block>> *blocks)
 {
-    for (size_t i = blocks->size() - 1; i >= 0; i--) {
+    for (size_t i = blocks->size() - 1;; i--) {
         BlockVariableType *res = (*blocks)[i]->get_variable(name);
         if (res) return res;
         else if (i == 0) return nullptr;
@@ -44,7 +44,7 @@ void Block::debug() const
     for (const auto &[name, variable] : this->variables) {
         printf(
             "G-%05zu -> %s%s %s\n",
-            variable.reg,
+            static_cast<size_t>(variable.reg),
             name.c_str(),
             variable.exported ? "*:" : ":",
             variable.type->to_string().c_str()

@@ -233,7 +233,6 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         }
         case RULE_IF: {
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
-            size_t initial_index = this->program->memory->code.size() - 1;
             reg_t rx = this->compile(rif->condition);
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             // Save the jump index
@@ -574,6 +573,10 @@ reg_t Compiler::compile(
                     this->add_opcodes({{ OP_AND, result, ry, rz }});
                     break;
                 }
+                default: {
+                    ADD_LOG(logical, "Invalid logical type to compile.");
+                    exit(logger->crash());
+                }
             }
             this->local.free_register(ry);
             this->local.free_register(rz);
@@ -775,7 +778,7 @@ reg_t Compiler::compile(
 
 std::pair<BlockVariableType *, bool> Compiler::get_variable(const std::string &name)
 {
-    for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
+    for (size_t i = this->blocks.size() - 1;; i--) {
         BlockVariableType *var = this->blocks[i]->get_variable(name);
         if (var) return { var, i == 0 };
         else if (i == 0) return { nullptr, false };
@@ -786,7 +789,7 @@ std::pair<BlockVariableType *, bool> Compiler::get_variable(const std::string &n
 
 BlockClassType *Compiler::get_class(const std::string &name)
 {
-    for (size_t i = this->blocks.size() - 1; i >= 0; i--) {
+    for (size_t i = this->blocks.size() - 1;; i--) {
         BlockClassType *c = this->blocks[i]->get_class(name);
         if (c) return c;
         else if (i == 0) return nullptr;
