@@ -68,6 +68,7 @@ static void print_file_line(const char *file, const line_t line, const column_t 
     while (buffer[offset] == '\t' || buffer[offset] == ' ') offset++;
     printf("\n%*c%s%*c", 3, ' ', buffer + offset, 3, ' ');
     for (column_t i = 1; i < column - offset; i++) printf(" ");
+    fflush(stdout);
     printf("^\n");
 }
 
