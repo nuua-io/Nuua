@@ -328,7 +328,7 @@ class Cast : public Expression
         std::shared_ptr<Expression> expression;
         std::shared_ptr<Type> type;
         CastType cast_type = (CastType) NULL;
-        Cast(NODE_PROPS, const std::shared_ptr<Expression> &e, std::shared_ptr<Type> &t)
+        Cast(NODE_PROPS, const std::shared_ptr<Expression> &e, const std::shared_ptr<Type> &t)
             : Expression({ RULE_CAST, file, line, column }), expression(std::move(e)), type(std::move(t)) {}
 };
 
@@ -378,7 +378,7 @@ class FunctionValue : public Expression
         std::shared_ptr<Type> return_type;
         std::vector<std::shared_ptr<Statement>> body;
         std::shared_ptr<Block> block;
-        FunctionValue(NODE_PROPS, const std::string &n, const std::vector<std::shared_ptr<Declaration>> &p, std::shared_ptr<Type> &rt, const std::vector<std::shared_ptr<Statement>> &b)
+        FunctionValue(NODE_PROPS, const std::string &n, const std::vector<std::shared_ptr<Declaration>> &p, const std::shared_ptr<Type> &rt, const std::vector<std::shared_ptr<Statement>> &b)
             : Expression({ RULE_FUNCTION, file, line, column }), name(n), parameters(p), return_type(std::move(rt)), body(b) {}
 };
 
@@ -428,7 +428,7 @@ class Declaration : public Statement
         std::string name;
         std::shared_ptr<Type> type;
         std::shared_ptr<Expression> initializer;
-        Declaration(NODE_PROPS, const std::string &n, std::shared_ptr<Type> &t, const std::shared_ptr<Expression> &i)
+        Declaration(NODE_PROPS, const std::string &n, const std::shared_ptr<Type> &t, const std::shared_ptr<Expression> &i)
             : Statement({ RULE_DECLARATION, file, line, column }), name(n), type(std::move(t)), initializer(std::move(i)) {};
 };
 
