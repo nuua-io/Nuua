@@ -28,8 +28,8 @@ endif ()
 # Set the C++ general flags and flags for debug and release.
 if (CMAKE_COMPILER_IS_GNUCXX)
     set (CMAKE_CXX_FLAGS "-Wall -Wextra -pipe")
-    set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG=true")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -s -flto -frename-registers -fopenmp -DDEBUG=false")
+    set (CMAKE_CXX_FLAGS_DEBUG "-g")
+    set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -s -flto")
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 # Set the output directories.

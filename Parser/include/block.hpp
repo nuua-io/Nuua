@@ -22,14 +22,14 @@ class BlockVariableType
         std::shared_ptr<Type> type;
         // Stores the AST node where this variable is.
         std::shared_ptr<Node> node;
+        // Represents the last use of the variable (Variable life)
+        std::shared_ptr<Node> last_use;
         // Represents the registers where it's stored.
         reg_t reg = 0;
         // Determines in the variable is exported. (only applies to TLDs).
         bool exported = false;
         // Determines in the variable is a method. (only applies to functions).
         bool is_method = false;
-        // Represents the last use of the variable (Variable life)
-        std::shared_ptr<Node> last_use;
         BlockVariableType() {};
         BlockVariableType(
             const std::shared_ptr<Type> &type,
@@ -44,9 +44,10 @@ class BlockClassType
 {
     public:
         std::shared_ptr<Block> block;
-        bool exported = false;
         // Stores the AST node where this variable is.
         std::shared_ptr<Node> node;
+        // Determines if the class is exported.
+        bool exported = false;
         BlockClassType() {}
         BlockClassType(
             const std::shared_ptr<Block> &block,
