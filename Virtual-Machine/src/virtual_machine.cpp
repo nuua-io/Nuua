@@ -664,7 +664,7 @@ void VirtualMachine::interpret(const char *file, const std::vector<std::string> 
 {
     // Compile the code.
     Compiler compiler = Compiler(this->program);
-    register_t main = compiler.compile(file);
+    reg_t main = compiler.compile(file);
     // Call the main function.
     const std::shared_ptr<nfun_t> &callee = GETV((this->program->main_frame.registers.get() + main)->value, std::shared_ptr<nfun_t>);
     // Push the argv of the main function.

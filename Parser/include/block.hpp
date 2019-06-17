@@ -6,7 +6,7 @@
 #include <utility>
 #include <memory>
 
-typedef uint32_t register_t;
+typedef uint32_t reg_t;
 
 // Forward declarations
 class Node;
@@ -23,7 +23,7 @@ class BlockVariableType
         // Stores the AST node where this variable is.
         std::shared_ptr<Node> node;
         // Represents the registers where it's stored.
-        register_t reg = 0;
+        reg_t reg = 0;
         // Determines in the variable is exported. (only applies to TLDs).
         bool exported = false;
         // Determines in the variable is a method. (only applies to functions).

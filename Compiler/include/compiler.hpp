@@ -25,7 +25,7 @@ class Compiler
     // Sotres the current local information (it resets automatically).
     FrameInfo local;
     // Dead variables list (variables that can be freed on the next statement).
-    std::vector<register_t> dead_variables;
+    std::vector<reg_t> dead_variables;
     // Compiles a module.
     void compile_module(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block);
     // Registers the top level declarations by assigning a register to them.
@@ -38,17 +38,17 @@ class Compiler
     // If const_opcode is true and the expression is a constant expression, it will move it
     // to a new register. Otherwise, it will just add the constant and the constant index.
     // suggested_register will use that register as the result.
-    register_t compile(
+    reg_t compile(
         // The expression to compile
         const std::shared_ptr<Expression> &rule,
         // If the load constant opcode shall be included
         const bool load_constant = true,
         // If a register is suggested as the output instead of a new one.
-        const register_t *suggested_register = nullptr,
+        const reg_t *suggested_register = nullptr,
         // If the inner expresion needs to assign rather than get the value.
         const std::shared_ptr<Expression> &assignment_value = std::shared_ptr<Expression>(),
         // It stores the object of the property in case is needed.
-        register_t *object_reg = nullptr,
+        reg_t *object_reg = nullptr,
         // Determines if the access must be deleted
         const bool delete_access = false
     );
@@ -81,7 +81,7 @@ class Compiler
     BlockClassType *get_class(const std::string &name);
     public:
         // Compile an input source and returns the main global register.
-        register_t compile(const char *file);
+        reg_t compile(const char *file);
         Compiler(const std::shared_ptr<Program> &program)
             : program(program) { }
 };

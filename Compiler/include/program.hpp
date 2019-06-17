@@ -46,19 +46,19 @@ class Frame
 class FrameInfo
 {
     // Stores the registers that are free to use again.
-    std::vector<register_t> free_registers;
+    std::vector<reg_t> free_registers;
     // Stores the registers that are protected to get free unless forçed.
-    std::vector<register_t> protected_registers;
+    std::vector<reg_t> protected_registers;
     public:
         // Stores the next register to give in case no free ones are available.
-        register_t current_register = 0;
+        reg_t current_register = 0;
         // Method to return an available register.
         // It will try to get it from the free_registers
         // otherwise it will return a new register and
         // increment current_register by 1
-        register_t get_register(bool protect = false);
+        reg_t get_register(bool protect = false);
         // Used to free a register.
-        void free_register(register_t reg, bool force = false);
+        void free_register(reg_t reg, bool force = false);
         // Resets the frame info.
         void reset();
 };

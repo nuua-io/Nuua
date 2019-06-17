@@ -237,10 +237,10 @@ void Frame::setup(registers_size_t size, opcode_t *return_address)
     this->return_address = return_address;
 }
 
-register_t FrameInfo::get_register(bool protect)
+reg_t FrameInfo::get_register(bool protect)
 {
     // Sotres the resulting register.
-    register_t reg;
+    reg_t reg;
     // Check if there are free registers to use before
     // allocating a new one.
     if (this->free_registers.size() == 0) {
@@ -258,7 +258,7 @@ register_t FrameInfo::get_register(bool protect)
     return reg;
 }
 
-void FrameInfo::free_register(register_t reg, bool force)
+void FrameInfo::free_register(reg_t reg, bool force)
 {
     // Check if it's a protected register
     auto el = std::find(this->protected_registers.begin(), this->protected_registers.end(), reg);

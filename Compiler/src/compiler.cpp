@@ -27,7 +27,7 @@ static std::unordered_map<
     std::unordered_map<std::string, size_t>
 > class_constant_pool;
 
-register_t Compiler::compile(const char *file)
+reg_t Compiler::compile(const char *file)
 {
     Analyzer analyzer = Analyzer(file);
     std::shared_ptr<std::vector<std::shared_ptr<Statement>>>code = std::make_shared<std::vector<std::shared_ptr<Statement>>>();
@@ -180,7 +180,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 this->add_opcodes({{ OP_PRINT_C }});
                 this->compile(print->expression, false);
             } else {
-                register_t rx = this->compile(print->expression);
+                reg_t rx = this->compile(print->expression);
                 this->add_opcodes({{ OP_PRINT, rx }});
                 this->local.free_register(rx);
             }
@@ -193,7 +193,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         case RULE_DECLARATION: {
             std::shared_ptr<Declaration> dec = std::static_pointer_cast<Declaration>(rule);
             // Get a register from the register allocator.
-            register_t rx = this->local.get_register(true);
+            reg_t rx = this->local.get_register(true);
             BlockVariableType *var = this->get_variable(dec->name).first;
             // Set the variable register in the current block.
             var->reg = rx;
@@ -219,7 +219,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                     this->add_opcodes({{ OP_PUSH_C }});
                     this->compile(ret->value, false);
                 } else {
-                    register_t res = this->compile(ret->value);
+                    reg_t res = this->compile(ret->value);
                     this->add_opcodes({{ OP_PUSH, res }});
                     this->local.free_register(res);
                 }
@@ -235,7 +235,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         case RULE_IF: {
             std::shared_ptr<If> rif = std::static_pointer_cast<If>(rule);
             size_t initial_index = this->program->memory->code.size() - 1;
-            register_t rx = this->compile(rif->condition);
+            reg_t rx = this->compile(rif->condition);
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             // Save the jump index
             size_t jump_index = this->program->memory->code.size() - 2; // The 0 on the opcode above.
@@ -265,7 +265,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Save the initial point.
             size_t initial_index = this->program->memory->code.size();
             // Compile the condition.
-            register_t rx = this->compile(rwhile->condition);
+            reg_t rx = this->compile(rwhile->condition);
             // Perform the jump if nessesary.
             this->add_opcodes({{ OP_CFNJUMP, 0, rx }});
             this->local.free_register(rx);
@@ -288,17 +288,17 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             std::shared_ptr<For> rfor = std::static_pointer_cast<For>(rule);
             bool string_index = rfor->type->type == VALUE_DICT;
             // Current index.
-            register_t ri = this->local.get_register(true);
-            register_t ris; // String variation for dictionaries.
+            reg_t ri = this->local.get_register(true);
+            reg_t ris; // String variation for dictionaries.
             if (string_index) ris = this->local.get_register(true);
             // Loop variable.
-            register_t re = this->local.get_register(true);
+            reg_t re = this->local.get_register(true);
             // Set the initial index.
             this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ 0LL }) }});
             // Save the initial point.
             size_t initial_index = this->program->memory->code.size();
             // Setup the for condition.
-            register_t rc = this->compile(rfor->iterator);
+            reg_t rc = this->compile(rfor->iterator);
             // Set the for block.
             this->blocks.push_back(rfor->block);
             // Set the used registers in the block.
@@ -310,7 +310,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 this->get_variable(rfor->index).first->reg = ri;
             }
             // Store the length of the iterator.
-            register_t r1 = this->local.get_register();
+            reg_t r1 = this->local.get_register();
             switch (rfor->type->type) {
                 case VALUE_STRING: { this->add_opcodes({{ OP_CAST_STRING_INT, r1, rc }}); break; }
                 case VALUE_LIST: { this->add_opcodes({{ OP_CAST_LIST_INT, r1, rc }}); break; }
@@ -318,7 +318,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
                 default: { ADD_LOG(rfor->iterator, "Invalid iterator type to compile: '" + rfor->type->to_string() + "'"); exit(logger->crash()); }
             }
             // Add the loop condition.
-            register_t rx = this->local.get_register(); // Loop condition.
+            reg_t rx = this->local.get_register(); // Loop condition.
             this->add_opcodes({{ OP_LT_INT, rx, ri, r1 }});
             this->local.free_register(r1);
             // Perform the jump if nessesary.
@@ -363,16 +363,16 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
     }
 }
 
-register_t Compiler::compile(
+reg_t Compiler::compile(
     const std::shared_ptr<Expression> &rule,
     const bool load_constant,
-    const register_t *suggested_register,
+    const reg_t *suggested_register,
     const std::shared_ptr<Expression> &assignment_value,
-    register_t *object_reg,
+    reg_t *object_reg,
     const bool delete_access
 ) {
     SET_SOURCE_LOCATION(rule);
-    register_t result = 0;
+    reg_t result = 0;
     switch (rule->rule) {
         case RULE_INTEGER: {
             if (load_constant) this->add_opcodes({{ OP_LOAD_C, result = suggested_register ? *suggested_register : this->local.get_register() }});
@@ -411,7 +411,7 @@ register_t Compiler::compile(
                         this->add_opcodes({{ OP_LPUSH_C, result }});
                         this->compile(e, false);
                     } else {
-                        register_t ry = this->compile(e);
+                        reg_t ry = this->compile(e);
                         this->add_opcodes({{ OP_LPUSH, result, ry }});
                         this->local.free_register(ry);
                     }
@@ -437,7 +437,7 @@ register_t Compiler::compile(
                         this->add_opcodes({{ OP_DSET, result, key_reg }});
                         this->compile(value, false);
                     } else {
-                        register_t ry = this->compile(value);
+                        reg_t ry = this->compile(value);
                         this->add_opcodes({{ OP_DSET, result, key_reg, ry }});
                         this->local.free_register(ry);
                     }
@@ -455,7 +455,7 @@ register_t Compiler::compile(
             this->add_opcodes({{ objr }});
             // Assign each register its corresponding values.
             for (const auto &[name, type] : object->c->block->variables) {
-                register_t val;
+                reg_t val;
                 // Check if the value is part of the init arguments.
                 for (const auto &[n, e] : object->arguments) {
                     if (n == name) {
@@ -477,7 +477,7 @@ register_t Compiler::compile(
         case RULE_CAST: {
             std::shared_ptr<Cast> cast = std::static_pointer_cast<Cast>(rule);
             opcode_t base = OP_CAST_INT_FLOAT;
-            register_t rx = this->compile(cast->expression);
+            reg_t rx = this->compile(cast->expression);
             this->add_opcodes({{ base + cast->cast_type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
             this->local.free_register(rx);
             break;
@@ -485,7 +485,7 @@ register_t Compiler::compile(
         case RULE_UNARY: {
             std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(rule);
             opcode_t base = OP_NEG_BOOL;
-            register_t rx = this->compile(unary->right);
+            reg_t rx = this->compile(unary->right);
             this->add_opcodes({{ base + unary->type, result = suggested_register ? *suggested_register : this->local.get_register(), rx }});
             this->local.free_register(rx);
             break;
@@ -493,8 +493,8 @@ register_t Compiler::compile(
         case RULE_BINARY: {
             std::shared_ptr<Binary> binary = std::static_pointer_cast<Binary>(rule);
             opcode_t base = OP_ADD_INT;
-            register_t ry = this->compile(binary->left);
-            register_t rz = this->compile(binary->right);
+            reg_t ry = this->compile(binary->left);
+            reg_t rz = this->compile(binary->right);
             // Use a suggested register if needed.
             if (suggested_register) result = *suggested_register;
             // Check if there are some dead variables to use.
@@ -536,7 +536,7 @@ register_t Compiler::compile(
                 case ASSIGN_VALUE: {
                     result = this->compile(assign->value);
                     // Compile the target.
-                    register_t target = this->compile(assign->target);
+                    reg_t target = this->compile(assign->target);
                     // Check if it's a global variable.
                     if (assign->target->rule == RULE_VARIABLE) {
                         // Check if the assignment is to a global variable
@@ -564,8 +564,8 @@ register_t Compiler::compile(
         case RULE_LOGICAL: {
             std::shared_ptr<Logical> logical = std::static_pointer_cast<Logical>(rule);
             result = suggested_register ? *suggested_register : this->local.get_register();
-            register_t ry = this->compile(logical->left);
-            register_t rz = this->compile(logical->right);
+            reg_t ry = this->compile(logical->left);
+            reg_t rz = this->compile(logical->right);
             switch (logical->op.type) {
                 case TOKEN_OR: {
                     this->add_opcodes({{ OP_OR, result, ry, rz }});
@@ -582,9 +582,9 @@ register_t Compiler::compile(
         }
         case RULE_CALL: {
             std::shared_ptr<Call> call = std::static_pointer_cast<Call>(rule);
-            register_t target;
+            reg_t target;
             if (call->is_method) {
-                register_t objr;
+                reg_t objr;
                 target = this->compile(call->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
                 this->add_opcodes({{ OP_PUSH, objr }});
                 this->local.free_register(objr);
@@ -597,7 +597,7 @@ register_t Compiler::compile(
                     this->add_opcodes({{ OP_PUSH_C }});
                     this->compile(arg, false);
                 } else {
-                    register_t rx = this->compile(arg);
+                    reg_t rx = this->compile(arg);
                     this->add_opcodes({{ OP_PUSH, rx }});
                     this->local.free_register(rx);
                 }
@@ -612,10 +612,10 @@ register_t Compiler::compile(
         }
         case RULE_ACCESS: {
             std::shared_ptr<Access> access = std::static_pointer_cast<Access>(rule);
-            register_t index = this->compile(access->index);
-            register_t target;
+            reg_t index = this->compile(access->index);
+            reg_t target;
             if (delete_access) {
-                register_t objr;
+                reg_t objr;
                 if (access->target->rule == RULE_PROPERTY) {
                     target = this->compile(access->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
                 } else {
@@ -646,7 +646,7 @@ register_t Compiler::compile(
                 }
             } else if (assignment_value) {
                 // The value needs to be compiled.
-                register_t objr;
+                reg_t objr;
                 if (access->target->rule == RULE_PROPERTY) {
                     target = this->compile(access->target, true, nullptr, std::shared_ptr<Expression>(), &objr);
                 } else {
@@ -699,20 +699,20 @@ register_t Compiler::compile(
         }
         case RULE_SLICE: {
             std::shared_ptr<Slice> slice = std::static_pointer_cast<Slice>(rule);
-            register_t r1;
+            reg_t r1;
             if (slice->start) r1 = this->compile(slice->start);
             else {
                 r1 = this->local.get_register();
                 this->add_opcodes({{ OP_LOAD_C, r1, this->add_constant({ 0LL }) }});
             }
-            register_t r2 = slice->end ? this->compile(slice->end) : 0;
-            register_t r3;
+            reg_t r2 = slice->end ? this->compile(slice->end) : 0;
+            reg_t r3;
             if (slice->step) r3 = this->compile(slice->step);
             else {
                 r3 = this->local.get_register();
                 this->add_opcodes({{ OP_LOAD_C, r3, this->add_constant({ 1LL }) }});
             }
-            register_t rx = this->compile(slice->target);
+            reg_t rx = this->compile(slice->target);
             if (slice->end) {
                 this->add_opcodes({{
                     slice->is_list ? OP_LSLICE : OP_SSLICE,
@@ -734,8 +734,8 @@ register_t Compiler::compile(
         }
         case RULE_RANGE: {
             std::shared_ptr<Range> range = std::static_pointer_cast<Range>(rule);
-            register_t r1 = this->compile(range->start);
-            register_t r2 = this->compile(range->end);
+            reg_t r1 = this->compile(range->start);
+            reg_t r2 = this->compile(range->end);
             this->add_opcodes({{
                 range->inclusive ? OP_RANGEI : OP_RANGEE,
                 result = suggested_register ? *suggested_register : this->local.get_register(),
@@ -748,7 +748,7 @@ register_t Compiler::compile(
         case RULE_PROPERTY: {
             std::shared_ptr<Property> prop = std::static_pointer_cast<Property>(rule);
             // Compile the object.
-            register_t ry = this->compile(prop->object);
+            reg_t ry = this->compile(prop->object);
             if (assignment_value) {
                 // The value needs to be compiled.
                 result = this->compile(assignment_value);
