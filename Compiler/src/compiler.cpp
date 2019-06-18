@@ -92,6 +92,7 @@ void Compiler::compile_module(const std::shared_ptr<std::vector<std::shared_ptr<
         }
     }
     code->clear();
+    if (logger->tld_blocks) this->blocks.back()->debug();
     this->blocks.pop_back();
     for (const std::shared_ptr<Use> &use : delay_usages) {
         // Only compile if needed.
@@ -164,13 +165,10 @@ void Compiler::register_tld(const std::shared_ptr<std::vector<std::shared_ptr<St
 void Compiler::compile(const std::shared_ptr<Statement> &rule)
 {
     // Check if the local registers were reset.
-    if (this->local.current_register == 0 && this->dead_variables.size() > 0) {
-        this->dead_variables.clear();
-    }
-    // Free the registers of the dead variables.
-    while (this->dead_variables.size() > 0) {
-        this->local.free_register(this->dead_variables.back(), true);
-        this->dead_variables.pop_back();
+    if (logger->linear_scan) {
+        if (this->local.current_register == 0 && this->dead_variables.size() > 0) {
+            this->dead_variables.clear();
+        }
     }
     switch (rule->rule) {
         case RULE_PRINT: {
@@ -210,7 +208,7 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             }
             // Check if the variable is ever used.
             if (!var->last_use) {
-                this->dead_variables.push_back(var->reg);
+                if (logger->linear_scan) this->dead_variables.push_back(var->reg);
             }
             break;
         }
@@ -375,6 +373,13 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
         default: {
             ADD_LOG(rule, "Compilation error: Invalid statement to compile");
             exit(logger->crash());
+        }
+    }
+    if (logger->linear_scan) {
+        // Free the registers of the dead variables.
+        while (this->dead_variables.size() > 0) {
+            this->local.free_register(this->dead_variables.back(), true);
+            this->dead_variables.pop_back();
         }
     }
 }
@@ -546,7 +551,7 @@ reg_t Compiler::compile(
             // Use a suggested register if needed.
             if (suggested_register) result = *suggested_register;
             // Check if there are some dead variables to use.
-            else if (this->dead_variables.size() > 0) {
+            else if (logger->linear_scan && this->dead_variables.size() > 0) {
                 this->local.free_register(this->dead_variables.back(), true);
                 this->dead_variables.pop_back();
                 result = this->local.get_register();
@@ -576,7 +581,7 @@ reg_t Compiler::compile(
             // Check if the variable is last used.
             if (variable->last_use.get() == std::static_pointer_cast<Node>(rule).get()) {
                 // This is the last time the variable is needed.
-                this->dead_variables.push_back(variable->reg);
+                if (logger->linear_scan) this->dead_variables.push_back(variable->reg);
             }
             break;
         }
@@ -997,7 +1002,9 @@ Value Compiler::compile_function(const std::shared_ptr<Function> &f)
             SET_SOURCE_LOCATION(fun);
             this->add_opcodes({{ OP_POP, var->reg }});
             // Check if the variable is ever used.
-            if (!var->last_use) this->dead_variables.push_back(var->reg);
+            if (!var->last_use) {
+                if (logger->linear_scan) this->dead_variables.push_back(var->reg);
+            }
             if (i == 0) break; // Don't change this.
         }
     }

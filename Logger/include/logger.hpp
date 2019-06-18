@@ -52,6 +52,8 @@ class Logger
         bool show_ast = false;
         bool show_opcodes = false;
         bool show_references = false;
+        bool linear_scan = false;
+        bool tld_blocks = false;
         // Adds a new entity to the entity stack.
         void add_entity(const std::shared_ptr<const std::string> &file, const line_t line, const column_t column, const std::string &msg);
         // Pops an entity from the entity stack.

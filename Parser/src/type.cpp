@@ -607,8 +607,10 @@ std::vector<std::string> Type::classes_used(const std::string &mod) const
         }
         case VALUE_FUN: {
             // Return type.
-            std::vector<std::string> r = this->inner_type->classes_used(mod);
-            result.insert(result.end(), r.begin(), r.end());
+            if (this->inner_type) {
+                std::vector<std::string> r = this->inner_type->classes_used(mod);
+                result.insert(result.end(), r.begin(), r.end());
+            }
             // Parameters.
             for (const std::shared_ptr<Type> &p : this->parameters) {
                 std::vector<std::string> r2 = p->classes_used(mod);

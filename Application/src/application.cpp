@@ -39,6 +39,10 @@ Application::Application(int argc, char *argv[])
             logger->show_opcodes = true;
         } else if (this->argv.back() == "--refs") {
             logger->show_references = true;
+        } else if (this->argv.back() == "--linear-scan") {
+            logger->linear_scan = true;
+        } else if (this->argv.back() == "--tld") {
+            logger->tld_blocks = true;
         } else if (this->file_name == "") {
             this->file_name = std::string(argv[1]);
         }

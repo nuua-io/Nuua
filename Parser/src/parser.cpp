@@ -691,8 +691,6 @@ top_level_declaration -> use_declaration "\n"
 std::shared_ptr<Statement> Parser::top_level_declaration(const bool expect_new_line)
 {
     std::shared_ptr<Statement> result;
-    // Remove blank lines
-    while (this->match(TOKEN_NEW_LINE));
 
     // Save the current line / column.
     line_t line = LINE();
@@ -715,7 +713,8 @@ std::shared_ptr<Statement> Parser::top_level_declaration(const bool expect_new_l
         std::static_pointer_cast<Function>(result)->value->line = line;
         std::static_pointer_cast<Function>(result)->value->column = column;
     } else {
-        ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_string() + "'");
+        //printf("CURRENT: %zu\n", CURRENT().);
+        ADD_LOG("Unknown top level declaration. Expected 'use', 'export', 'class' or 'fun'. But got '" + CURRENT().to_type_string() + "'");
         exit(logger->crash());
     }
     if (expect_new_line) EXPECT_NEW_LINE();
@@ -809,6 +808,10 @@ std::vector<std::shared_ptr<Statement>> Parser::body()
     while (!IS_AT_END()) {
         // Remove blank lines.
         while (this->match(TOKEN_NEW_LINE));
+        if (IS_AT_END()) {
+            ADD_LOG("Unterminated body. Must use '}' to terminate the body.");
+            exit(logger->crash());
+        }
         // Check if the body ended.
         if (CHECK(TOKEN_RIGHT_BRACE)) break;
         // Push a new statement into the body.
@@ -890,7 +893,13 @@ void Parser::parse(std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &cod
     lexer.scan(tokens);
     if (logger->show_tokens) Token::debug_tokens(*tokens);
     this->current = &tokens->front();
-    while (!IS_AT_END()) code->push_back(std::move(this->top_level_declaration()));
+    while (!IS_AT_END()) {
+        // Remove blank lines
+        while (this->match(TOKEN_NEW_LINE));
+        if (IS_AT_END()) break;
+        // Add the TLD.
+        code->push_back(std::move(this->top_level_declaration()));
+    }
     // Check the code size to avoid empty files.
     if (code->size() == 0) {
         logger->add_entity(this->file, 0, 0, "Empty file detected, you might need to check the file or make sure it's not empty.");

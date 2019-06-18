@@ -26,6 +26,8 @@ class Compiler
     FrameInfo local;
     // Dead variables list (variables that can be freed on the next statement).
     std::vector<reg_t> dead_variables;
+    // protected dead variables list (variables that can't be freed on the next statement).
+    std::vector<reg_t> protected_dead_variables;
     // Compiles a module.
     void compile_module(const std::shared_ptr<std::vector<std::shared_ptr<Statement>>> &code, const std::shared_ptr<Block> &block);
     // Registers the top level declarations by assigning a register to them.
