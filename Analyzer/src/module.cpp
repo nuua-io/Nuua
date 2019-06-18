@@ -297,17 +297,23 @@ void Module::analyze_code(
             const std::shared_ptr<Block> &block = ct->block;
             // Check the arguments to initialize the class.
             for (const auto &[key, arg] : object->arguments) {
+                // Check if it exist in the class.
                 BlockVariableType *var;
                 if (!(var = block->get_variable(key))) {
-                    ADD_LOG(arg, "The class '" + object->name + "' does not have a '" + key + "' field.");
+                    ADD_LOG(arg, "The class '" + object->name + "' does not have a '" + key + "' property.");
                     exit(logger->crash());
                 }
                 // Analyze the argument.
                 this->analyze_code(arg);
+                // Check if it's a method, and therefore can't assign to.
+                if (var->is_method) {
+                    ADD_LOG(arg, "The property '" + key + "' in the class '" + object->name + "' can't be initialized because it's a class method.");
+                    exit(logger->crash());
+                }
                 // Check if the types match.
-                Type t = Type(arg, &this->blocks);
+                std::shared_ptr<Type> t = var->type;
                 if (!var->type->same_as(t)) {
-                    ADD_LOG(arg, "Type missmatch. Expected '" + var->type->to_string() + "' but got '" + t.to_string() + "'");
+                    ADD_LOG(arg, "Type missmatch. Expected '" + var->type->to_string() + "' but got '" + t->to_string() + "'");
                     exit(logger->crash());
                 }
             }
