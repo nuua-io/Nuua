@@ -8,6 +8,7 @@ void Memory::dump()
         opcode_t opcode = this->code[i];
         // Print the opcode
         print_opcode(opcode);
+        // printf("Opcode: %d\n, size: %d\n", opcode, opcode_operands(opcode)->size());
         // Print the opcode operands
         for (const OpCodeType &ot : *opcode_operands(opcode)) {
             switch (ot) {

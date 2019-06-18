@@ -541,6 +541,8 @@ reg_t Compiler::compile(
             opcode_t base = OP_ADD_INT;
             reg_t ry = this->compile(binary->left);
             reg_t rz = this->compile(binary->right);
+            this->local.free_register(ry);
+            this->local.free_register(rz);
             // Use a suggested register if needed.
             if (suggested_register) result = *suggested_register;
             // Check if there are some dead variables to use.
@@ -553,8 +555,8 @@ reg_t Compiler::compile(
             else result = this->local.get_register();
             SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ base + binary->type, result, ry, rz }});
-            this->local.free_register(ry);
-            this->local.free_register(rz);
+            //this->local.free_register(ry);
+            //this->local.free_register(rz);
             break;
         }
         case RULE_VARIABLE: {

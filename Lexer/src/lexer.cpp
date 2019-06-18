@@ -84,6 +84,9 @@ bool Lexer::match(const char c)
 
 TokenType Lexer::is_string(bool simple)
 {
+    std::shared_ptr<const std::string> f = this->file;
+    line_t l = this->line;
+    column_t c = this->column;
     while (PEEK() != (simple ? '\'' : '"') && !IS_AT_END()) {
         if (PEEK() == '\n') this->line++;
         else if (PEEK() == '\\') { NEXT(); }
@@ -91,7 +94,7 @@ TokenType Lexer::is_string(bool simple)
     }
 
     if (IS_AT_END()) {
-        ADD_LOG("Unterminated string literal");
+        logger->add_entity(f, l, c, "Unterminated string literal");
         exit(logger->crash());
     }
 

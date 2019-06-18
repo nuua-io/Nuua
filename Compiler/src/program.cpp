@@ -14,7 +14,7 @@
 
 static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
    // Others
-    { "EXIT", {{ }} }, // EXIT - - -
+    { "EXIT", { } }, // EXIT - - -
 
     // Register manipulation
     { "MOVE", {{ OT_REG, OT_REG }} }, // MOVE RX RY
@@ -35,7 +35,7 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     // List releated
     { "LPUSH", {{ OT_REG, OT_REG }} }, // LPUSH RX RY
     { "LPUSH_C", {{ OT_REG, OT_CONST }} }, // LPUSH_C RX C1
-    { "LPOP", {{ OT_REG }} }, // LPOP RX
+    // { "LPOP", {{ OT_REG }} }, // LPOP RX
     { "LGET", {{ OT_REG, OT_REG, OT_REG }} }, // LGET RX RY RZ
     { "LSET", {{ OT_REG, OT_REG, OT_REG }} }, // LSET RX RY RZ
     { "LDELETE", {{ OT_REG, OT_REG }} }, // LDELETE RX RY
@@ -49,7 +49,7 @@ static std::pair<std::string, std::vector<OpCodeType>> opcode_names[] = {
     // Function releated
     { "CALL", {{ OT_REG }} }, // CALL RX
     // { "GCALL", {{ OT_GLOBAL }} }, // CALL G1
-    { "RETURN", {{ }} }, // RETURN
+    { "RETURN", { } }, // RETURN
 
     // Object releated
     { "LPROP", {{ OT_REG, OT_REG, OT_PROP }} }, // LPROP RX RY PX

@@ -2,6 +2,7 @@
 #include "../../Compiler/include/value.hpp"
 #include "../../Logger/include/logger.hpp"
 #include <math.h>
+#include <algorithm>
 
 #define BASE_PC (&this->program->memory->code.front())
 #define END_PC (&this->program->memory->code.back())
@@ -22,6 +23,14 @@
     CRASH("Segmentation fault: Uninitialized object '" + REGISTER(object_at)->to_string() + "'."); }
 #define CHECK_FUN(fun_at) if (!GETV(REGISTER(fun_at)->value, std::shared_ptr<nfun_t>)) { \
     CRASH("Segmentation fault: Uninitialized function '" + REGISTER(fun_at)->to_string() + "'."); }
+
+static std::string key_order_to_string(const std::vector<std::string> &vec)
+{
+    std::string r = "[";
+    for (const std::string &el : vec) r += el + ", ";
+    if (vec.size() > 0) { r.pop_back(); r.pop_back(); }
+    return r + "]";
+}
 
 void VirtualMachine::run()
 {
@@ -73,7 +82,7 @@ void VirtualMachine::run()
                 INC_PC(3);
                 break;
             }
-            case OP_LPOP: { break; }
+            // case OP_LPOP: { INC_PC(2); break; }
             case OP_LGET: {
                 REGISTER(2)->type.inner_type->copy_to(REGISTER(1)->type);
                 nint_t index = GETV(REGISTER(3)->value, nint_t);
@@ -97,13 +106,20 @@ void VirtualMachine::run()
             }
             case OP_LDELETE: {
                 std::shared_ptr<nlist_t> &target = GETV(REGISTER(1)->value, std::shared_ptr<nlist_t>);
-                target->erase(target->begin() + GETV(REGISTER(2)->value, nint_t));
+                const nint_t &index = GETV(REGISTER(2)->value, nint_t);
+                if (index < 0 || static_cast<size_t>(index) > target->size()) {
+                    CRASH("Index out of range. The index at this point of execution must be between [0, " + std::to_string(target->size()) + "]");
+                }
+                target->erase(target->begin() + index);
                 INC_PC(3);
                 break;
             }
             case OP_DKEY: {
                 const std::shared_ptr<ndict_t> &d = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>);
                 const nint_t &index = GETV(REGISTER(3)->value, nint_t);
+                if (index < 0 || static_cast<size_t>(index) > d->key_order.size()) {
+                    CRASH("Key index out of range. The index at this point of execution must be between [0, " + std::to_string(d->key_order.size()) + "]");
+                }
                 REGISTER(1)->value = d->key_order[index];
                 REGISTER(1)->retype(VALUE_STRING);
                 INC_PC(4);
@@ -112,6 +128,10 @@ void VirtualMachine::run()
             case OP_DGET: {
                 const std::shared_ptr<ndict_t> &d = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>);
                 const nstring_t &key = GETV(REGISTER(3)->value, nstring_t);
+                const auto el = std::find(d->key_order.begin(), d->key_order.end(), key);
+                if (el == d->key_order.end()) {
+                    CRASH("Key '" + key + "' not found in dictionary. Current dictionary keys are: " + key_order_to_string(d->key_order));
+                }
                 REGISTER(2)->type.inner_type->copy_to(REGISTER(1)->type);
                 // REGISTER(1)->value = d.values.at(key);
                 d->values.at(key).copy_to(REGISTER(1));
@@ -119,11 +139,27 @@ void VirtualMachine::run()
                 break;
             }
             case OP_DSET: {
+                const std::shared_ptr<ndict_t> &dict = GETV(REGISTER(1)->value, std::shared_ptr<ndict_t>);
+                const nstring_t &index = GETV(REGISTER(2)->value, nstring_t);
+                // Add the index to the key order if needed.
+                if (std::find(dict->key_order.begin(), dict->key_order.end(), index) == dict->key_order.end()) {
+                    // Key not found, need to add it as well at the end.
+                    dict->key_order.push_back(index);
+                }
+                // Add the value to the hashmap.
+                dict->values[index] = *REGISTER(3);
+                INC_PC(4);
                 break;
             }
             case OP_DDELETE: {
                 std::shared_ptr<ndict_t> &target = GETV(REGISTER(1)->value, std::shared_ptr<ndict_t>);
-                target->values.erase(GETV(REGISTER(2)->value, nstring_t));
+                const nstring_t &index = GETV(REGISTER(2)->value, nstring_t);
+                const auto el = std::find(target->key_order.begin(), target->key_order.end(), index);
+                if (el == target->key_order.end()) {
+                    CRASH("Key '" + index + "' not found in dictionary. Current dictionary keys are: " + key_order_to_string(target->key_order));
+                }
+                target->values.erase(index);
+                target->key_order.erase(el);
                 INC_PC(3);
                 break;
             }
@@ -327,9 +363,32 @@ void VirtualMachine::run()
                 break;
             }
             case OP_ADD_LIST: {
+                nlist_t res;
+                const std::shared_ptr<nlist_t> &a = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>);
+                const std::shared_ptr<nlist_t> &b = GETV(REGISTER(3)->value, std::shared_ptr<nlist_t>);
+                res.reserve(a->size() + b->size());
+                res.insert(res.end(), a->begin(), a->end());
+                res.insert(res.end(), b->begin(), b->end());
+                REGISTER(1)->value = std::make_shared<nlist_t>(res);
+                REGISTER(2)->type.copy_to(REGISTER(1)->type);
+                INC_PC(4);
                 break;
             }
             case OP_ADD_DICT: {
+                const std::shared_ptr<ndict_t> &a = GETV(REGISTER(2)->value, std::shared_ptr<ndict_t>);
+                const std::shared_ptr<ndict_t> &b = GETV(REGISTER(3)->value, std::shared_ptr<ndict_t>);
+                ndict_t res = ndict_t(*a);
+                for (const auto &[key, value] : b->values) {
+                    // Add the key if it does not exist.
+                    if (std::find(res.key_order.begin(), res.key_order.end(), key) == res.key_order.end()) {
+                        res.key_order.push_back(key);
+                    }
+                    // Add the value
+                    res.values[key] = value;
+                }
+                REGISTER(1)->value = std::make_shared<ndict_t>(res);
+                REGISTER(2)->type.copy_to(REGISTER(1)->type);
+                INC_PC(4);
                 break;
             }
             case OP_SUB_INT: {
@@ -369,20 +428,58 @@ void VirtualMachine::run()
                 break;
             }
             case OP_MUL_INT_STRING: {
+                const nint_t &integer = GETV(REGISTER(2)->value, nint_t);
+                const nstring_t &string = GETV(REGISTER(3)->value, nstring_t);
+                nstring_t res = "";
+                if (integer > 0) {
+                    for (size_t i = 0; i < static_cast<size_t>(integer); i++) res += string;
+                }
+                REGISTER(1)->value = res;
+                REGISTER(1)->retype(VALUE_STRING);
+                INC_PC(4);
                 break;
             }
             case OP_MUL_STRING_INT: {
+                const nint_t &integer = GETV(REGISTER(3)->value, nint_t);
+                const nstring_t &string = GETV(REGISTER(2)->value, nstring_t);
+                nstring_t res = "";
+                if (integer > 0) {
+                    for (size_t i = 0; i < static_cast<size_t>(integer); i++) res += string;
+                }
+                REGISTER(1)->value = res;
+                REGISTER(1)->retype(VALUE_STRING);
+                INC_PC(4);
                 break;
             }
             case OP_MUL_INT_LIST: {
+                const nint_t &integer = GETV(REGISTER(2)->value, nint_t);
+                const std::shared_ptr<nlist_t> &list = GETV(REGISTER(3)->value, std::shared_ptr<nlist_t>);
+                nlist_t res;
+                if (integer > 0) {
+                    res.reserve(list->size() * integer);
+                    for (size_t i = 0; i < static_cast<size_t>(integer); i++) res.insert(res.end(), list->begin(), list->end());
+                }
+                REGISTER(1)->value = std::make_shared<nlist_t>(res);
+                REGISTER(3)->type.copy_to(REGISTER(1)->type);
+                INC_PC(4);
                 break;
             }
             case OP_MUL_LIST_INT: {
+                const nint_t &integer = GETV(REGISTER(3)->value, nint_t);
+                const std::shared_ptr<nlist_t> &list = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>);
+                nlist_t res;
+                if (integer > 0) {
+                    res.reserve(list->size() * integer);
+                    for (size_t i = 0; i < static_cast<size_t>(integer); i++) res.insert(res.end(), list->begin(), list->end());
+                }
+                REGISTER(1)->value = std::make_shared<nlist_t>(res);
+                REGISTER(2)->type.copy_to(REGISTER(1)->type);
+                INC_PC(4);
                 break;
             }
             case OP_DIV_INT: {
-                nint_t divident = GETV(REGISTER(2)->value, nint_t);
-                nint_t divisor = GETV(REGISTER(3)->value, nint_t);
+                const nint_t divident = GETV(REGISTER(2)->value, nint_t);
+                const nint_t divisor = GETV(REGISTER(3)->value, nint_t);
 				if (divisor == 0) { CRASH("Division by 0 -> " + std::to_string(divident) + " / " + std::to_string(divisor)); }
                 REGISTER(1)->value = static_cast<nfloat_t>(divident / divisor);
                 REGISTER(1)->retype(VALUE_FLOAT);
@@ -390,8 +487,8 @@ void VirtualMachine::run()
                 break;
             }
             case OP_DIV_FLOAT: {
-                nfloat_t divident = GETV(REGISTER(2)->value, nfloat_t);
-                nfloat_t divisor = GETV(REGISTER(3)->value, nfloat_t);
+                const nfloat_t divident = GETV(REGISTER(2)->value, nfloat_t);
+                const nfloat_t divisor = GETV(REGISTER(3)->value, nfloat_t);
 				if (divisor == 0) { CRASH("Division by 0 -> " + std::to_string(divident) + " / " + std::to_string(divisor)); }
                 REGISTER(1)->value = static_cast<nfloat_t>(divident / divisor);
                 REGISTER(1)->retype(VALUE_FLOAT);
@@ -399,9 +496,43 @@ void VirtualMachine::run()
                 break;
             }
             case OP_DIV_STRING_INT: {
+                const nstring_t &string = GETV(REGISTER(2)->value, nstring_t);
+                const nint_t &integer = GETV(REGISTER(3)->value, nint_t);
+                size_t per_item = static_cast<size_t>(ceil(string.length() / static_cast<double>(abs(integer))));
+                nlist_t res;
+                size_t current_index = 0;
+                if (integer > 0) {
+                    for (size_t i = 0; i < integer; i++) {
+                        nstring_t s;
+                        for (size_t k = 0; k < per_item; k++) {
+                            if (current_index < string.length()) s += string[current_index++];
+                        }
+                        res.push_back({ s });
+                    }
+                } else { CRASH("The string divisor must be greater than 0 -> " + std::to_string(string.length()) + " / " + std::to_string(integer)); }
+                REGISTER(1)->value = std::make_shared<nlist_t>(res);
+                REGISTER(1)->retype(VALUE_LIST, std::make_shared<Type>(VALUE_STRING));
+                INC_PC(4);
                 break;
             }
             case OP_DIV_LIST_INT: {
+                const std::shared_ptr<nlist_t> &list = GETV(REGISTER(2)->value, std::shared_ptr<nlist_t>);
+                const nint_t &integer = GETV(REGISTER(3)->value, nint_t);
+                size_t per_item = static_cast<size_t>(ceil(list->size() / static_cast<double>(abs(integer))));
+                nlist_t res;
+                size_t current_index = 0;
+                if (integer > 0) {
+                    for (size_t i = 0; i < integer; i++) {
+                        nlist_t l;
+                        for (size_t k = 0; k < per_item; k++) {
+                            if (current_index < list->size()) l.push_back((*list)[current_index++]);
+                        }
+                        res.push_back({ l, REGISTER(2)->type.inner_type });
+                    }
+                } else { CRASH("The list divisor must be greater than 0 -> " + std::to_string(list->size()) + " / " + std::to_string(integer)); }
+                REGISTER(1)->value = std::make_shared<nlist_t>(res);
+                REGISTER(1)->retype(VALUE_LIST, std::make_shared<Type>(REGISTER(2)->type));
+                INC_PC(4);
                 break;
             }
             case OP_EQ_INT: {
@@ -607,6 +738,7 @@ void VirtualMachine::run()
                 break;
             }
             case OP_SSLICE: {
+                CRASH("Slices are currently pending of implementation.");
                 /*
                 const nstring_t &target = GETV(REGISTER(2)->value, nstring_t);
                 const nint_t k = GETV(REGISTER(5)->value, nint_t); // The step index.
@@ -628,12 +760,15 @@ void VirtualMachine::run()
                 break;
             }
             case OP_SSLICEE: {
+                CRASH("Slices are currently pending of implementation.");
                 break;
             }
             case OP_LSLICE: {
+                CRASH("Slices are currently pending of implementation.");
                 break;
             }
             case OP_LSLICEE: {
+                CRASH("Slices are currently pending of implementation.");
                 break;
             }
             case OP_RANGEE: {
