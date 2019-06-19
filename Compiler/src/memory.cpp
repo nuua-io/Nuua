@@ -32,7 +32,7 @@ void Memory::show_refs()
     }
     printf("\nLine references:\n");
     for (const auto &[key, value] : this->lines) {
-        printf("%5zu: %d\n", key, static_cast<size_t>(value));
+        printf("%5zu: %zu\n", key, static_cast<size_t>(value));
     }
     printf("\nColumn references:\n");
     for (const auto &[key, value] : this->columns) {

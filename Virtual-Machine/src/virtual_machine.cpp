@@ -502,7 +502,7 @@ void VirtualMachine::run()
                 nlist_t res;
                 size_t current_index = 0;
                 if (integer > 0) {
-                    for (size_t i = 0; i < integer; i++) {
+                    for (size_t i = 0; i < static_cast<size_t>(integer); i++) {
                         nstring_t s;
                         for (size_t k = 0; k < per_item; k++) {
                             if (current_index < string.length()) s += string[current_index++];
@@ -522,7 +522,7 @@ void VirtualMachine::run()
                 nlist_t res;
                 size_t current_index = 0;
                 if (integer > 0) {
-                    for (size_t i = 0; i < integer; i++) {
+                    for (size_t i = 0; i < static_cast<size_t>(integer); i++) {
                         nlist_t l;
                         for (size_t k = 0; k < per_item; k++) {
                             if (current_index < list->size()) l.push_back((*list)[current_index++]);
@@ -829,7 +829,7 @@ std::shared_ptr<const std::string> VirtualMachine::current_file()
 {
     std::pair<size_t, std::shared_ptr<const std::string>> result = { 0, std::shared_ptr<const std::string>() };
     for (const auto &el : this->program->memory->files) {
-        if ((el.first == 0 && !result.second) || el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
+        if ((el.first == 0 && !result.second) || (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC))) result = el;
     }
     return result.second;
 }
@@ -838,7 +838,7 @@ line_t VirtualMachine::current_line()
 {
     std::pair<size_t, line_t> result = { 0, 0 };
     for (const auto &el : this->program->memory->lines) {
-        if ((el.first == 0 && result.second == 0) || el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
+        if ((el.first == 0 && result.second == 0) || (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC))) result = el;
     }
     return result.second;
 }
@@ -847,7 +847,7 @@ column_t VirtualMachine::current_column()
 {
     std::pair<size_t, column_t> result = { 0, 0 };
     for (const auto &el : this->program->memory->columns) {
-        if ((el.first == 0 && result.second == 0) || el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC)) result = el;
+        if ((el.first == 0 && result.second == 0) || (el.first > result.first && el.first <= static_cast<size_t>(PC - BASE_PC))) result = el;
     }
     return result.second;
 }
