@@ -101,7 +101,7 @@ void Parser::debug_ast(const std::shared_ptr<Expression> &expression, const uint
         }
         case RULE_UNARY: {
             std::shared_ptr<Unary> unary = std::static_pointer_cast<Unary>(expression);
-            printf("Unary[%s]\n", unary->op.to_string().c_str());
+            printf("Unary[%s]\n", unary->op.to_type_string().c_str());
             Parser::debug_ast(unary->right, spacer + 1);
             break;
         }
