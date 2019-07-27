@@ -11,6 +11,58 @@ The syntax is familiar with no strange structures. However, some syntax sugar is
 
 Nuua homepage is <https://nuua.io>. You may subscribe to recieve further information.
 
+## Code examples
+
+-   Calculate the area of a triangle (with some OOP programming).
+    ```cpp
+    class Triangle {
+        b: float
+        h: float
+        fun area(): float -> (self.b * self.h) / 2.0
+    }
+
+    fun main(argv: [string]) {
+        t := Triangle!{b: 10.0, h: 5.0}
+        print "The area is: " + t.area() as string
+    }
+    ```
+
+- Calculate nth Fibonacci number (using recursion).
+
+    ```cpp
+    fun rec_fib(n: int): int {
+        if n < 2 => return n
+        return rec_fib(n - 2) + rec_fib(n - 1)
+    }
+
+    fun main(argv: [string]) {
+        print rec_fib(25)
+    }
+    ```
+
+- High level programming.
+
+    ```cpp
+    use list_int_map from "list"
+
+    class Collection {
+        numbers: [int]
+        fun map(f: (int -> int)): Collection {
+            list_int_map(self.numbers, f)
+            return self
+        }
+    }
+
+    fun multiply(n: int): int -> n * 2
+
+    fun main(argv: [string]) {
+        c := Collection!{numbers: [1, 2, 3, 4, 5]}
+        c.map(multiply).map(multiply)
+        print c.numbers
+    }
+
+    ```
+
 ## Nuua Roadmap
 
 - ~~From dynamic to static~~ :white_check_mark:
