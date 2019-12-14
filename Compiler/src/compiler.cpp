@@ -302,10 +302,10 @@ void Compiler::compile(const std::shared_ptr<Statement> &rule)
             // Set the initial index.
             SET_SOURCE_LOCATION(rule);
             this->add_opcodes({{ OP_LOAD_C, ri, this->add_constant({ static_cast<nint_t>(0) }) }});
-            // Save the initial point.
-            size_t initial_index = this->program->memory->code.size();
             // Setup the for condition.
             reg_t rc = this->compile(rfor->iterator);
+            // Save the initial point.
+            size_t initial_index = this->program->memory->code.size();
             // Set the for block.
             this->blocks.push_back(rfor->block);
             // Set the used registers in the block.
